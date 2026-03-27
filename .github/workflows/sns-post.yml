@@ -1,0 +1,108 @@
+name: SNS Auto Post
+
+on:
+  schedule:
+    # 毎日 8/12/18/22時（JST = UTC+9）
+    - cron: '0 23 * * *'   # JST 8:00
+    - cron: '0 3 * * *'    # JST 12:00
+    - cron: '0 9 * * *'    # JST 18:00
+    - cron: '0 13 * * *'   # JST 22:00
+  workflow_dispatch:        # 手動実行ボタン
+
+jobs:
+  post-x:
+    name: X (Twitter) 投稿
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Python セットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 依存関係インストール
+        run: |
+          pip install google-genai python-dotenv
+
+      - name: X投稿（テキスト生成のみ・ブラウザなし）
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+        run: |
+          cd x_automation
+          python3 x_post_generator.py generate
+
+  post-bluesky:
+    name: Bluesky 投稿
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Python セットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 依存関係インストール
+        run: pip install atproto google-genai python-dotenv
+
+      - name: Bluesky投稿
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          BSKY_HANDLE: ${{ secrets.BSKY_HANDLE }}
+          BSKY_APP_PASSWORD: ${{ secrets.BSKY_APP_PASSWORD }}
+        run: |
+          cd bluesky_automation
+          python3 bsky_poster.py live
+
+  post-hatena:
+    name: はてなブログ 投稿
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Python セットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 依存関係インストール
+        run: |
+          pip install google-genai python-dotenv playwright
+          playwright install chromium --with-deps
+
+      - name: はてなブログ投稿
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          HATENA_COOKIES: ${{ secrets.HATENA_COOKIES }}
+        run: |
+          cd hatena_automation
+          python3 hatena_poster.py post
+
+  post-note:
+    name: note 投稿
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Python セットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 依存関係インストール
+        run: |
+          pip install google-genai python-dotenv playwright
+          playwright install chromium --with-deps
+
+      - name: note投稿
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          NOTE_COOKIES: ${{ secrets.NOTE_COOKIES }}
+        run: |
+          cd note_automation
+          python3 note_poster.py post

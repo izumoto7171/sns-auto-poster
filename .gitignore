@@ -1,0 +1,20 @@
+# 機密情報
+.env
+*_cookies.json
+*_session.json
+x_browser_cookies.json
+
+# ログ・一時ファイル
+*.log
+*.mp4
+*.mp3
+*.png
+*.jpg
+__pycache__/
+*.pyc
+drafts/
+outputs/
+note_automation/drafts/
+
+# DB
+*.db
