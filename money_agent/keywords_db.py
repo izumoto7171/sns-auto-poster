@@ -76,7 +76,7 @@ AFFILIATE_PROGRAMS = {
         "name": "楽天カード",
         "commission": "7,000〜10,000円/件",
         "category": "クレカ",
-        "url": "https://px.a8.net/svt/ejp?a8mat=XXXXXX",  # A8.netリンクに変更
+        "url": "https://rpx.a8.net/svt/ejp?a8mat=4AZMKI+BFEJSI+2HOM+BW8O1&rakuten=y&a8ejpredirect=http%3A%2F%2Fhb.afl.rakuten.co.jp%2Fhgc%2F0ea62065.34400275.0ea62066.204f04c0%2Fa26032392970_4AZMKI_BFEJSI_2HOM_BW8O1%3Fpc%3Dhttps%253A%252F%252Fcard.rakuten.co.jp%252F%26m%3Dhttps%253A%252F%252Fcard.rakuten.co.jp%252F",
         "description": "年会費永年無料・ポイント還元率1%",
         "cta": "今すぐ無料で作る →"
     },
@@ -84,7 +84,7 @@ AFFILIATE_PROGRAMS = {
         "name": "SBI証券",
         "commission": "3,000〜20,000円/口座",
         "category": "証券",
-        "url": "https://px.a8.net/svt/ejp?a8mat=XXXXXX",
+        "url": "https://rpx.a8.net/svt/ejp?a8mat=4AZMKI+BFEJSI+2HOM+BW8O1&rakuten=y&a8ejpredirect=http%3A%2F%2Fhb.afl.rakuten.co.jp%2Fhgc%2F0ea62065.34400275.0ea62066.204f04c0%2Fa26032392970_4AZMKI_BFEJSI_2HOM_BW8O1%3Fpc%3Dhttps%253A%252F%252Fwww.sbisec.co.jp%252F%26m%3Dhttps%253A%252F%252Fwww.sbisec.co.jp%252F",
         "description": "国内株式手数料0円・新NISA対応",
         "cta": "無料口座開設 →"
     },
@@ -92,12 +92,20 @@ AFFILIATE_PROGRAMS = {
         "name": "楽天証券",
         "commission": "3,000〜15,000円/口座",
         "category": "証券",
-        "url": "https://px.a8.net/svt/ejp?a8mat=XXXXXX",
+        "url": "https://rpx.a8.net/svt/ejp?a8mat=4AZMKI+BFEJSI+2HOM+BW8O1&rakuten=y&a8ejpredirect=http%3A%2F%2Fhb.afl.rakuten.co.jp%2Fhgc%2F0ea62065.34400275.0ea62066.204f04c0%2Fa26032392970_4AZMKI_BFEJSI_2HOM_BW8O1%3Fpc%3Dhttps%253A%252F%252Fwww.rakuten-sec.co.jp%252F%26m%3Dhttps%253A%252F%252Fwww.rakuten-sec.co.jp%252F",
         "description": "楽天ポイントで投資できる・新NISA対応",
         "cta": "楽天ポイントを使って投資を始める →"
     },
 
     # === 中単価（1,000〜5,000円）===
+    "onamae_domain": {
+        "name": "お名前.com",
+        "commission": "110〜3,100円/件",
+        "category": "ドメイン",
+        "url": "https://px.a8.net/svt/ejp?a8mat=4AZMKI+BRWNHU+50+2HEG76",
+        "description": "国内シェアNo.1ドメイン取得サービス・.com/.net 0円〜",
+        "cta": "お名前.comでドメインを取得する →"
+    },
     "crowdworks": {
         "name": "クラウドワークス",
         "commission": "2,000〜3,000円/登録",
@@ -114,31 +122,13 @@ AFFILIATE_PROGRAMS = {
         "description": "スキルを活かして在宅で稼ぐ",
         "cta": "ランサーズで仕事を探す →"
     },
-    "chatwork": {
-        "name": "Chatwork",
-        "commission": "2,000円/登録",
-        "category": "ツール",
-        "url": "https://px.a8.net/svt/ejp?a8mat=XXXXXX",
-        "description": "ビジネスチャット・無料で使える",
-        "cta": "無料で始める →"
-    },
-
-    # === Amazon アソシエイト ===
-    "amazon_books": {
-        "name": "Amazon（書籍）",
-        "commission": "3〜8%",
+    "rakuten_market": {
+        "name": "楽天市場",
+        "commission": "1〜3%",
         "category": "物販",
-        "url": "https://amzn.to/XXXXXX",
-        "description": "AI・副業・投資関連書籍",
-        "cta": "Amazonで詳細を見る →"
-    },
-    "amazon_gadgets": {
-        "name": "Amazon（ガジェット）",
-        "commission": "3〜5%",
-        "category": "物販",
-        "url": "https://amzn.to/XXXXXX",
-        "description": "生産性向上ガジェット",
-        "cta": "Amazonで購入する →"
+        "url": "https://rpx.a8.net/svt/ejp?a8mat=4AZMKI+BFEJSI+2HOM+BW8O1&rakuten=y&a8ejpredirect=http%3A%2F%2Fhb.afl.rakuten.co.jp%2Fhgc%2F0ea62065.34400275.0ea62066.204f04c0%2Fa26032392970_4AZMKI_BFEJSI_2HOM_BW8O1%3Fpc%3Dhttps%253A%252F%252Fwww.rakuten.co.jp%26m%3Dhttps%253A%252F%252Fwww.rakuten.co.jp",
+        "description": "日本最大のネットショッピングモール",
+        "cta": "楽天市場で探す →"
     },
 
     # === SaaS/AIツール（継続課金）===
@@ -146,7 +136,7 @@ AFFILIATE_PROGRAMS = {
         "name": "Canva Pro",
         "commission": "初回購入の36%",
         "category": "AIツール",
-        "url": "https://partner.canva.com/XXXXXX",
+        "url": "https://www.canva.com/affiliates/",
         "description": "AI搭載デザインツール・月1,500円〜",
         "cta": "Canva Proを試す（30日無料）→"
     },
@@ -154,7 +144,7 @@ AFFILIATE_PROGRAMS = {
         "name": "Notion Plus",
         "commission": "3ヶ月分の50%",
         "category": "生産性",
-        "url": "https://affiliate.notion.so/XXXXXX",
+        "url": "https://www.notion.so/",
         "description": "オールインワン仕事術ツール",
         "cta": "Notionを無料で始める →"
     }
@@ -162,10 +152,10 @@ AFFILIATE_PROGRAMS = {
 
 # コンテンツ × アフィリエイトのマッピング
 CONTENT_AFFILIATE_MAP = {
-    "ai_tools": ["canva_pro", "notion", "amazon_books"],
-    "side_hustle": ["crowdworks", "lancers", "amazon_books"],
-    "investment_savings": ["rakuten_card", "sbi_securities", "rakuten_securities"],
-    "productivity": ["notion", "chatwork", "canva_pro"],
+    "ai_tools": ["canva_pro", "notion", "onamae_domain"],
+    "side_hustle": ["crowdworks", "lancers", "onamae_domain"],
+    "investment_savings": ["rakuten_card", "rakuten_securities", "sbi_securities"],
+    "productivity": ["notion", "onamae_domain", "canva_pro"],
 }
 
 def get_keywords_for_category(category: str) -> list:
