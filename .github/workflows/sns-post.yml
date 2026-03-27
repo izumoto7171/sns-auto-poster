@@ -114,11 +114,7 @@ jobs:
   money-agent:
     name: 💰 月10万円エージェント
     runs-on: ubuntu-latest
-    # 8時と18時のみ実行（記事投稿は1日2回）
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      github.event.schedule == '0 23 * * *' ||
-      github.event.schedule == '0 9 * * *'
+    # 全スケジュール（8/12/18/22時）で実行 = 1日4回
     steps:
       - uses: actions/checkout@v4
 
