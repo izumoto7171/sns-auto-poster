@@ -332,8 +332,9 @@ if __name__ == "__main__":
         kw = sys.argv[2] if len(sys.argv) > 2 else None
         article = generate_article(force_keyword=kw)
         preview_article(article)
-        print("\n📤 はてなブログに投稿します（ブラウザ表示）...")
-        success = post_article(article["title"], article["body"], article["category"], headless=False)
+        is_ci = os.getenv("CI", "false").lower() == "true"
+        print("\n📤 はてなブログに投稿します...")
+        success = post_article(article["title"], article["body"], article["category"], headless=is_ci)
         save_log(article, success)
 
     elif cmd == "log":

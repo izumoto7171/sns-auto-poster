@@ -231,7 +231,9 @@ if __name__ == "__main__":
         article = generate_article()
         preview_article(article)
         print("\n📤 noteに投稿します...")
-        success = post_article(article["title"], article["body"], headless=False)
+        # CI環境（GitHub Actions）では自動的にheadless=True
+        is_ci = os.getenv("CI", "false").lower() == "true"
+        success = post_article(article["title"], article["body"], headless=is_ci)
         save_log(article, success)
 
     elif cmd == "log":
