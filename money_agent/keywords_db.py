@@ -72,6 +72,14 @@ KEYWORD_CATEGORIES = {
 AFFILIATE_PROGRAMS = {
 
     # === 高単価（5,000円以上）===
+    "tossy": {
+        "name": "TOSSY（DMM.com証券）",
+        "commission": "15,000円/件",
+        "category": "投資",
+        "url": "https://px.a8.net/svt/ejp?a8mat=4AZPOR+A94RUA+1WP2+1HLNLE",
+        "description": "株式・FX・暗号資産を1アプリで完結・新規登録+1回取引",
+        "cta": "TOSSYで投資を始める →"
+    },
     "rakuten_card": {
         "name": "楽天カード",
         "commission": "7,000〜10,000円/件",
@@ -81,12 +89,12 @@ AFFILIATE_PROGRAMS = {
         "cta": "今すぐ無料で作る →"
     },
     "sbi_securities": {
-        "name": "SBI証券",
-        "commission": "3,000〜20,000円/口座",
+        "name": "楽天証券（NISA）",
+        "commission": "3,000〜15,000円/口座",
         "category": "証券",
-        "url": "https://rpx.a8.net/svt/ejp?a8mat=4AZMKI+BFEJSI+2HOM+BW8O1&rakuten=y&a8ejpredirect=http%3A%2F%2Fhb.afl.rakuten.co.jp%2Fhgc%2F0ea62065.34400275.0ea62066.204f04c0%2Fa26032392970_4AZMKI_BFEJSI_2HOM_BW8O1%3Fpc%3Dhttps%253A%252F%252Fwww.sbisec.co.jp%252F%26m%3Dhttps%253A%252F%252Fwww.sbisec.co.jp%252F",
-        "description": "国内株式手数料0円・新NISA対応",
-        "cta": "無料口座開設 →"
+        "url": "https://rpx.a8.net/svt/ejp?a8mat=4AZMKI+BFEJSI+2HOM+BW8O1&rakuten=y&a8ejpredirect=http%3A%2F%2Fhb.afl.rakuten.co.jp%2Fhgc%2F0ea62065.34400275.0ea62066.204f04c0%2Fa26032392970_4AZMKI_BFEJSI_2HOM_BW8O1%3Fpc%3Dhttps%253A%252F%252Fwww.rakuten-sec.co.jp%252F%26m%3Dhttps%253A%252F%252Fwww.rakuten-sec.co.jp%252F",
+        "description": "楽天ポイントで投資・新NISA完全対応",
+        "cta": "楽天証券で口座開設（無料）→"
     },
     "rakuten_securities": {
         "name": "楽天証券",
@@ -154,7 +162,7 @@ AFFILIATE_PROGRAMS = {
 CONTENT_AFFILIATE_MAP = {
     "ai_tools": ["canva_pro", "notion", "onamae_domain"],
     "side_hustle": ["crowdworks", "lancers", "onamae_domain"],
-    "investment_savings": ["rakuten_card", "rakuten_securities", "sbi_securities"],
+    "investment_savings": ["tossy", "rakuten_card", "rakuten_securities"],
     "productivity": ["notion", "onamae_domain", "canva_pro"],
 }
 
