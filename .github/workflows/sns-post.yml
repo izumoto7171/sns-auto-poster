@@ -101,8 +101,44 @@ jobs:
 
       - name: note投稿
         env:
+          CI: "true"
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           NOTE_COOKIES: ${{ secrets.NOTE_COOKIES }}
         run: |
           cd note_automation
           python3 note_poster.py post
+
+  # ============================================================
+  # 💰 月10万円 AIエージェント（SEO記事 × アフィリエイト）
+  # ============================================================
+  money-agent:
+    name: 💰 月10万円エージェント
+    runs-on: ubuntu-latest
+    # 8時と18時のみ実行（記事投稿は1日2回）
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      github.event.schedule == '0 23 * * *' ||
+      github.event.schedule == '0 9 * * *'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Python セットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 依存関係インストール
+        run: |
+          pip install google-genai python-dotenv playwright atproto
+          playwright install chromium --with-deps
+
+      - name: 月10万円エージェント実行
+        env:
+          CI: "true"
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          HATENA_COOKIES: ${{ secrets.HATENA_COOKIES }}
+          NOTE_COOKIES: ${{ secrets.NOTE_COOKIES }}
+          BSKY_HANDLE: ${{ secrets.BSKY_HANDLE }}
+          BSKY_APP_PASSWORD: ${{ secrets.BSKY_APP_PASSWORD }}
+        run: |
+          python3 money_agent/money_agent.py run
