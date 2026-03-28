@@ -241,7 +241,8 @@ jobs:
 
       - name: 依存関係インストール
         run: |
-          pip install google-genai python-dotenv atproto "twikit==1.7.4"
+          pip install google-genai python-dotenv atproto "twikit==1.7.4" gtts
+          sudo apt-get install -y ffmpeg
 
       - name: ショート動画コンテンツ投稿
         env:

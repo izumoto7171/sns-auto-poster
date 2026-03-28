@@ -92,18 +92,67 @@ def post_to_note(title: str, body: str) -> bool:
         return False
 
 
+def commit_output_files():
+    """生成した動画・画像をGitHubにコミット（Actions上で実行）"""
+    try:
+        output_dir = Path(__file__).parent / "output"
+        # 今日の生成物のみ対象
+        today = datetime.now().strftime("%Y%m%d")
+        new_files = list(output_dir.glob(f"video_{today}*.mp4")) + \
+                    list(output_dir.glob(f"character_{today}*.png"))
+
+        if not new_files:
+            print("📁 コミット対象ファイルなし")
+            return
+
+        import subprocess as sp
+        sp.run(["git", "config", "user.name", "github-actions[bot]"], check=False)
+        sp.run(["git", "config", "user.email", "github-actions[bot]@users.noreply.github.com"], check=False)
+        for f in new_files:
+            sp.run(["git", "add", str(f)], check=False)
+        result = sp.run(
+            ["git", "commit", "-m", f"feat: ショート動画自動生成 {today}"],
+            capture_output=True, text=True
+        )
+        if result.returncode == 0:
+            sp.run(["git", "push"], check=False)
+            print(f"✅ {len(new_files)}件のファイルをGitHubにコミット")
+            for f in new_files:
+                # GitHub上のダウンロードURLを表示
+                print(f"   📥 {f.name}")
+        else:
+            print("ℹ️ コミット不要（変更なし）")
+    except Exception as e:
+        print(f"⚠️ コミットスキップ: {e}")
+
+
 def run(test_mode: bool = False):
-    """ショート動画コンテンツ生成→SNS投稿"""
+    """ショート動画コンテンツ生成→画像・動画生成→SNS投稿"""
     sys.path.insert(0, str(Path(__file__).parent))
-    from script_generator import generate, load_env
+    from script_generator import generate, load_env, save_output
+    from video_generator import generate_full_video
     load_env()
 
+    date_str = datetime.now().strftime("%Y%m%d_%H%M%S")
     post = generate()
     short_text = post["short_text"]
     title = f"【ライフハック】{post['theme']['topic']}"
 
     print(f"\n📱 投稿テキスト（{len(short_text)}文字）:")
     print(short_text[:100] + "..." if len(short_text) > 100 else short_text)
+
+    # 画像生成
+    print("\n🖼️  キャラクター画像生成中...")
+    save_output(post, generate_image=True)
+
+    # 動画生成（画像 + 音声）
+    print("\n🎬 動画生成中...")
+    video_path = generate_full_video(post, date_str)
+    if video_path:
+        post["video_path"] = str(video_path)
+        print(f"✅ 動画完成: {video_path.name}")
+    else:
+        print("⚠️ 動画生成スキップ")
 
     if test_mode:
         print("\n🧪 [テストモード] 実際には投稿しません")
@@ -113,6 +162,10 @@ def run(test_mode: bool = False):
         print("\n🚀 SNS投稿開始...")
         success_x    = post_to_x(short_text)
         success_bsky = post_to_bluesky(short_text)
+
+    # 生成ファイルをGitHubにコミット（iPhoneからダウンロード用）
+    if os.getenv("CI"):
+        commit_output_files()
 
     save_log({
         "datetime": datetime.now().isoformat(),
