@@ -33,6 +33,39 @@ def save_log(entry: dict):
 # ─────────────────────────────────────────
 # Playwright ブラウザ自動投稿（Chrome Cookie使用）
 # ─────────────────────────────────────────
+def post_with_tweepy(text: str) -> bool:
+    """tweepy（公式API v2）でXに投稿"""
+    try:
+        import tweepy
+
+        api_key        = os.getenv("X_API_KEY")
+        api_secret     = os.getenv("X_API_SECRET")
+        access_token   = os.getenv("X_ACCESS_TOKEN")
+        access_secret  = os.getenv("X_ACCESS_TOKEN_SECRET")
+
+        if not all([api_key, api_secret, access_token, access_secret]):
+            print("⚠️ X APIキーが未設定（X_API_KEY / X_API_SECRET / X_ACCESS_TOKEN / X_ACCESS_TOKEN_SECRET）")
+            return False
+
+        client = tweepy.Client(
+            consumer_key=api_key,
+            consumer_secret=api_secret,
+            access_token=access_token,
+            access_token_secret=access_secret,
+        )
+        resp = client.create_tweet(text=text)
+        tweet_id = resp.data["id"]
+        print(f"✅ 投稿成功！ Tweet ID: {tweet_id}")
+        return True
+
+    except ImportError:
+        print("⚠️ tweepy未インストール: pip install tweepy")
+        return False
+    except Exception as e:
+        print(f"❌ tweepy投稿エラー: {e}")
+        return False
+
+
 def post_with_browser(text: str) -> bool:
     """ChromeのCookieを使いPlaywrightで投稿（API不要・完全無料）"""
     try:
@@ -116,11 +149,17 @@ def post_now(force_type: str = None, test_mode: bool = False) -> bool:
     print(f"\n🎯 投稿タイプ: {post['label']} ({post['chars']}文字)")
     print(f"🕐 投稿時刻: {datetime.now().strftime('%Y/%m/%d %H:%M')}")
 
-    # 投稿実行
+    # 投稿実行（tweepy → twikit → browser の順でフォールバック）
     if test_mode:
         success = dry_run(text)
     else:
-        success = post_with_browser(text)
+        success = post_with_tweepy(text)
+        if not success:
+            print("⚠️ tweepy失敗、twikitで再試行...")
+            success = post_with_twikit(text)
+        if not success:
+            print("⚠️ twikit失敗、ブラウザで再試行...")
+            success = post_with_browser(text)
 
     # ログ保存
     save_log({
@@ -217,6 +256,10 @@ if __name__ == "__main__":
     elif cmd == "post":
         # 今すぐ1件投稿（テスト）
         post_now(test_mode=True)
+
+    elif cmd == "live":
+        # 今すぐ1件投稿（本番・GitHub Actions用）
+        post_now(test_mode=False)
 
     elif cmd == "schedule":
         # 今日のスケジュール実行

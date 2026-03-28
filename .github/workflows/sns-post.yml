@@ -23,9 +23,9 @@ jobs:
 
       - name: 依存関係インストール
         run: |
-          pip install google-genai python-dotenv
+          pip install google-genai python-dotenv tweepy
 
-      - name: X投稿（テキスト生成のみ・ブラウザなし）
+      - name: X投稿（tweepy公式API）
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           X_API_KEY: ${{ secrets.X_API_KEY }}
@@ -34,7 +34,7 @@ jobs:
           X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
         run: |
           cd x_automation
-          python3 x_post_generator.py generate
+          python3 x_poster.py live
 
   post-bluesky:
     name: Bluesky 投稿
