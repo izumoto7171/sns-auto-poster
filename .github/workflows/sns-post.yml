@@ -13,6 +13,7 @@ jobs:
   post-x:
     name: X (Twitter) 投稿
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
@@ -20,6 +21,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
 
       - name: 依存関係インストール
         run: |
@@ -39,6 +41,7 @@ jobs:
   post-bluesky:
     name: Bluesky 投稿
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
@@ -46,6 +49,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
 
       - name: 依存関係インストール
         run: pip install atproto google-genai python-dotenv
@@ -62,6 +66,7 @@ jobs:
   post-hatena:
     name: はてなブログ 投稿
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -69,11 +74,22 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
 
       - name: 依存関係インストール
         run: |
           pip install google-genai python-dotenv playwright
-          playwright install chromium --with-deps
+
+      - name: Playwrightブラウザキャッシュ
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('**/requirements*.txt') }}
+          restore-keys: |
+            playwright-chromium-${{ runner.os }}-
+
+      - name: Chromiumインストール（キャッシュミス時のみ）
+        run: playwright install chromium --with-deps
 
       - name: はてなブログ投稿
         env:
@@ -86,6 +102,7 @@ jobs:
   post-note:
     name: note 投稿
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -93,11 +110,22 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
 
       - name: 依存関係インストール
         run: |
           pip install google-genai python-dotenv playwright
-          playwright install chromium --with-deps
+
+      - name: Playwrightブラウザキャッシュ
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('**/requirements*.txt') }}
+          restore-keys: |
+            playwright-chromium-${{ runner.os }}-
+
+      - name: Chromiumインストール（キャッシュミス時のみ）
+        run: playwright install chromium --with-deps
 
       - name: note投稿
         env:
@@ -114,6 +142,7 @@ jobs:
   money-agent:
     name: 💰 月10万円エージェント
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     # 全スケジュール（8/12/18/22時）で実行 = 1日4回
     steps:
       - uses: actions/checkout@v4
@@ -122,11 +151,22 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
 
       - name: 依存関係インストール
         run: |
-          pip install google-genai python-dotenv playwright atproto
-          playwright install chromium --with-deps
+          pip install google-genai python-dotenv playwright atproto tweepy
+
+      - name: Playwrightブラウザキャッシュ
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('**/requirements*.txt') }}
+          restore-keys: |
+            playwright-chromium-${{ runner.os }}-
+
+      - name: Chromiumインストール（キャッシュミス時のみ）
+        run: playwright install chromium --with-deps
 
       - name: 月10万円エージェント実行
         env:
@@ -136,5 +176,9 @@ jobs:
           NOTE_COOKIES: ${{ secrets.NOTE_COOKIES }}
           BSKY_HANDLE: ${{ secrets.BSKY_HANDLE }}
           BSKY_APP_PASSWORD: ${{ secrets.BSKY_APP_PASSWORD }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
         run: |
           python3 money_agent/money_agent.py run

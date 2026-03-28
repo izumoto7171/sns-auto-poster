@@ -176,7 +176,7 @@ def get_affiliates_for_category(category: str) -> list:
     affiliate_ids = CONTENT_AFFILIATE_MAP.get(category, [])
     return [AFFILIATE_PROGRAMS[aid] for aid in affiliate_ids if aid in AFFILIATE_PROGRAMS]
 
-def get_next_keyword(used_keywords: list = None) -> dict:
+def get_next_keyword(used_keywords: list = None, _depth: int = 0) -> dict:
     """未使用の次のキーワードを選択"""
     import random
     used = used_keywords or []
@@ -191,8 +191,20 @@ def get_next_keyword(used_keywords: list = None) -> dict:
                     "volume": kw_data["volume"]
                 })
     if not all_kws:
-        # 全部使い切ったらリセット
-        return get_next_keyword([])
+        if _depth >= 1:
+            # 全キーワード使い切り・リセット後も空なら先頭を返す（無限再帰防止）
+            all_kws = [
+                {"keyword": kw_data["kw"], "category": cat_id,
+                 "intent": kw_data["intent"], "volume": kw_data["volume"]}
+                for cat_id, cat_data in KEYWORD_CATEGORIES.items()
+                for kw_data in cat_data["keywords"]
+            ]
+            return random.choice(all_kws) if all_kws else {
+                "keyword": "副業", "category": "side_hustle",
+                "intent": "commercial", "volume": "high"
+            }
+        # 全部使い切ったらリセット（1回のみ）
+        return get_next_keyword([], _depth=_depth + 1)
 
     # 商業意図 × 検索ボリュームで重み付け
     weights = []

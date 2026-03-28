@@ -179,9 +179,15 @@ def run_money_agent(dry_run: bool = False, force_category: str = None) -> dict:
     if x_result:
         print("  ✅ X投稿成功")
         results["success"].append("x")
+    else:
+        print("  ❌ X投稿失敗（全手段失敗）")
+        results["failed"].append("x")
     if bsky_result:
         print("  ✅ Bluesky投稿成功")
         results["success"].append("bluesky")
+    else:
+        print("  ❌ Bluesky投稿失敗")
+        results["failed"].append("bluesky")
 
     # === STEP 6: 使用済みキーワードを記録 ===
     used_keywords.append(keyword)
@@ -215,7 +221,7 @@ def _generate_article_with_ai_or_template(keyword: str, category: str) -> dict:
         try:
             return _generate_with_gemini(keyword, category, api_key)
         except Exception as e:
-            print(f"  ⚠️ Gemini失敗、テンプレート使用: {str(e)[:50]}")
+            print(f"  ⚠️ Gemini失敗、テンプレート使用: {e}")
 
     from money_agent.seo_article_generator import generate_seo_article
     return generate_seo_article(keyword, category)
@@ -305,13 +311,17 @@ def _post_to_note(article: dict) -> dict:
 
 
 def _post_to_x(text: str) -> bool:
-    """Xに投稿"""
+    """Xに投稿（tweepy公式API → ブラウザ の順でフォールバック）"""
     try:
         sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), "x_automation"))
-        from x_browser_poster import post
-        return post(text, headless=True)
+        from x_poster import post_with_tweepy, post_with_browser
+        # tweepy優先（GitHub Actions対応）
+        if post_with_tweepy(text):
+            return True
+        print("  ⚠️ tweepy失敗、ブラウザ投稿にフォールバック...")
+        return post_with_browser(text)
     except Exception as e:
-        print(f"  ⚠️ X投稿エラー: {str(e)[:50]}")
+        print(f"  ⚠️ X投稿エラー: {e}")
         return False
 
 
