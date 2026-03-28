@@ -176,11 +176,32 @@ def get_affiliates_for_category(category: str) -> list:
     affiliate_ids = CONTENT_AFFILIATE_MAP.get(category, [])
     return [AFFILIATE_PROGRAMS[aid] for aid in affiliate_ids if aid in AFFILIATE_PROGRAMS]
 
+def _get_dynamic_keywords() -> list:
+    """data_collectorが収集した動的キーワードを取得"""
+    try:
+        from money_agent.data_collector import get_dynamic_keywords
+        dynamic = []
+        for cat_id in KEYWORD_CATEGORIES:
+            for kw in get_dynamic_keywords(cat_id):
+                if kw.get("kw"):
+                    dynamic.append({
+                        "keyword": kw["kw"],
+                        "category": cat_id,
+                        "intent": kw.get("intent", "commercial"),
+                        "volume": kw.get("volume", "mid"),
+                        "source": "dynamic",
+                    })
+        return dynamic
+    except Exception:
+        return []
+
+
 def get_next_keyword(used_keywords: list = None, _depth: int = 0) -> dict:
     """未使用の次のキーワードを選択"""
     import random
     used = used_keywords or []
     all_kws = []
+    # 静的キーワード
     for cat_id, cat_data in KEYWORD_CATEGORIES.items():
         for kw_data in cat_data["keywords"]:
             if kw_data["kw"] not in used:
@@ -190,6 +211,10 @@ def get_next_keyword(used_keywords: list = None, _depth: int = 0) -> dict:
                     "intent": kw_data["intent"],
                     "volume": kw_data["volume"]
                 })
+    # 動的キーワード（トレンド収集分）を追加
+    for kw_data in _get_dynamic_keywords():
+        if kw_data["keyword"] not in used:
+            all_kws.append(kw_data)
     if not all_kws:
         if _depth >= 1:
             # 全キーワード使い切り・リセット後も空なら先頭を返す（無限再帰防止）
