@@ -86,34 +86,28 @@ def post_with_twikit(text: str) -> bool:
         import asyncio
         from twikit import Client
 
-        username = os.getenv("X_USERNAME")
-        email    = os.getenv("X_EMAIL")
-        password = os.getenv("X_PASSWORD")
+        cookies_path = os.path.join(os.path.dirname(__file__), "x_cookies.json")
 
-        if not all([username, email, password]):
-            print("⚠️ X_USERNAME / X_EMAIL / X_PASSWORD が未設定")
+        # GitHub Actions: X_COOKIES env var からファイルに復元
+        env_cookies = os.getenv("X_COOKIES", "")
+        if env_cookies and not os.path.exists(cookies_path):
+            with open(cookies_path, "w") as f:
+                f.write(env_cookies)
+            print(f"✅ X_COOKIES環境変数からCookieを復元")
+
+        if not os.path.exists(cookies_path):
+            print("⚠️ x_cookies.json なし。python3.11 x_automation/fetch_x_cookies.py を実行してください")
             return False
 
         async def _post():
             client = Client("ja")
-            cookies_path = os.path.join(os.path.dirname(__file__), "x_cookies.json")
-
-            if os.path.exists(cookies_path):
-                client.load_cookies(cookies_path)
-            else:
-                await client.login(
-                    auth_info_1=username,
-                    auth_info_2=email,
-                    password=password,
-                )
-                client.save_cookies(cookies_path)
-
+            client.load_cookies(cookies_path)
             tweet = await client.create_tweet(text=text)
             return tweet.id
 
         tweet_id = asyncio.run(_post())
         print(f"✅ 投稿成功！ Tweet ID: {tweet_id}")
-        print(f"   URL: https://x.com/{os.getenv('X_USERNAME')}/status/{tweet_id}")
+        print(f"   URL: https://x.com/{os.getenv('X_USERNAME', 'user')}/status/{tweet_id}")
         return True
 
     except ImportError:
