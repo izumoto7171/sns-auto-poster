@@ -180,6 +180,9 @@ async def collect_async() -> dict:
             collected[cat].extend(kws)
             print(f"  取得キーワード: {[k['kw'] for k in kws]}")
 
+        except Exception as e:
+            print(f"  エラー: {e}")
+
     # 既存データとマージ（重複排除）
     existing = _load_dynamic()
     for cat, kws in collected.items():
