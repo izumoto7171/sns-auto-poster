@@ -188,13 +188,48 @@ def generate(category: str = None) -> dict:
     return post
 
 
-def save_output(post: dict):
-    """生成コンテンツをJSONで保存"""
+def generate_character_image(image_prompt: str, output_path: Path) -> bool:
+    """Gemini gemini-2.5-flash-image でキャラクター画像を生成"""
+    try:
+        from google import genai
+        from google.genai import types
+
+        client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+        response = client.models.generate_content(
+            model="gemini-2.5-flash-image",
+            contents=image_prompt,
+            config=types.GenerateContentConfig(
+                response_modalities=["IMAGE", "TEXT"]
+            ),
+        )
+        for part in response.candidates[0].content.parts:
+            if part.inline_data:
+                output_path.parent.mkdir(exist_ok=True)
+                output_path.write_bytes(part.inline_data.data)
+                print(f"🖼️  画像生成完了: {output_path} ({len(part.inline_data.data)//1024}KB)")
+                return True
+        print("⚠️ 画像データなし")
+        return False
+    except Exception as e:
+        print(f"⚠️ 画像生成スキップ: {e}")
+        return False
+
+
+def save_output(post: dict, generate_image: bool = True):
+    """生成コンテンツをJSONで保存 + 画像生成"""
     output_dir = Path(__file__).parent / "output"
     output_dir.mkdir(exist_ok=True)
 
     date_str = datetime.now().strftime("%Y%m%d_%H%M%S")
     out_path = output_dir / f"script_{date_str}.json"
+
+    # 画像生成
+    img_path = output_dir / f"character_{date_str}.png"
+    if generate_image:
+        success = generate_character_image(post["image_prompt"], img_path)
+        if success:
+            post["image_path"] = str(img_path)
+
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(post, f, ensure_ascii=False, indent=2)
     print(f"💾 保存: {out_path}")
