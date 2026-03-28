@@ -1,0 +1,6 @@
+google-genai
+python-dotenv
+tweepy
+atproto
+playwright
+requests
