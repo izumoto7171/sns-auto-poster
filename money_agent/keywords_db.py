@@ -108,10 +108,10 @@ AFFILIATE_PROGRAMS = {
     # === 中単価（1,000〜5,000円）===
     "onamae_domain": {
         "name": "お名前.com",
-        "commission": "110〜3,100円/件",
+        "commission": "1,150〜5,100円/件",
         "category": "ドメイン",
         "url": "https://px.a8.net/svt/ejp?a8mat=4AZMKI+BRWNHU+50+2HEG76",
-        "description": "国内シェアNo.1ドメイン取得サービス・.com/.net 0円〜",
+        "description": "国内シェアNo.1ドメイン取得サービス・ドメインカテゴリNO.1報酬！レンタルサーバー同時申請なら5,100円",
         "cta": "お名前.comでドメインを取得する →"
     },
     "crowdworks": {
