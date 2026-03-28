@@ -336,31 +336,133 @@ def generate_with_template() -> dict:
     }
 
 
+def search_web(query: str, num_results: int = 6) -> str:
+    """Web検索でトレンド情報を取得（DuckDuckGo → Google フォールバック）"""
+    import re
+    import html as html_module
+    import urllib.parse
+
+    try:
+        import requests
+    except ImportError:
+        return ""
+
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/120.0.0.0 Safari/537.36"
+        ),
+        "Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
+    }
+
+    def _strip_tags(text: str) -> str:
+        return html_module.unescape(re.sub(r'<[^>]+>', '', text)).strip()
+
+    # ── DuckDuckGo HTML（Botブロックなし）──
+    try:
+        encoded = urllib.parse.quote(query)
+        url = f"https://html.duckduckgo.com/html/?q={encoded}&kl=jp-jp"
+        resp = requests.post(
+            "https://html.duckduckgo.com/html/",
+            data={"q": query, "kl": "jp-jp"},
+            headers=headers,
+            timeout=12,
+        )
+        body = resp.text
+
+        results = []
+        # タイトル: <a class="result__a">
+        for m in re.findall(r'<a[^>]*class="result__a"[^>]*>(.*?)</a>', body, re.DOTALL)[:num_results]:
+            text = _strip_tags(m)
+            if text and len(text) > 4:
+                results.append(f"・{text}")
+
+        # スニペット: <a class="result__snippet">
+        for m in re.findall(r'<a[^>]*class="result__snippet"[^>]*>(.*?)</a>', body, re.DOTALL)[:num_results]:
+            text = _strip_tags(m)
+            if text and len(text) > 20:
+                results.append(f"  → {text[:200]}")
+
+        if results:
+            print(f"  DuckDuckGo検索取得: {len(results)}件")
+            return "\n".join(results[:12])
+        else:
+            print("  DuckDuckGo: スニペット未取得、Googleを試みます")
+    except Exception as e:
+        print(f"  DuckDuckGo失敗: {e}")
+
+    # ── Google フォールバック ──
+    try:
+        encoded = urllib.parse.quote(query)
+        url = f"https://www.google.com/search?q={encoded}&num={num_results}&hl=ja&gl=jp"
+        resp = requests.get(url, headers=headers, timeout=10)
+        body = resp.text
+
+        results = []
+        for m in re.findall(r'<h3[^>]*>(.*?)</h3>', body, re.DOTALL)[:num_results]:
+            text = _strip_tags(m)
+            if text and len(text) > 5:
+                results.append(f"・{text}")
+        for m in re.findall(r'<div[^>]*class="[^"]*VwiC3b[^"]*"[^>]*>(.*?)</div>', body, re.DOTALL)[:num_results]:
+            text = _strip_tags(m)
+            if text and len(text) > 20:
+                results.append(f"  → {text[:200]}")
+
+        if results:
+            print(f"  Google検索取得: {len(results)}件")
+            return "\n".join(results[:12])
+        else:
+            print("  Google検索: スニペット未取得（スキップ）")
+            return ""
+    except Exception as e:
+        print(f"  Google検索失敗（スキップ）: {e}")
+        return ""
+
+
 def generate_with_gemini(theme: dict, api_key: str) -> dict:
-    """Gemini APIで記事を生成（PASONA法則 × ブルーオーシャン × 魂の注入）"""
+    """Gemini APIで記事を生成（PASONA法則 × ブルーオーシャン × 魂の注入）
+    情報収集フロー: Google検索（最新トレンド取得）→ Gemini Step1（市場分析）→ Gemini Step2（PASONA記事生成）
+    """
     try:
         from google import genai
+        import json, re
 
         topic = random.choice(theme["topics"])
         client = genai.Client(api_key=api_key)
 
         # ─────────────────────────────────────────
-        # STEP1: ブルーオーシャン分析プロンプト
+        # STEP0: Web検索で最新トレンド情報を収集（DuckDuckGo → Google）
+        # ─────────────────────────────────────────
+        search_query = f"{topic} 副業 AI 2024 2025"
+        print(f"  Web検索中: {search_query}")
+        google_snippets = search_web(search_query)
+
+        # ─────────────────────────────────────────
+        # STEP1: ブルーオーシャン分析プロンプト（Google検索結果を注入）
         # コンセプト錬金術：ターゲット × 強み × パワーワード
         # ─────────────────────────────────────────
+        google_context = ""
+        if google_snippets:
+            google_context = f"""
+【Google検索で見つかった現在の競合記事・トレンド情報】
+{google_snippets}
+※上記は現在の競合記事の見出し・スニペット。これを参考にブルーオーシャン角度を見つけること。
+"""
+
         research_prompt = f"""
 副業・AI・ライフハック分野のnote記事を書く前に、ブルーオーシャン戦略で市場分析をしてください。
 
 【テーマ】{theme['label']}
 【トピック】{topic}
-
-以下を箇条書きで出力してください（合計200文字以内）：
+{google_context}
+以下を出力してください：
 1. 競合が多い「レッドオーシャン」キーワード（3つ）
-2. 競合が少ない「ブルーオーシャン」角度（2つ）
+2. 競合が少ない「ブルーオーシャン」角度（Google検索結果を参考に、誰も書いていない切り口・2つ）
 3. 読者のコメント欄によく出る「パワーワード」（感情を刺激する言葉・3つ）
 4. このトピックを読む読者の「本当の悩み」（1文）
 
-JSON形式で出力：
+JSON形式のみ出力：
 {{"red_ocean": [], "blue_ocean": [], "power_words": [], "real_pain": ""}}
 """
         research_resp = client.models.generate_content(
@@ -370,7 +472,6 @@ JSON形式で出力：
         research_text = research_resp.text.strip()
 
         # JSONパース試行（失敗してもデフォルト値で続行）
-        import json, re
         research = {"red_ocean": [], "blue_ocean": [topic], "power_words": ["稼げない", "続かない", "難しい"], "real_pain": "何をやっても稼げない"}
         try:
             json_match = re.search(r'\{.*\}', research_text, re.DOTALL)
@@ -394,6 +495,7 @@ JSON形式で出力：
 【トピック（ブルーオーシャン角度）】{blue_angle}
 【読者の本当の悩み】{real_pain}
 【感情を動かすパワーワード】{power_words}
+{google_context}
 
 【PASONA構成で記事を書いてください】
 
