@@ -222,3 +222,33 @@ jobs:
           git add money_agent/dynamic_keywords.json || true
           git diff --staged --quiet || git commit -m "chore: トレンドキーワード自動更新 $(date +'%Y-%m-%d')"
           git push || true
+
+  # ============================================================
+  # 🎬 ショート動画コンテンツ生成（X + Bluesky に投稿）
+  # ============================================================
+  tiktok-content:
+    name: 🎬 ショート動画コンテンツ
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Python セットアップ
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 依存関係インストール
+        run: |
+          pip install google-genai python-dotenv atproto "twikit==1.7.4"
+
+      - name: ショート動画コンテンツ投稿
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          BSKY_HANDLE: ${{ secrets.BSKY_HANDLE }}
+          BSKY_APP_PASSWORD: ${{ secrets.BSKY_APP_PASSWORD }}
+          X_COOKIES: ${{ secrets.X_COOKIES }}
+          X_USERNAME: ${{ secrets.X_USERNAME }}
+        run: |
+          python3 tiktok_automation/tiktok_poster.py live

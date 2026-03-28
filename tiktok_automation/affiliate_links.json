@@ -1,0 +1,25 @@
+{
+  "掃除": [
+    {"name": "鏡クリーナー", "url": "https://a8.net/s/res.php?sid=a8net&ls=a8id&ref=https://www.amazon.co.jp/dp/B08XXXX", "price": "980円"},
+    {"name": "強力泡スプレー", "url": "https://a8.net/s/res.php?sid=a8net&ls=a8id&ref=https://www.amazon.co.jp/dp/B08YYYY", "price": "1,280円"}
+  ],
+  "収納": [
+    {"name": "突っ張り棒収納セット", "url": "https://a8.net/s/res.php?sid=a8net&ls=a8id&ref=https://www.amazon.co.jp/dp/B08ZZZZ", "price": "2,480円"},
+    {"name": "積み重ね収納ボックス", "url": "https://a8.net/s/res.php?sid=a8net&ls=a8id&ref=https://www.amazon.co.jp/dp/B08AAAA", "price": "1,980円"}
+  ],
+  "料理": [
+    {"name": "電動みじん切り器", "url": "https://a8.net/s/res.php?sid=a8net&ls=a8id&ref=https://www.amazon.co.jp/dp/B08BBBB", "price": "3,980円"},
+    {"name": "シリコン保存袋10枚セット", "url": "https://a8.net/s/res.php?sid=a8net&ls=a8id&ref=https://www.amazon.co.jp/dp/B08CCCC", "price": "1,580円"}
+  ],
+  "美容": [
+    {"name": "電動洗顔ブラシ", "url": "https://a8.net/s/res.php?sid=a8net&ls=a8id&ref=https://www.amazon.co.jp/dp/B08DDDD", "price": "2,980円"},
+    {"name": "蒸気アイマスク5枚入り", "url": "https://a8.net/s/res.php?sid=a8net&ls=a8id&ref=https://www.amazon.co.jp/dp/B08EEEE", "price": "880円"}
+  ],
+  "健康": [
+    {"name": "ストレッチポール", "url": "https://a8.net/s/res.php?sid=a8net&ls=a8id&ref=https://www.amazon.co.jp/dp/B08FFFF", "price": "4,980円"},
+    {"name": "マッサージガン", "url": "https://a8.net/s/res.php?sid=a8net&ls=a8id&ref=https://www.amazon.co.jp/dp/B08GGGG", "price": "6,980円"}
+  ],
+  "デフォルト": [
+    {"name": "おすすめAIツール無料登録", "url": "https://a8.net/s/res.php?sid=a8net&ls=a8id", "price": "無料"}
+  ]
+}
