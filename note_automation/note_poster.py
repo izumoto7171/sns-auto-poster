@@ -99,7 +99,7 @@ async def post_article_async(title: str, body: str, headless: bool = True) -> bo
 
         print(f"   現在のURL: {page.url}")
 
-        # タイトル入力
+        # ① タイトル入力
         print("✏️  タイトル入力中...")
         try:
             title_box = await page.wait_for_selector("textarea", timeout=10000)
@@ -113,24 +113,95 @@ async def post_article_async(title: str, body: str, headless: bool = True) -> bo
             await browser.close()
             return False
 
-        # 本文入力
+        # ② 本文入力
         print("📝 本文入力中...")
         try:
             body_box = await page.wait_for_selector(".ProseMirror", timeout=10000)
             await body_box.click()
             await page.wait_for_timeout(300)
-            # execCommandで本文を挿入
             await page.evaluate(f"""
-                const el = document.querySelector('.ProseMirror');
-                if (el) {{
-                    el.focus();
-                    document.execCommand('insertText', false, {json.dumps(body)});
-                }}
+                (() => {{
+                    const el = document.querySelector('.ProseMirror');
+                    if (el) {{
+                        el.focus();
+                        document.execCommand('insertText', false, {json.dumps(body)});
+                    }}
+                }})()
             """)
             await page.wait_for_timeout(1000)
             print("   本文入力完了")
         except Exception as e:
             print(f"⚠️ 本文入力エラー: {e}")
+
+        # ③ 下書き保存（サーバーにタイトル・本文を確定させてからクロップを行う）
+        print("💾 下書き保存中...")
+        try:
+            draft_btn = await page.wait_for_selector('button:has-text("下書き保存")', timeout=5000)
+            await draft_btn.click()
+            await page.wait_for_timeout(2000)
+            print("   下書き保存完了")
+        except Exception as e:
+            print(f"   ⚠️ 下書き保存スキップ（{e}）")
+
+        # ④ ヘッダー画像を「記事にあう画像を選ぶ」で設定
+        print("🖼️  ヘッダー画像を選択中...")
+        try:
+            add_image_btn = await page.wait_for_selector(
+                'button[aria-label="画像を追加"]',
+                timeout=5000
+            )
+            await add_image_btn.click()
+            await page.wait_for_timeout(1000)
+
+            suggest_btn = await page.wait_for_selector(
+                'button:has-text("記事にあう画像を選ぶ")',
+                timeout=5000
+            )
+            await suggest_btn.click()
+            await page.wait_for_timeout(4000)
+
+            first_fig = await page.wait_for_selector('figure', timeout=8000)
+            await first_fig.click()
+            await page.wait_for_timeout(2000)
+
+            insert_btn = await page.wait_for_selector(
+                'button:has-text("この画像を挿入")',
+                timeout=5000
+            )
+            await insert_btn.click()
+            await page.wait_for_timeout(2000)
+
+            # クロップモーダルの「保存」をJSでクリック
+            try:
+                await page.wait_for_selector('.CropModal__overlay', timeout=5000)
+                clicked = await page.evaluate("""
+                    (() => {
+                        const modal = document.querySelector('.CropModal__overlay');
+                        if (!modal) return false;
+                        const btns = Array.from(modal.querySelectorAll('button'));
+                        const saveBtn = btns.find(b => b.textContent.trim() === '保存');
+                        if (saveBtn) { saveBtn.click(); return true; }
+                        return false;
+                    })()
+                """)
+                await page.wait_for_timeout(2000)
+                if clicked:
+                    print("   クロップ確定完了")
+            except Exception:
+                pass
+
+            print("   ヘッダー画像設定完了")
+
+            # クロップ後にReact stateがリセットされるため、ページをリロードして復元
+            print("   ページリロードして状態を復元中...")
+            current_url = page.url
+            await page.goto(current_url, wait_until="domcontentloaded", timeout=30000)
+            await page.wait_for_selector("textarea", timeout=20000)
+            await page.wait_for_timeout(3000)
+            print("   リロード完了")
+
+        except Exception as e:
+            print(f"   ⚠️ 画像選択スキップ（{e}）")
 
         # 公開に進むボタン
         print("🚀 公開ボタンをクリック...")
