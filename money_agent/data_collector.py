@@ -1,15 +1,15 @@
 """
 トレンドデータ収集モジュール
 
-OpenCrawl（非同期クローラー）でAIニュース・副業トレンド・人気商品・
+requests + HTMLParserでAIニュース・副業トレンド・人気商品・
 アフィリエイト案件を収集し、dynamic_keywords.json に保存する。
+（OpenCrawlはPostgreSQL+Kafka必須のため、軽量実装を採用）
 
 収集ソース:
-  - Gigazine AI          : 最新AIニュース
-  - AINOW                : AI業界トレンド
+  - Gigazine             : 最新AIニュース
   - はてなブックマーク    : 話題キーワード（テクノロジー/副業）
   - 楽天ランキング        : 人気商品カテゴリ
-  - A8.net               : アフィリエイト案件トレンド
+  - ITmedia AI+          : AI業界トレンド
 """
 import os
 import sys
@@ -35,41 +35,6 @@ def load_env():
 load_env()
 
 DYNAMIC_KW_FILE = Path(__file__).parent / "dynamic_keywords.json"
-
-# ============================================================
-# クローラー初期化（opencrawl優先、なければrequests）
-# ============================================================
-
-def _make_crawler():
-    """opencrawlが使えればそれを、なければrequests+BSをラップして返す"""
-    try:
-        from opencrawl import AsyncCrawler, CrawlerConfig, CrawlRequest, ExtractionType
-        class OCWrapper:
-            def __init__(self):
-                config = CrawlerConfig(
-                    max_concurrent_requests=3,
-                    extraction_strategy=ExtractionType.MARKDOWN,
-                )
-                self._crawler = AsyncCrawler(config)
-                self._ready = False
-
-            async def setup(self):
-                if not self._ready:
-                    await self._crawler.setup()
-                    self._ready = True
-
-            async def fetch_text(self, url: str) -> str:
-                await self.setup()
-                resp = await self._crawler.fetch(CrawlRequest(url=url))
-                return resp.extracted.content or ""
-
-            async def cleanup(self):
-                if self._ready:
-                    await self._crawler.cleanup()
-
-        return OCWrapper(), "opencrawl"
-    except ImportError:
-        return None, "requests"
 
 
 async def _fetch_with_requests(url: str) -> str:
@@ -194,9 +159,6 @@ CRAWL_SOURCES = [
 
 async def collect_async() -> dict:
     """非同期でトレンドを収集し dynamic_keywords.json を更新する"""
-    crawler, mode = _make_crawler()
-    print(f"クローラーモード: {mode}")
-
     collected: dict[str, list] = {
         "ai_tools": [],
         "side_hustle": [],
@@ -207,10 +169,7 @@ async def collect_async() -> dict:
     for source in CRAWL_SOURCES:
         print(f"\n📡 収集中: {source['label']} ({source['url'][:50]}...)")
         try:
-            if mode == "opencrawl" and crawler:
-                text = await crawler.fetch_text(source["url"])
-            else:
-                text = await _fetch_with_requests(source["url"])
+            text = await _fetch_with_requests(source["url"])
 
             if not text:
                 print("  テキスト取得失敗")
@@ -220,12 +179,6 @@ async def collect_async() -> dict:
             cat = source["category"]
             collected[cat].extend(kws)
             print(f"  取得キーワード: {[k['kw'] for k in kws]}")
-
-        except Exception as e:
-            print(f"  エラー: {e}")
-
-    if mode == "opencrawl" and crawler:
-        await crawler.cleanup()
 
     # 既存データとマージ（重複排除）
     existing = _load_dynamic()
