@@ -90,15 +90,22 @@ async def post_article_async(title: str, body: str, headless: bool = True) -> bo
         # note投稿ページを開く（editor.note.comを直接使用）
         print("🌐 note投稿ページを開いています...")
         await page.goto("https://editor.note.com/new", wait_until="domcontentloaded", timeout=30000)
-        await page.wait_for_timeout(2000)
+        await page.wait_for_timeout(1000)
 
-        # SPAのロード完了を待つ（textareaが現れるまで）
+        # /new → /notes/xxx/edit/ へのリダイレクト完了を待つ
         print("   ページ読み込み待機中...")
         try:
-            await page.wait_for_selector("textarea", timeout=20000)
+            await page.wait_for_url("**/notes/**/edit/**", timeout=15000)
         except Exception:
             pass
-        await page.wait_for_timeout(2000)
+        await page.wait_for_timeout(1500)
+
+        # textareaが完全に描画されるまで待つ
+        try:
+            await page.wait_for_selector("textarea", timeout=15000)
+        except Exception:
+            pass
+        await page.wait_for_timeout(500)
 
         # ログインチェック
         if "login" in page.url or "signup" in page.url:
