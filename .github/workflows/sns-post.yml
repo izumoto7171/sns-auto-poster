@@ -26,7 +26,7 @@ jobs:
 
       - name: 依存関係インストール
         run: |
-          pip install google-genai python-dotenv tweepy twikit
+          pip install google-genai python-dotenv tweepy "twikit==1.7.4"
 
       - name: X投稿（tweepy公式API）
         env:
