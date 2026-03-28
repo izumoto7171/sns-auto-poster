@@ -89,36 +89,46 @@ async def post_article_async(title: str, body: str, headless: bool = True) -> bo
 
         # note投稿ページを開く（editor.note.comを直接使用）
         print("🌐 note投稿ページを開いています...")
-        await page.goto("https://editor.note.com/new", wait_until="domcontentloaded", timeout=30000)
-        await page.wait_for_timeout(1000)
+        # networkidle でSPAのJS実行完了まで待つ
+        await page.goto("https://editor.note.com/new", wait_until="networkidle", timeout=45000)
+        await page.wait_for_timeout(2000)
 
-        # /new → /notes/xxx/edit/ へのリダイレクト完了を待つ
-        print("   ページ読み込み待機中...")
-        try:
-            await page.wait_for_url("**/notes/**/edit/**", timeout=15000)
-        except Exception:
-            pass
-        await page.wait_for_timeout(1500)
-
-        # textareaが完全に描画されるまで待つ
-        try:
-            await page.wait_for_selector("textarea", timeout=15000)
-        except Exception:
-            pass
-        await page.wait_for_timeout(500)
-
-        # ログインチェック
+        # ログインチェック（リダイレクト後）
         if "login" in page.url or "signup" in page.url:
             print("⚠️ ログインが必要です。fetch_note_cookies()を実行してください")
             await browser.close()
             return False
 
+        # /new → /notes/xxx/edit/ へのリダイレクト完了を待つ
+        print("   ページ読み込み待機中...")
+        if "/new" in page.url:
+            try:
+                await page.wait_for_url(lambda url: "/notes/" in url and "/edit" in url, timeout=20000)
+            except Exception:
+                pass
+            await page.wait_for_timeout(2000)
+
         print(f"   現在のURL: {page.url}")
 
-        # ① タイトル入力
+        # ① タイトル入力（複数セレクタでフォールバック）
         print("✏️  タイトル入力中...")
+        title_box = None
+        # 優先順位: 記事タイトルプレースホルダ → textarea全般
+        for selector in ['textarea[placeholder="記事タイトル"]', 'textarea']:
+            try:
+                title_box = await page.wait_for_selector(selector, timeout=20000)
+                if title_box:
+                    break
+            except Exception:
+                continue
+
+        if not title_box:
+            await page.screenshot(path=str(Path(__file__).parent / "note_debug.png"))
+            print("⚠️ タイトル入力欄が見つかりません（スクリーンショット保存済み）")
+            await browser.close()
+            return False
+
         try:
-            title_box = await page.wait_for_selector("textarea", timeout=10000)
             await title_box.click()
             await title_box.fill(title)
             await page.wait_for_timeout(500)
