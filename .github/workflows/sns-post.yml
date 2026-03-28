@@ -137,9 +137,19 @@ jobs:
           CI: "true"
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           NOTE_COOKIES: ${{ secrets.NOTE_COOKIES }}
+          PYTHONUNBUFFERED: "1"
         run: |
           cd note_automation
           python3 note_poster.py post
+
+      - name: デバッグスクリーンショットをアップロード（失敗時）
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: note-debug-screenshot
+          path: note_automation/note_debug.png
+          if-no-files-found: ignore
+          retention-days: 3
 
   # ============================================================
   # 💰 月10万円 AIエージェント（SEO記事 × アフィリエイト）

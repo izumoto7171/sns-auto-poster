@@ -72,8 +72,23 @@ def fetch_note_cookies():
 async def post_article_async(title: str, body: str, headless: bool = True) -> bool:
     """noteに記事を投稿"""
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=headless)
-        context = await browser.new_context()
+        browser = await p.chromium.launch(
+            headless=headless,
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+            ],
+        )
+        context = await browser.new_context(
+            user_agent=(
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0.0.0 Safari/537.36"
+            ),
+            locale="ja-JP",
+            timezone_id="Asia/Tokyo",
+        )
 
         # Cookie読み込み
         if COOKIES_FILE.exists():
