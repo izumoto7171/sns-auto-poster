@@ -32,6 +32,15 @@ def load_env():
                 if line and not line.startswith("#") and "=" in line:
                     k, v = line.split("=", 1)
                     os.environ.setdefault(k.strip(), v.strip())
+    # GitHub Actions: 環境変数 HATENA_COOKIES があればファイルに書き出す
+    env_cookies = os.environ.get("HATENA_COOKIES", "")
+    if env_cookies and not COOKIES_FILE.exists():
+        try:
+            with open(COOKIES_FILE, "w") as f:
+                f.write(env_cookies)
+            print(f"✅ HATENA_COOKIES環境変数からCookieを復元（{len(env_cookies)}文字）")
+        except Exception as e:
+            print(f"⚠️ Cookie書き出しエラー: {e}")
 
 
 # ─────────────────────────────────────────
