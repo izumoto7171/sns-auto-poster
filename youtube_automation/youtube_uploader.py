@@ -48,21 +48,25 @@ def authenticate():
 
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-            # 更新済みトークンを保存
-            with open(TOKEN_FILE, "wb") as f:
-                pickle.dump(creds, f)
-            print("✅ トークン更新完了")
-        else:
+            try:
+                creds.refresh(Request())
+                with open(TOKEN_FILE, "wb") as f:
+                    pickle.dump(creds, f)
+                print("✅ トークン更新完了")
+            except Exception:
+                # リフレッシュ失敗（失効・取り消し）→ 再認証
+                creds = None
+                TOKEN_FILE.unlink(missing_ok=True)
+
+        if not creds or not creds.valid:
             if not SECRETS_FILE.exists():
                 print(f"❌ {SECRETS_FILE} が見つかりません")
                 sys.exit(1)
             flow = InstalledAppFlow.from_client_secrets_file(str(SECRETS_FILE), SCOPES)
             creds = flow.run_local_server(port=0)
             print("✅ 新規認証完了")
-
-        with open(TOKEN_FILE, "wb") as f:
-            pickle.dump(creds, f)
+            with open(TOKEN_FILE, "wb") as f:
+                pickle.dump(creds, f)
 
     return build("youtube", "v3", credentials=creds)
 
