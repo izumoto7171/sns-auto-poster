@@ -1,0 +1,26 @@
+[
+  {
+    "datetime": "2026-03-30T09:03:40.779266",
+    "category": "歴史",
+    "hook": "クレオパトラとティラノサウルスは同じ時代ではない",
+    "video_path": "/home/user/sns-auto-poster/output/trivia/歴史_20260330_090302.mp4",
+    "youtube_url": null,
+    "test_mode": true
+  },
+  {
+    "datetime": "2026-03-30T09:04:29.053745",
+    "category": "歴史",
+    "hook": "クレオパトラとティラノサウルスは同じ時代ではない",
+    "video_path": "/home/user/sns-auto-poster/output/trivia/歴史_20260330_090351.mp4",
+    "youtube_url": null,
+    "test_mode": false
+  },
+  {
+    "datetime": "2026-03-30T09:06:09.574350",
+    "category": "科学",
+    "hook": "宇宙は音がしない、ではなく「音の概念がない」",
+    "video_path": "/home/user/sns-auto-poster/output/trivia/科学_20260330_090530.mp4",
+    "youtube_url": null,
+    "test_mode": false
+  }
+]
