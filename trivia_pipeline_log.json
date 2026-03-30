@@ -22,5 +22,13 @@
     "video_path": "/home/user/sns-auto-poster/output/trivia/科学_20260330_090530.mp4",
     "youtube_url": null,
     "test_mode": false
+  },
+  {
+    "datetime": "2026-03-30T09:14:25.988457",
+    "category": "歴史",
+    "hook": "クレオパトラとティラノサウルスは同じ時代ではない",
+    "video_path": "/home/user/sns-auto-poster/output/trivia/歴史_20260330_091349.mp4",
+    "youtube_url": null,
+    "test_mode": false
   }
 ]
