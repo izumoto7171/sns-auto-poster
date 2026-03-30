@@ -106,6 +106,22 @@ def build_sns_text(content: dict) -> str:
     return text
 
 
+def upload_to_youtube(video_path: str, content: dict) -> str:
+    """YouTube Shortsにアップロードして動画URLを返す"""
+    try:
+        sys.path.insert(0, str(BASE_DIR / "youtube_automation"))
+        from youtube_uploader import upload_trivia_video
+        video_id = upload_trivia_video(video_path, content)
+        if video_id:
+            url = f"https://www.youtube.com/shorts/{video_id}"
+            print(f"✅ YouTube投稿完了: {url}")
+            return url
+        return None
+    except Exception as e:
+        print(f"❌ YouTube投稿エラー: {e}")
+        return None
+
+
 def commit_video(video_path: str):
     """生成した動画をGitHubにコミット（CI上でiPhoneからダウンロード用）"""
     if not os.getenv("CI"):
@@ -168,9 +184,19 @@ def run_once(test_mode: bool, category: str = None) -> dict:
 
     create_trivia_video(content, video_path, duration=15, bgm_path=bgm_path)
 
-    # Step3: SNS投稿
+    # Step3: YouTube Shorts アップロード
+    youtube_url = None
+    if test_mode:
+        print("\n🧪 [テストモード] YouTube投稿スキップ")
+    else:
+        print("\n📺 YouTube Shortsにアップロード中...")
+        youtube_url = upload_to_youtube(video_path, content)
+
+    # Step4: X/Bluesky に投稿（YouTube URLを添付）
     sns_text = build_sns_text(content)
-    print(f"\n📱 投稿テキスト:\n{sns_text[:120]}...")
+    if youtube_url:
+        sns_text = sns_text.rstrip() + f"\n\n▶ {youtube_url}"
+    print(f"\n📱 投稿テキスト:\n{sns_text[:150]}...")
 
     x_ok = False
     bsky_ok = False
@@ -180,21 +206,22 @@ def run_once(test_mode: bool, category: str = None) -> dict:
         x_ok = True
         bsky_ok = True
     else:
-        print("\n🚀 SNS投稿...")
+        print("\n🚀 X/Bluesky投稿...")
         x_ok    = post_to_x(sns_text)
         bsky_ok = post_to_bluesky(sns_text)
 
-    # Step4: 動画をGitHubにコミット（CI上）
+    # Step5: 動画をGitHubにコミット（CI上）
     commit_video(video_path)
 
     result = {
-        "datetime":   datetime.now().isoformat(),
-        "category":   cat,
-        "hook":       content.get("hook", ""),
-        "video_path": video_path,
-        "x_posted":   x_ok,
+        "datetime":    datetime.now().isoformat(),
+        "category":    cat,
+        "hook":        content.get("hook", ""),
+        "video_path":  video_path,
+        "youtube_url": youtube_url,
+        "x_posted":    x_ok,
         "bsky_posted": bsky_ok,
-        "test_mode":  test_mode,
+        "test_mode":   test_mode,
     }
     save_log(result)
     return result
@@ -228,8 +255,11 @@ def main():
     for r in results:
         x_icon    = "✅" if r["x_posted"]    else "❌"
         bsky_icon = "✅" if r["bsky_posted"] else "❌"
+        yt_icon   = "✅" if r.get("youtube_url") else "❌"
         print(f"  [{r['category']}] {r['hook'][:30]}")
-        print(f"    X:{x_icon}  Bluesky:{bsky_icon}  → {Path(r['video_path']).name}")
+        print(f"    YouTube:{yt_icon}  X:{x_icon}  Bluesky:{bsky_icon}")
+        if r.get("youtube_url"):
+            print(f"    → {r['youtube_url']}")
     print("=" * 55)
 
 

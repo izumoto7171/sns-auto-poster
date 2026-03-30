@@ -295,13 +295,25 @@ jobs:
 
       - name: 依存関係インストール
         run: |
-          pip install pillow google-genai anthropic python-dotenv atproto "twikit==1.7.4"
+          pip install pillow google-genai anthropic python-dotenv atproto "twikit==1.7.4" \
+            google-api-python-client google-auth-oauthlib google-auth-httplib2
           sudo apt-get install -y ffmpeg
 
       - name: 日本語フォントインストール
         run: |
           sudo apt-get install -y fonts-noto-cjk
           fc-cache -fv
+
+      - name: YouTube OAuthトークンを復元
+        env:
+          YOUTUBE_TOKEN: ${{ secrets.YOUTUBE_TOKEN }}
+        run: |
+          if [ -n "$YOUTUBE_TOKEN" ]; then
+            echo "$YOUTUBE_TOKEN" | base64 -d > youtube_automation/token.pickle
+            echo "✅ token.pickle 復元完了"
+          else
+            echo "⚠️ YOUTUBE_TOKEN シークレット未設定（YouTube投稿スキップ）"
+          fi
 
       - name: AI雑学ショート生成・投稿
         env:
@@ -315,7 +327,7 @@ jobs:
         run: |
           python3 trivia_pipeline.py live 1
 
-      - name: 生成動画をアーティファクトに保存（iPhoneダウンロード用）
+      - name: 生成動画をアーティファクトに保存
         if: always()
         uses: actions/upload-artifact@v4
         with:

@@ -35,6 +35,13 @@ def authenticate():
 
     creds = None
 
+    # GitHub Actions: YOUTUBE_TOKEN env var から token.pickle を復元
+    env_token = os.getenv("YOUTUBE_TOKEN", "")
+    if env_token and not TOKEN_FILE.exists():
+        import base64
+        TOKEN_FILE.write_bytes(base64.b64decode(env_token))
+        print("✅ YOUTUBE_TOKEN env からトークン復元")
+
     if TOKEN_FILE.exists():
         with open(TOKEN_FILE, "rb") as f:
             creds = pickle.load(f)
@@ -42,6 +49,9 @@ def authenticate():
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
+            # 更新済みトークンを保存
+            with open(TOKEN_FILE, "wb") as f:
+                pickle.dump(creds, f)
             print("✅ トークン更新完了")
         else:
             if not SECRETS_FILE.exists():
@@ -177,6 +187,54 @@ def upload_lifehack_video(video_path: str, content: dict) -> str:
         tags=tags,
         privacy="public",
         category_id="22",
+    )
+
+
+# ─────────────────────────────────────────
+# 雑学ショート用ラッパー
+# ─────────────────────────────────────────
+def upload_trivia_video(video_path: str, content: dict) -> str:
+    """
+    生成した雑学ショート動画をYouTube Shortsにアップロード
+
+    Args:
+        video_path: 動画ファイルパス
+        content: trivia_content_generator が生成したdict
+    Returns:
+        video_id or None
+    """
+    hook      = content.get("hook", "")
+    category  = content.get("category", "雑学")
+    punchline = content.get("punchline", "")
+    explanation = content.get("explanation", "")
+
+    # タイトル（#Shorts 必須・60文字以内推奨）
+    title = f"【{category}】{hook[:30]} #Shorts"
+
+    # 説明文
+    description = f"""{hook}
+
+{explanation}
+
+💡 {punchline}
+
+━━━━━━━━━━━━
+🧠 毎日「知らなかった！」な雑学を発信中
+チャンネル登録して賢くなろう！
+
+#{category} #雑学 #豆知識 #Shorts #知識 #教育
+"""
+
+    tags = [category, "雑学", "豆知識", "Shorts", "shorts",
+            "知識", "教育", "トリビア", "衝撃", "99%が知らない"]
+
+    return upload_video(
+        video_path=video_path,
+        title=title,
+        description=description,
+        tags=tags,
+        privacy="public",
+        category_id="27",   # 27=Education
     )
 
 
