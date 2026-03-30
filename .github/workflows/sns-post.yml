@@ -315,15 +315,12 @@ jobs:
             echo "⚠️ YOUTUBE_TOKEN シークレット未設定（YouTube投稿スキップ）"
           fi
 
-      - name: AI雑学ショート生成・投稿
+      - name: AI雑学ショート生成・YouTube投稿
         env:
           CI: "true"
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          BSKY_HANDLE: ${{ secrets.BSKY_HANDLE }}
-          BSKY_APP_PASSWORD: ${{ secrets.BSKY_APP_PASSWORD }}
-          X_COOKIES: ${{ secrets.X_COOKIES }}
-          X_USERNAME: ${{ secrets.X_USERNAME }}
+          YOUTUBE_TOKEN: ${{ secrets.YOUTUBE_TOKEN }}
         run: |
           python3 trivia_pipeline.py live 1
 
