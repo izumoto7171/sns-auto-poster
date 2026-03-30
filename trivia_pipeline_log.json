@@ -30,5 +30,13 @@
     "video_path": "/home/user/sns-auto-poster/output/trivia/歴史_20260330_091349.mp4",
     "youtube_url": null,
     "test_mode": false
+  },
+  {
+    "datetime": "2026-03-30T09:34:27.921738",
+    "category": "危険",
+    "hook": "スマホを充電しながら使うのは実はヤバい",
+    "video_path": "/home/user/sns-auto-poster/output/trivia/危険_20260330_093246.mp4",
+    "youtube_url": null,
+    "test_mode": false
   }
 ]
