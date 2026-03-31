@@ -1,0 +1,8 @@
+pillow
+requests
+python-dotenv
+google-auth
+google-auth-oauthlib
+google-api-python-client
+anthropic
+google-generativeai
