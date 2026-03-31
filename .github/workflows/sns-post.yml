@@ -8,6 +8,11 @@ on:
     - cron: '0 6 * * *'    # JST 15:00
     - cron: '0 10 * * *'   # JST 19:00
     - cron: '0 14 * * *'   # JST 23:00
+    # 雑学ショート追加スロット（JST 9/13/17/21時）× 4本/日
+    - cron: '0 0 * * *'    # JST 9:00
+    - cron: '0 4 * * *'    # JST 13:00
+    - cron: '0 8 * * *'    # JST 17:00
+    - cron: '0 12 * * *'   # JST 21:00
   workflow_dispatch:        # 手動実行ボタン
 
 jobs:
@@ -263,3 +268,72 @@ jobs:
           X_USERNAME: ${{ secrets.X_USERNAME }}
         run: |
           python3 tiktok_automation/tiktok_poster.py live
+
+  # ============================================================
+  # 🧠 AI雑学ショート自動生成（X + Bluesky 投稿 + 動画コミット）
+  # JST 9/13/17/21時 の4スロットで実行 = 1日4本
+  # ============================================================
+  trivia-shorts:
+    name: 🧠 AI雑学ショート
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # 雑学専用スロットのみ実行（他のスロットはスキップ）
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.schedule == '0 0 * * *'  ||
+      github.event.schedule == '0 4 * * *'  ||
+      github.event.schedule == '0 8 * * *'  ||
+      github.event.schedule == '0 12 * * *'
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Python セットアップ
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 依存関係インストール
+        run: |
+          pip install pillow google-genai anthropic python-dotenv atproto "twikit==1.7.4" \
+            google-api-python-client google-auth-oauthlib google-auth-httplib2
+          sudo apt-get install -y ffmpeg
+
+      - name: 日本語フォントインストール
+        run: |
+          sudo apt-get install -y fonts-noto-cjk
+          fc-cache -fv
+
+      - name: YouTube OAuthトークンを復元
+        env:
+          YOUTUBE_TOKEN: ${{ secrets.YOUTUBE_TOKEN }}
+        run: |
+          python3 - <<'EOF'
+          import os, base64
+          token = os.environ.get("YOUTUBE_TOKEN", "").strip()
+          if token:
+              data = base64.b64decode(token)
+              with open("youtube_automation/token.pickle", "wb") as f:
+                  f.write(data)
+              print("✅ token.pickle 復元完了")
+          else:
+              print("⚠️ YOUTUBE_TOKEN シークレット未設定（YouTube投稿スキップ）")
+          EOF
+
+      - name: AI雑学ショート生成・YouTube投稿
+        env:
+          CI: "true"
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          YOUTUBE_TOKEN: ${{ secrets.YOUTUBE_TOKEN }}
+        run: |
+          python3 trivia_pipeline.py live 1
+
+      - name: 生成動画をアーティファクトに保存
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivia-video-${{ github.run_number }}
+          path: output/trivia/*.mp4
+          if-no-files-found: ignore
+          retention-days: 7
