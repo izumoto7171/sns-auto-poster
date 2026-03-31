@@ -308,12 +308,17 @@ jobs:
         env:
           YOUTUBE_TOKEN: ${{ secrets.YOUTUBE_TOKEN }}
         run: |
-          if [ -n "$YOUTUBE_TOKEN" ]; then
-            echo "$YOUTUBE_TOKEN" | base64 -d > youtube_automation/token.pickle
-            echo "✅ token.pickle 復元完了"
-          else
-            echo "⚠️ YOUTUBE_TOKEN シークレット未設定（YouTube投稿スキップ）"
-          fi
+          python3 - <<'EOF'
+          import os, base64
+          token = os.environ.get("YOUTUBE_TOKEN", "").strip()
+          if token:
+              data = base64.b64decode(token)
+              with open("youtube_automation/token.pickle", "wb") as f:
+                  f.write(data)
+              print("✅ token.pickle 復元完了")
+          else:
+              print("⚠️ YOUTUBE_TOKEN シークレット未設定（YouTube投稿スキップ）")
+          EOF
 
       - name: AI雑学ショート生成・YouTube投稿
         env:
