@@ -1,0 +1,82 @@
+[
+  {
+    "id": 1,
+    "name": "Kindle Paperwhite",
+    "category": "ガジェット",
+    "image": "https://images-na.ssl-images-amazon.com/images/I/61m0GuHn6VL._AC_SL1000_.jpg",
+    "description": "目に優しい6.8インチ電子ペーパーディスプレイ。防水機能付きで読書に集中できる最高の端末。",
+    "amazonUrl": "https://www.amazon.co.jp/dp/B09TMF6742",
+    "rakutenUrl": "https://search.rakuten.co.jp/search/mall/kindle+paperwhite/",
+    "videoNumber": 1
+  },
+  {
+    "id": 2,
+    "name": "Anker PowerCore 10000",
+    "category": "ガジェット",
+    "image": "https://images-na.ssl-images-amazon.com/images/I/61bMNRiYByL._AC_SL1200_.jpg",
+    "description": "コンパクトで大容量のモバイルバッテリー。スマホ約2.5回分の充電が可能。外出先でも安心。",
+    "amazonUrl": "https://www.amazon.co.jp/dp/B07SCXQKQ2",
+    "rakutenUrl": "https://search.rakuten.co.jp/search/mall/anker+powercore+10000/",
+    "videoNumber": 1
+  },
+  {
+    "id": 3,
+    "name": "ロジクール MX Master 3S",
+    "category": "PC周辺機器",
+    "image": "https://images-na.ssl-images-amazon.com/images/I/61ni3t1ryQL._AC_SL1500_.jpg",
+    "description": "作業効率を劇的に上げるハイエンドマウス。電磁気スクロールとアプリ別カスタマイズが秀逸。",
+    "amazonUrl": "https://www.amazon.co.jp/dp/B09HM94VDS",
+    "rakutenUrl": "https://search.rakuten.co.jp/search/mall/ロジクール+MX+Master+3S/",
+    "videoNumber": 2
+  },
+  {
+    "id": 4,
+    "name": "FLEXISPOT E7 スタンディングデスク",
+    "category": "家具・デスク環境",
+    "image": "https://images-na.ssl-images-amazon.com/images/I/71O+NOpvV8L._AC_SL1500_.jpg",
+    "description": "電動昇降デスク。立ち作業で集中力と健康を同時に手に入れる。リモートワーカー必須アイテム。",
+    "amazonUrl": "https://www.amazon.co.jp/dp/B08T91FVGM",
+    "rakutenUrl": "https://search.rakuten.co.jp/search/mall/FLEXISPOT+E7/",
+    "videoNumber": 2
+  },
+  {
+    "id": 5,
+    "name": "Kindle Unlimited",
+    "category": "サービス・サブスク",
+    "image": "https://m.media-amazon.com/images/G/09/Kindle/dp/design-assets/kux/KU_Logo_Hero_JP._CB627251023_.png",
+    "description": "月980円で200万冊以上読み放題。ビジネス書・小説・マンガまで網羅。30日間無料体験あり。",
+    "amazonUrl": "https://www.amazon.co.jp/kindle-dbs/hz/subscribe/ku",
+    "rakutenUrl": "",
+    "videoNumber": 3
+  },
+  {
+    "id": 6,
+    "name": "Apple AirPods Pro (第2世代)",
+    "category": "ガジェット",
+    "image": "https://images-na.ssl-images-amazon.com/images/I/61SUj2aKoEL._AC_SL1500_.jpg",
+    "description": "業界最高クラスのアクティブノイズキャンセリング。外音取り込みモードも自然で快適な使用感。",
+    "amazonUrl": "https://www.amazon.co.jp/dp/B0BDHWDR12",
+    "rakutenUrl": "https://search.rakuten.co.jp/search/mall/AirPods+Pro+第2世代/",
+    "videoNumber": 3
+  },
+  {
+    "id": 7,
+    "name": "楽天カード",
+    "category": "金融・カード",
+    "image": "https://image.rakuten.co.jp/brandavenuegolf/cabinet/item/43/4316012243.jpg",
+    "description": "年会費永年無料でポイント還元率1%。新規入会で最大8,000ポイントプレゼント。",
+    "amazonUrl": "",
+    "rakutenUrl": "https://card.rakuten.co.jp/",
+    "videoNumber": 4
+  },
+  {
+    "id": 8,
+    "name": "Canva Pro",
+    "category": "AIツール・アプリ",
+    "image": "https://images-na.ssl-images-amazon.com/images/I/51-nXsSRfZL.png",
+    "description": "AIデザインツールのスタンダード。テンプレート豊富でSNS画像・動画・資料が誰でも簡単に作れる。",
+    "amazonUrl": "",
+    "rakutenUrl": "https://www.canva.com/ja_jp/pro/",
+    "videoNumber": 4
+  }
+]

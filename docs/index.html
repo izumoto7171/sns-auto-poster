@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>おすすめ商品カタログ</title>
+  <style>
+    /* ── リセット & ベース ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', sans-serif;
+      background: #f5f5f5;
+      color: #333;
+      min-height: 100vh;
+    }
+
+    /* ── ヘッダー ── */
+    header {
+      background: #fff;
+      border-bottom: 1px solid #e5e5e5;
+      padding: 0 20px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+    .header-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .logo {
+      font-size: 18px;
+      font-weight: 700;
+      color: #111;
+      white-space: nowrap;
+    }
+    .logo span { color: #e47911; }
+
+    /* 検索バー */
+    .search-wrap {
+      flex: 1;
+      max-width: 400px;
+      position: relative;
+    }
+    .search-wrap input {
+      width: 100%;
+      padding: 8px 14px 8px 38px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 14px;
+      background: #f9f9f9;
+      outline: none;
+      transition: border-color .2s, background .2s;
+    }
+    .search-wrap input:focus {
+      border-color: #aaa;
+      background: #fff;
+    }
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #aaa;
+      font-size: 15px;
+      pointer-events: none;
+    }
+
+    /* ── メインコンテンツ ── */
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 20px 60px;
+    }
+
+    /* アフィリエイト表記 */
+    .affiliate-notice {
+      font-size: 12px;
+      color: #999;
+      background: #fff;
+      border: 1px solid #e8e8e8;
+      border-radius: 8px;
+      padding: 8px 14px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* カテゴリフィルター */
+    .filter-bar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+    .filter-btn {
+      padding: 6px 16px;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 20px;
+      background: #fff;
+      font-size: 13px;
+      color: #555;
+      cursor: pointer;
+      transition: all .18s;
+      white-space: nowrap;
+    }
+    .filter-btn:hover { border-color: #bbb; color: #222; }
+    .filter-btn.active {
+      background: #111;
+      border-color: #111;
+      color: #fff;
+    }
+
+    /* 件数表示 */
+    .result-count {
+      font-size: 13px;
+      color: #999;
+      margin-bottom: 16px;
+    }
+
+    /* ── カードグリッド ── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 20px;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid #e8e8e8;
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform .2s, box-shadow .2s;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0,0,0,.1);
+    }
+
+    .card-img {
+      width: 100%;
+      aspect-ratio: 4/3;
+      object-fit: contain;
+      background: #f8f8f8;
+      padding: 16px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .card-body { padding: 14px; }
+
+    .card-category {
+      font-size: 11px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 6px;
+    }
+
+    .card-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: #111;
+      margin-bottom: 8px;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .card-desc {
+      font-size: 13px;
+      color: #777;
+      line-height: 1.6;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .card-footer {
+      padding: 10px 14px 14px;
+      display: flex;
+      gap: 6px;
+    }
+    .card-badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    .badge-amazon { background: #fff3e0; color: #e47911; }
+    .badge-rakuten { background: #fde8e8; color: #bf0000; }
+
+    /* 空状態 */
+    .empty {
+      grid-column: 1/-1;
+      text-align: center;
+      padding: 60px 0;
+      color: #bbb;
+      font-size: 15px;
+    }
+
+    /* ── モーダル ── */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.45);
+      z-index: 200;
+      backdrop-filter: blur(2px);
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .overlay.open { display: flex; }
+
+    .modal {
+      background: #fff;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 520px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,.2);
+      animation: modalIn .2s ease;
+    }
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(.95) translateY(10px); }
+      to   { opacity: 1; transform: scale(1)  translateY(0); }
+    }
+
+    .modal-img {
+      width: 100%;
+      aspect-ratio: 16/9;
+      object-fit: contain;
+      background: #f8f8f8;
+      border-radius: 16px 16px 0 0;
+      padding: 20px;
+    }
+
+    .modal-body { padding: 24px; }
+
+    .modal-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .modal-category {
+      font-size: 12px;
+      color: #888;
+      background: #f3f3f3;
+      padding: 3px 10px;
+      border-radius: 12px;
+    }
+    .modal-video {
+      font-size: 12px;
+      color: #999;
+    }
+
+    .modal-name {
+      font-size: 22px;
+      font-weight: 700;
+      color: #111;
+      margin-bottom: 12px;
+      line-height: 1.4;
+    }
+
+    .modal-desc {
+      font-size: 14px;
+      color: #555;
+      line-height: 1.8;
+      margin-bottom: 24px;
+    }
+
+    .modal-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 14px 20px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: opacity .18s, transform .18s;
+      border: none;
+      cursor: pointer;
+    }
+    .btn:hover { opacity: .88; transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+
+    .btn-amazon {
+      background: #ff9900;
+      color: #fff;
+    }
+    .btn-rakuten {
+      background: #bf0000;
+      color: #fff;
+    }
+    .btn-disabled {
+      background: #f0f0f0;
+      color: #bbb;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    .btn-icon { font-size: 18px; }
+
+    .modal-notice {
+      font-size: 11px;
+      color: #bbb;
+      text-align: center;
+      margin-top: 16px;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(0,0,0,.5);
+      color: #fff;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background .18s;
+    }
+    .modal-close:hover { background: rgba(0,0,0,.7); }
+    .modal-wrap { position: relative; }
+
+    /* ── レスポンシブ ── */
+    @media (max-width: 600px) {
+      .header-inner { height: 52px; }
+      .logo { font-size: 15px; }
+      .grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+      .card-body { padding: 10px; }
+      .card-name { font-size: 13px; }
+      .modal-name { font-size: 18px; }
+    }
+    @media (max-width: 380px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-inner">
+      <div class="logo">📦 商品<span>カタログ</span></div>
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" placeholder="商品を検索..." autocomplete="off">
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="affiliate-notice">
+      ℹ️ このページはアフィリエイトリンクを含みます。リンク経由でご購入いただくと、チャンネル運営の支援になります。
+    </div>
+
+    <div class="filter-bar" id="filterBar">
+      <button class="filter-btn active" data-category="all">すべて</button>
+    </div>
+
+    <div class="result-count" id="resultCount"></div>
+
+    <div class="grid" id="grid"></div>
+  </main>
+
+  <!-- モーダル -->
+  <div class="overlay" id="overlay">
+    <div class="modal-wrap">
+      <button class="modal-close" id="modalClose">✕</button>
+      <div class="modal" id="modal">
+        <img class="modal-img" id="modalImg" src="" alt="">
+        <div class="modal-body">
+          <div class="modal-meta">
+            <span class="modal-category" id="modalCategory"></span>
+            <span class="modal-video" id="modalVideo"></span>
+          </div>
+          <h2 class="modal-name" id="modalName"></h2>
+          <p class="modal-desc" id="modalDesc"></p>
+          <div class="modal-buttons" id="modalButtons"></div>
+          <p class="modal-notice">※ アフィリエイトリンクを含みます</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let products = [];
+    let currentCategory = 'all';
+    let currentSearch = '';
+
+    // ── データ読み込み ──
+    async function loadProducts() {
+      try {
+        const res = await fetch('./products.json');
+        products = await res.json();
+      } catch {
+        // fetch失敗時（file://などローカル）はインライン埋め込みデータを使用
+        products = INLINE_PRODUCTS;
+      }
+      init();
+    }
+
+    // ── 初期化 ──
+    function init() {
+      buildFilters();
+      render();
+    }
+
+    // ── カテゴリフィルター構築 ──
+    function buildFilters() {
+      const categories = [...new Set(products.map(p => p.category))];
+      const bar = document.getElementById('filterBar');
+      categories.forEach(cat => {
+        const btn = document.createElement('button');
+        btn.className = 'filter-btn';
+        btn.dataset.category = cat;
+        btn.textContent = cat;
+        btn.addEventListener('click', () => setCategory(cat));
+        bar.appendChild(btn);
+      });
+    }
+
+    function setCategory(cat) {
+      currentCategory = cat;
+      document.querySelectorAll('.filter-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.category === cat);
+      });
+      render();
+    }
+
+    // ── レンダリング ──
+    function render() {
+      const q = currentSearch.trim().toLowerCase();
+      const filtered = products.filter(p => {
+        const matchCat = currentCategory === 'all' || p.category === currentCategory;
+        const matchQ   = !q || p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q);
+        return matchCat && matchQ;
+      });
+
+      const grid = document.getElementById('grid');
+      const count = document.getElementById('resultCount');
+      count.textContent = `${filtered.length} 件`;
+
+      if (filtered.length === 0) {
+        grid.innerHTML = '<div class="empty">😔 該当する商品が見つかりません</div>';
+        return;
+      }
+
+      grid.innerHTML = filtered.map(p => `
+        <div class="card" onclick="openModal(${p.id})">
+          <img class="card-img" src="${escHtml(p.image)}" alt="${escHtml(p.name)}"
+               onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22150%22><rect fill=%22%23f0f0f0%22 width=%22200%22 height=%22150%22/><text x=%2250%%22 y=%2250%%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23ccc%22 font-size=%2232%22>📦</text></svg>'">
+          <div class="card-body">
+            <div class="card-category">${escHtml(p.category)}</div>
+            <div class="card-name">${escHtml(p.name)}</div>
+            <div class="card-desc">${escHtml(p.description)}</div>
+          </div>
+          <div class="card-footer">
+            ${p.amazonUrl  ? '<span class="card-badge badge-amazon">Amazon</span>' : ''}
+            ${p.rakutenUrl ? '<span class="card-badge badge-rakuten">楽天</span>'  : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // ── モーダル ──
+    function openModal(id) {
+      const p = products.find(x => x.id === id);
+      if (!p) return;
+
+      document.getElementById('modalImg').src      = p.image;
+      document.getElementById('modalImg').alt      = p.name;
+      document.getElementById('modalCategory').textContent = p.category;
+      document.getElementById('modalVideo').textContent    = p.videoNumber ? `動画 #${p.videoNumber}` : '';
+      document.getElementById('modalName').textContent     = p.name;
+      document.getElementById('modalDesc').textContent     = p.description;
+
+      const btns = document.getElementById('modalButtons');
+      btns.innerHTML = '';
+
+      if (p.amazonUrl) {
+        btns.innerHTML += `
+          <a href="${escHtml(p.amazonUrl)}" target="_blank" rel="noopener" class="btn btn-amazon">
+            <span class="btn-icon">📦</span> Amazonで見る
+          </a>`;
+      }
+      if (p.rakutenUrl) {
+        btns.innerHTML += `
+          <a href="${escHtml(p.rakutenUrl)}" target="_blank" rel="noopener" class="btn btn-rakuten">
+            <span class="btn-icon">🛒</span> 楽天市場で見る
+          </a>`;
+      }
+      if (!p.amazonUrl && !p.rakutenUrl) {
+        btns.innerHTML = '<div class="btn btn-disabled">リンクは準備中です</div>';
+      }
+
+      document.getElementById('overlay').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+      document.getElementById('overlay').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    // ── イベント ──
+    document.getElementById('modalClose').addEventListener('click', closeModal);
+    document.getElementById('overlay').addEventListener('click', e => {
+      if (e.target === document.getElementById('overlay')) closeModal();
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    document.getElementById('searchInput').addEventListener('input', e => {
+      currentSearch = e.target.value;
+      render();
+    });
+
+    // ── ユーティリティ ──
+    function escHtml(s) {
+      return String(s ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    // ── インライン埋め込みデータ（fetch失敗時のフォールバック）──
+    const INLINE_PRODUCTS = [
+      {
+        "id": 1,
+        "name": "Kindle Paperwhite",
+        "category": "ガジェット",
+        "image": "https://images-na.ssl-images-amazon.com/images/I/61m0GuHn6VL._AC_SL1000_.jpg",
+        "description": "目に優しい6.8インチ電子ペーパーディスプレイ。防水機能付きで読書に集中できる最高の端末。",
+        "amazonUrl": "https://www.amazon.co.jp/dp/B09TMF6742",
+        "rakutenUrl": "https://search.rakuten.co.jp/search/mall/kindle+paperwhite/",
+        "videoNumber": 1
+      },
+      {
+        "id": 2,
+        "name": "Anker PowerCore 10000",
+        "category": "ガジェット",
+        "image": "https://images-na.ssl-images-amazon.com/images/I/61bMNRiYByL._AC_SL1200_.jpg",
+        "description": "コンパクトで大容量のモバイルバッテリー。スマホ約2.5回分の充電が可能。",
+        "amazonUrl": "https://www.amazon.co.jp/dp/B07SCXQKQ2",
+        "rakutenUrl": "https://search.rakuten.co.jp/search/mall/anker+powercore+10000/",
+        "videoNumber": 1
+      },
+      {
+        "id": 3,
+        "name": "ロジクール MX Master 3S",
+        "category": "PC周辺機器",
+        "image": "https://images-na.ssl-images-amazon.com/images/I/61ni3t1ryQL._AC_SL1500_.jpg",
+        "description": "作業効率を劇的に上げるハイエンドマウス。電磁気スクロールとアプリ別カスタマイズが秀逸。",
+        "amazonUrl": "https://www.amazon.co.jp/dp/B09HM94VDS",
+        "rakutenUrl": "https://search.rakuten.co.jp/search/mall/ロジクール+MX+Master+3S/",
+        "videoNumber": 2
+      },
+      {
+        "id": 4,
+        "name": "Kindle Unlimited",
+        "category": "サービス・サブスク",
+        "image": "https://m.media-amazon.com/images/G/09/Kindle/dp/design-assets/kux/KU_Logo_Hero_JP._CB627251023_.png",
+        "description": "月980円で200万冊以上読み放題。ビジネス書・小説・マンガまで網羅。30日間無料体験あり。",
+        "amazonUrl": "https://www.amazon.co.jp/kindle-dbs/hz/subscribe/ku",
+        "rakutenUrl": "",
+        "videoNumber": 3
+      },
+      {
+        "id": 5,
+        "name": "楽天カード",
+        "category": "金融・カード",
+        "image": "https://image.rakuten.co.jp/brandavenuegolf/cabinet/item/43/4316012243.jpg",
+        "description": "年会費永年無料でポイント還元率1%。新規入会で最大8,000ポイントプレゼント。",
+        "amazonUrl": "",
+        "rakutenUrl": "https://card.rakuten.co.jp/",
+        "videoNumber": 4
+      }
+    ];
+
+    loadProducts();
+  </script>
+</body>
+</html>
