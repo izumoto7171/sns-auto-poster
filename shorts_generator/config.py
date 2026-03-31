@@ -31,8 +31,9 @@ CAPTION_OUTLINE = (0, 0, 0)       # 黒縁取り
 OUTLINE_WIDTH   = 8
 
 # VOICEVOX
-VOICEVOX_URL   = "http://localhost:50021"
-VOICEVOX_SPEAKER = 1
+VOICEVOX_URL     = "http://localhost:50021"
+VOICEVOX_SPEAKER = 3  # ずんだもん（ノーマル）
+# 他の選択肢: 1=ずんだもん(あまあま) 5=ずんだもん(セクシー) 7=ずんだもん(ツンツン)
 
 # Output
 OUTPUT_DIR = Path(__file__).parent / "output"
