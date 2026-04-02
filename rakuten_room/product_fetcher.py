@@ -8,8 +8,9 @@ import random
 import requests
 from datetime import datetime
 
-RAKUTEN_APP_ID = os.environ.get("RAKUTEN_APP_ID", "")
-RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID", "4AZMKI+BFEJSI+2HOM+BW8O1")
+RAKUTEN_APP_ID  = os.environ.get("RAKUTEN_APP_ID", "")   # アクセスキー (pk_...)
+RAKUTEN_APP_UUID = os.environ.get("RAKUTEN_APP_UUID", "")  # アプリケーションID (UUID)
+RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID", "52757052.94ac19d9.52757053.7c8da06d")
 
 # 女性ウケカテゴリ（楽天ジャンルID）
 FEMALE_CATEGORIES = [
@@ -33,13 +34,14 @@ def fetch_products(count: int = 5) -> list[dict]:
     ランダムカテゴリから女性ウケ商品を取得する。
     RAKUTEN_APP_ID が未設定の場合はモックデータを返す。
     """
-    if not RAKUTEN_APP_ID:
-        print("[product_fetcher] RAKUTEN_APP_ID 未設定 → モックデータを使用")
+    if not RAKUTEN_APP_ID or not RAKUTEN_APP_UUID:
+        print("[product_fetcher] RAKUTEN_APP_ID / RAKUTEN_APP_UUID 未設定 → モックデータを使用")
         return _mock_products(count)
 
     category = random.choice(FEMALE_CATEGORIES)
     params = {
-        "applicationId": RAKUTEN_APP_ID,
+        "applicationId": RAKUTEN_APP_UUID,   # UUID形式
+        "accessKey":     RAKUTEN_APP_ID,     # pk_形式
         "affiliateId":   RAKUTEN_AFFILIATE_ID,
         "genreId":       category["genre_id"],
         "minPrice":      PRICE_MIN,
@@ -52,7 +54,7 @@ def fetch_products(count: int = 5) -> list[dict]:
 
     try:
         res = requests.get(
-            "https://app.rakuten.co.jp/services/api/IchibaItem/Search/20220601",
+            "https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20220601",
             params=params,
             timeout=10,
         )
