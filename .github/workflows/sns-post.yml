@@ -234,6 +234,57 @@ jobs:
           git push || true
 
   # ============================================================
+  # 🛍️ 楽天ルーム 自動投稿（一人暮らし20代男性 × 女性ウケ商品ガチレビュー）
+  # ============================================================
+  post-rakuten-room:
+    name: 🛍️ 楽天ルーム投稿
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # JST 12:00（UTC 3:00）のみ実行（1日1商品）
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 3 * * *'
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Python セットアップ
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 依存関係インストール
+        run: pip install google-genai python-dotenv playwright requests
+
+      - name: Playwrightブラウザキャッシュ
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('**/requirements*.txt') }}
+          restore-keys: |
+            playwright-chromium-${{ runner.os }}-
+
+      - name: Chromiumインストール（キャッシュミス時のみ）
+        run: playwright install chromium --with-deps
+
+      - name: 楽天ルーム投稿
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          RAKUTEN_APP_ID: ${{ secrets.RAKUTEN_APP_ID }}
+          RAKUTEN_AFFILIATE_ID: ${{ secrets.RAKUTEN_AFFILIATE_ID }}
+          RAKUTEN_EMAIL: ${{ secrets.RAKUTEN_EMAIL }}
+          RAKUTEN_PASSWORD: ${{ secrets.RAKUTEN_PASSWORD }}
+        run: |
+          python3 -m rakuten_room.main --count 1
+
+      - name: 投稿ログをコミット
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add rakuten_room/post_log.json || true
+          git diff --staged --quiet || git commit -m "chore: 楽天ルーム投稿ログ更新 $(date +'%Y-%m-%d')"
+          git push || true
+
+  # ============================================================
   # 🎬 ショート動画コンテンツ生成（X + Bluesky に投稿）
   # ============================================================
   tiktok-content:
