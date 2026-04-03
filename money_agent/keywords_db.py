@@ -65,6 +65,23 @@ KEYWORD_CATEGORIES = {
             {"kw": "ChatGPT 仕事 活用 具体例", "intent": "informational", "volume": "high"},
             {"kw": "自動化 ツール 無料 おすすめ", "intent": "commercial", "volume": "mid"},
         ]
+    },
+
+    "dx_tools": {
+        "label": "DX・業務効率化ツール（中小企業向け）",
+        "commission_range": "1,500〜3,000円/件",
+        "keywords": [
+            {"kw": "freee 中小企業 クラウド会計", "intent": "commercial", "volume": "mid"},
+            {"kw": "freee 会計 使い方 経営者", "intent": "how-to", "volume": "mid"},
+            {"kw": "マネーフォワード クラウド 中小企業", "intent": "commercial", "volume": "mid"},
+            {"kw": "マネーフォワード 使い方 経営者", "intent": "how-to", "volume": "mid"},
+            {"kw": "Chatwork 社内チャット 中小企業", "intent": "commercial", "volume": "mid"},
+            {"kw": "Chatwork 使い方 社内連絡 効率化", "intent": "how-to", "volume": "mid"},
+            {"kw": "中小企業 DX ツール おすすめ 2026", "intent": "commercial", "volume": "high"},
+            {"kw": "クラウド会計 比較 中小企業", "intent": "commercial", "volume": "mid"},
+            {"kw": "業務効率化 ツール 無料 中小企業", "intent": "commercial", "volume": "mid"},
+            {"kw": "チャットツール 社内 おすすめ 中小企業", "intent": "commercial", "volume": "mid"},
+        ]
     }
 }
 
@@ -139,6 +156,36 @@ AFFILIATE_PROGRAMS = {
         "cta": "楽天市場で探す →"
     },
 
+    # === DX・業務効率化ツール（A8.net）===
+    # ※ 実際のA8.netプログラムURLは提携承認後に差し替えること
+    "freee_accounting": {
+        "name": "freee会計",
+        "commission": "2,000円/無料トライアル登録",
+        "category": "DXツール",
+        "url": "https://px.a8.net/svt/ejp?a8mat=3Z1234+FREEE1+0000+0000A",  # 要: A8.net提携後に差し替え
+        "description": "中小企業・個人事業主向けクラウド会計ソフト。確定申告・帳簿づけをAIが自動化",
+        "cta": "freeeを無料で試してみる（30日間）→",
+        "_note": "A8.net提携URL: https://www.a8.net/svt/bgt?aid=&wid=&eno=01&mid=s00000025203001015000&mc=1"
+    },
+    "moneyforward_cloud": {
+        "name": "マネーフォワード クラウド",
+        "commission": "1,500円/無料登録",
+        "category": "DXツール",
+        "url": "https://px.a8.net/svt/ejp?a8mat=3Z1234+MFWD01+0000+0000A",  # 要: A8.net提携後に差し替え
+        "description": "給与計算・経費精算・請求書をまとめて自動化。連携サービス5,000以上",
+        "cta": "マネーフォワード クラウドを無料で試す →",
+        "_note": "A8.net提携URL: https://biz.moneyforward.com/"
+    },
+    "chatwork": {
+        "name": "Chatwork",
+        "commission": "3,000円/有料プラン契約",
+        "category": "DXツール",
+        "url": "https://px.a8.net/svt/ejp?a8mat=3Z1234+CWORK1+0000+0000A",  # 要: A8.net提携後に差し替え
+        "description": "国内利用者数No.1のビジネスチャット。メール・電話を減らして社内連絡を効率化",
+        "cta": "Chatworkを無料で始める →",
+        "_note": "A8.net提携URL: https://go.chatwork.com/ja/"
+    },
+
     # === SaaS/AIツール（継続課金）===
     "canva_pro": {
         "name": "Canva Pro",
@@ -194,6 +241,7 @@ CONTENT_AFFILIATE_MAP = {
     "side_hustle": ["crowdworks", "lancers", "onamae_domain"],
     "investment_savings": ["tossy", "rakuten_card", "rakuten_securities"],
     "productivity": ["notion", "onamae_domain", "canva_pro"],
+    "dx_tools": ["freee_accounting", "moneyforward_cloud", "chatwork"],
 }
 
 def _resolve_affiliate_url(program: dict) -> dict:
