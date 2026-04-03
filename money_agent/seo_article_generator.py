@@ -71,13 +71,13 @@ ARTICLE_TEMPLATES = {
     "dx_tools": [
         {
             "title_format": "【中小企業向け】{keyword}の導入メリットを現場目線で解説｜{year}年版",
-            "structure": ["dx_hook", "user_worries", "what_is", "merit", "how_to", "affiliate_cta", "summary"],
+            "structure": ["dx_hook", "user_worries", "what_is", "merit", "how_to", "faq", "affiliate_cta", "summary"],
             "tone": "親切なDXアドバイザー・中小企業経営者に寄り添う",
             "target": "ITに疎い中小企業の経営者・管理職"
         },
         {
             "title_format": "{keyword}｜導入を迷っている経営者に伝えたいこと【ITが苦手でも大丈夫】",
-            "structure": ["dx_hook", "user_worries", "merit", "how_to", "affiliate_cta", "faq", "summary"],
+            "structure": ["dx_hook", "user_worries", "merit", "how_to", "faq", "affiliate_cta", "summary"],
             "tone": "親切なDXアドバイザー・背中を押すスタイル",
             "target": "DX検討中の中小企業経営者"
         }
@@ -88,10 +88,123 @@ ARTICLE_TEMPLATES = {
 # セクション別コンテンツ生成（テンプレート）
 # ============================================================
 
+def _extract_tool_name(keyword: str) -> str:
+    """キーワードからツール名（製品名）を抽出する"""
+    # 製品名として認識するマッピング（前方一致順）
+    known_tools = [
+        "マネーフォワード クラウド",
+        "マネーフォワード",
+        "freee",
+        "Chatwork",
+    ]
+    kw_lower = keyword.lower()
+    for tool in known_tools:
+        if kw_lower.startswith(tool.lower()):
+            return tool
+    # 不明な場合は先頭の単語を返す
+    return keyword.split()[0]
+
+
+def _dx_merit_section(keyword: str, tool: str) -> str:
+    return f"""## {tool}を導入するメリット・注意点
+
+### ✅ 導入で変わること
+
+**1. バックオフィス作業の時間が大幅に削減される**
+手入力・転記・集計といった繰り返し作業を自動化できます。
+「月次締めが3日かかっていたのが1日になった」という声は珍しくありません。
+
+**2. ヒューマンエラーが激減する**
+手書き・Excel管理では避けられない入力ミスや計算ミスを、システムが自動チェックします。
+消費税の計算ミス・給与計算のズレは後から修正コストが大きくなるため、特に効果が高い部分です。
+
+**3. 場所を選ばずリアルタイムで経営データを確認できる**
+クラウドなので、事務所の外からでもスマホで帳簿・売上・経費を確認できます。
+「社長が出張中でも月次の数字をすぐ確認できる」という使い方が典型的です。
+
+### 導入前に知っておきたい注意点
+
+**1. 初期設定に半日〜1日かかる**
+会社情報・銀行口座・科目設定など、最初の環境構築に時間が必要です。
+ただし、導入サポート（電話・チャット）を使えば一人でも進められます。
+サポートを積極的に活用することをおすすめします。
+
+**2. 税理士との連携方法を事前に確認する**
+現在顧問税理士がいる場合、データの共有方法（会計データのエクスポート形式など）を
+事前に税理士に確認しておくとスムーズです。
+多くのクラウド会計ソフトは税理士向けの招待機能を持っています。
+
+---
+"""
+
+
+def _dx_how_to_section(keyword: str, tool: str) -> str:
+    return f"""## {tool}の始め方【4ステップ】
+
+### STEP1：無料トライアルに申し込む（所要時間：5分）
+
+公式サイトでメールアドレスを入力するだけで登録できます。
+クレジットカードの登録は不要なサービスがほとんどです。
+
+### STEP2：会社の基本情報を入力する（所要時間：15〜30分）
+
+会社名・業種・従業員数・現在の経理方法などを入力します。
+入力した情報をもとに、最適な設定を提案してくれます。
+
+### STEP3：まず1つの業務だけ試してみる（最初の1週間）
+
+最初から全機能を使おうとする必要はありません。
+「請求書の発行だけ」「経費の記録だけ」など、**1つの業務に絞って**使い始めましょう。
+
+```
+ポイント：完璧を求めず、とにかく1件やってみることが大切
+```
+
+### STEP4：効果を確認してから本格導入を判断する
+
+1週間〜1ヶ月使ってみて、時間短縮・ミス削減を数字で確認します。
+「月に○時間削減できた」という実績が、社内への説得材料にもなります。
+
+---
+"""
+
+
+def _dx_faq_section(keyword: str, tool: str) -> str:
+    return f"""## よくある質問
+
+**Q: インボイス制度（適格請求書）に対応していますか？**
+A: はい、主要なクラウド会計・請求書ソフトはインボイス制度に対応しています。
+適格請求書発行事業者の登録番号を設定すると、制度に準拠した請求書を自動で発行できます。
+手書き・Excelで対応している場合は、早めにクラウド化することをおすすめします。
+
+**Q: 電子帳簿保存法（電帳法）には対応していますか？**
+A: 対応しています。2024年1月から義務化された電子取引データの保存要件（真実性・可視性の確保）を
+クラウド上で自動的に満たす形で保存できます。
+紙で保存していた領収書・請求書のスキャン保存（スキャナ保存）にも対応しているサービスが多いです。
+
+**Q: 顧問税理士と一緒に使えますか？連携はどうすればいいですか？**
+A: 税理士を「顧問税理士として招待」する機能があり、同じデータをリアルタイムで共有できます。
+従来の「月末にデータをまとめて渡す」作業が不要になり、税理士の作業時間削減にもつながります。
+導入前に税理士に相談し、使用しているソフトとの互換性を確認しておくとスムーズです。
+
+---
+"""
+
+
 def generate_section(section: str, keyword: str, category: str, affiliates: list) -> str:
     """各セクションのコンテンツを生成"""
 
     year = datetime.now().year
+    tool = _extract_tool_name(keyword) if category == "dx_tools" else keyword
+
+    # DXツール専用オーバーライド
+    if category == "dx_tools":
+        if section == "merit":
+            return _dx_merit_section(keyword, tool)
+        if section == "how_to":
+            return _dx_how_to_section(keyword, tool)
+        if section == "faq":
+            return _dx_faq_section(keyword, tool)
 
     sections = {
         "hook": f"""## 「{keyword}って本当に使えるの？」
@@ -337,7 +450,7 @@ A: 年間20万円以上の副収入がある場合は確定申告が必要です
 
         # ── DXアドバイザーペルソナ用セクション ──────────────────────
 
-        "dx_hook": f"""## 「{keyword}、うちの会社でも本当に使えるの？」
+        "dx_hook": f"""## 「{tool}、うちみたいな会社でも使えるの？」
 
 そう思っている経営者の方、安心してください。
 
@@ -345,7 +458,7 @@ A: 年間20万円以上の副収入がある場合は確定申告が必要です
 
 「ITは苦手」「社員が使いこなせるか不安」「コストが心配」――そういった不安はよくわかります。
 
-この記事では、**難しい専門用語は使わずに**{keyword}のメリットと始め方を解説します。
+この記事では、**難しい専門用語は使わずに**{tool}のメリットと始め方を解説します。
 一緒に、無理のない一歩を踏み出しましょう。
 
 ---
@@ -412,6 +525,27 @@ def _build_affiliate_cta(affiliates: list, keyword: str) -> str:
     return content
 
 
+# DXツール記事：キーワード → 自然言語タイトルのマッピング
+DX_NATURAL_TITLES = {
+    "freee 中小企業 クラウド会計": [
+        "freeeで経理を自動化した中小企業の話【月次作業が3日→1日になった理由】",
+        "freee会計は本当に使えるのか？ITが苦手な経営者が試してわかったこと",
+    ],
+    "マネーフォワード クラウド 中小企業": [
+        "マネーフォワード クラウドで経理・給与・経費をまとめて自動化した話",
+        "バックオフィスを1本化するなら？マネーフォワード クラウドを中小企業目線で解説",
+    ],
+    "Chatwork 社内チャット 中小企業": [
+        "社内メールをやめてChatworkにしたら、残業が週5時間減った話",
+        "Chatworkって本当に使いやすい？メール文化の中小企業が導入してみた結果",
+    ],
+    "バックオフィス 効率化 ツール 比較 中小企業": [
+        "バックオフィスを最短で効率化するならどれ？freee・マネーフォワード・Chatworkを比較した",
+        "中小企業のDXはどこから手をつける？3つのツールを経営者目線で徹底比較",
+    ],
+}
+
+
 def generate_seo_article(keyword: str, category: str) -> dict:
     """SEO最適化記事を生成"""
 
@@ -422,8 +556,11 @@ def generate_seo_article(keyword: str, category: str) -> dict:
     templates = ARTICLE_TEMPLATES.get(category, ARTICLE_TEMPLATES["ai_tools"])
     template = random.choice(templates)
 
-    # タイトル生成
-    title = template["title_format"].format(keyword=keyword, year=year)
+    # タイトル生成 — dx_tools はキャッチーな自然言語タイトルを優先
+    if category == "dx_tools" and keyword in DX_NATURAL_TITLES:
+        title = random.choice(DX_NATURAL_TITLES[keyword])
+    else:
+        title = template["title_format"].format(keyword=keyword, year=year)
 
     # 記事構造に従ってコンテンツ生成
     body_parts = []
