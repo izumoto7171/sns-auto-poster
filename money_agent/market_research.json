@@ -1,0 +1,174 @@
+{
+  "top5_genres": [
+    {
+      "genre": "DX・業務効率化ツール",
+      "score": 16011.85,
+      "unit_price": 8000,
+      "competition": 3,
+      "cvr_est": 0.8,
+      "trend": "growing",
+      "monthly_potential": 64000
+    },
+    {
+      "genre": "AIツール・SaaS",
+      "score": 15011.11,
+      "unit_price": 5000,
+      "competition": 3,
+      "cvr_est": 1.2,
+      "trend": "growing",
+      "monthly_potential": 60000
+    },
+    {
+      "genre": "米国株・ETF投資",
+      "score": 12187.5,
+      "unit_price": 15000,
+      "competition": 4,
+      "cvr_est": 0.5,
+      "trend": "growing",
+      "monthly_potential": 75000
+    },
+    {
+      "genre": "電力会社乗り換え",
+      "score": 3488.27,
+      "unit_price": 5000,
+      "competition": 5,
+      "cvr_est": 0.6,
+      "trend": "growing",
+      "monthly_potential": 30000
+    },
+    {
+      "genre": "証券口座",
+      "score": 3314.56,
+      "unit_price": 25000,
+      "competition": 8,
+      "cvr_est": 0.3,
+      "trend": "stable",
+      "monthly_potential": 75000
+    }
+  ],
+  "recommended_genre": "DX・業務効率化ツール",
+  "reason": "スコアが最も高いジャンル",
+  "target_keywords": [],
+  "monthly_10man_strategy": "",
+  "quick_wins": [],
+  "risk": "",
+  "scored_all": [
+    {
+      "genre": "DX・業務効率化ツール",
+      "score": 16011.85,
+      "unit_price": 8000,
+      "competition": 3,
+      "cvr_est": 0.8,
+      "trend": "growing",
+      "monthly_potential": 64000
+    },
+    {
+      "genre": "AIツール・SaaS",
+      "score": 15011.11,
+      "unit_price": 5000,
+      "competition": 3,
+      "cvr_est": 1.2,
+      "trend": "growing",
+      "monthly_potential": 60000
+    },
+    {
+      "genre": "米国株・ETF投資",
+      "score": 12187.5,
+      "unit_price": 15000,
+      "competition": 4,
+      "cvr_est": 0.5,
+      "trend": "growing",
+      "monthly_potential": 75000
+    },
+    {
+      "genre": "電力会社乗り換え",
+      "score": 3488.27,
+      "unit_price": 5000,
+      "competition": 5,
+      "cvr_est": 0.6,
+      "trend": "growing",
+      "monthly_potential": 30000
+    },
+    {
+      "genre": "証券口座",
+      "score": 3314.56,
+      "unit_price": 25000,
+      "competition": 8,
+      "cvr_est": 0.3,
+      "trend": "stable",
+      "monthly_potential": 75000
+    },
+    {
+      "genre": "ウォーターサーバー",
+      "score": 2857.74,
+      "unit_price": 7000,
+      "competition": 6,
+      "cvr_est": 0.6,
+      "trend": "stable",
+      "monthly_potential": 42000
+    },
+    {
+      "genre": "転職エージェント",
+      "score": 1666.67,
+      "unit_price": 30000,
+      "competition": 9,
+      "cvr_est": 0.15,
+      "trend": "stable",
+      "monthly_potential": 45000
+    },
+    {
+      "genre": "クレジットカード",
+      "score": 1481.48,
+      "unit_price": 8000,
+      "competition": 9,
+      "cvr_est": 0.5,
+      "trend": "stable",
+      "monthly_potential": 40000
+    },
+    {
+      "genre": "格安SIM",
+      "score": 1414.21,
+      "unit_price": 8000,
+      "competition": 8,
+      "cvr_est": 0.4,
+      "trend": "stable",
+      "monthly_potential": 32000
+    },
+    {
+      "genre": "副業・在宅ワーク",
+      "score": 1295.88,
+      "unit_price": 3000,
+      "competition": 7,
+      "cvr_est": 0.8,
+      "trend": "stable",
+      "monthly_potential": 24000
+    },
+    {
+      "genre": "プログラミングスクール",
+      "score": 1104.85,
+      "unit_price": 50000,
+      "competition": 8,
+      "cvr_est": 0.05,
+      "trend": "stable",
+      "monthly_potential": 25000
+    },
+    {
+      "genre": "FX口座",
+      "score": 1037.04,
+      "unit_price": 20000,
+      "competition": 9,
+      "cvr_est": 0.2,
+      "trend": "declining",
+      "monthly_potential": 40000
+    },
+    {
+      "genre": "脱毛・美容",
+      "score": 883.88,
+      "unit_price": 5000,
+      "competition": 8,
+      "cvr_est": 0.4,
+      "trend": "stable",
+      "monthly_potential": 20000
+    }
+  ]
+}
