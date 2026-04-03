@@ -152,13 +152,13 @@ jobs:
           retention-days: 3
 
   # ============================================================
-  # 💰 月10万円 AIエージェント（SEO記事 × アフィリエイト）
+  # 🏢 CEO AIエージェント（Analyst→Researcher→Writer×3→Distributor）
   # ============================================================
   money-agent:
-    name: 💰 月10万円エージェント
+    name: 🏢 CEO AIエージェント
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    # 全スケジュール（8/12/18/22時）で実行 = 1日4回
+    timeout-minutes: 30   # Writer×3並列のため延長
+    # 全スケジュールで実行 = 1日4回 × 3記事 = 12記事/日
     steps:
       - uses: actions/checkout@v5
 
@@ -183,7 +183,7 @@ jobs:
       - name: Chromiumインストール（キャッシュミス時のみ）
         run: playwright install chromium --with-deps
 
-      - name: 月10万円エージェント実行
+      - name: CEO AIエージェント実行
         env:
           CI: "true"
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -196,7 +196,16 @@ jobs:
           X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
           X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
         run: |
-          python3 money_agent/money_agent.py run
+          python3 money_agent/ceo_agent.py run
+
+      - name: ステート変更をコミット
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add money_agent/agent_state.json money_agent/used_keywords.json || true
+          git diff --staged --quiet || git commit -m "chore: CEOエージェント実行ログ更新 $(date +'%Y-%m-%d %H:%M')"
+          git push || true
 
   # ============================================================
   # 📡 トレンドデータ収集（毎日JST 7:00 = UTC 22:00のみ実行）
