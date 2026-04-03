@@ -155,7 +155,37 @@ AFFILIATE_PROGRAMS = {
         "url": "https://www.notion.so/",
         "description": "オールインワン仕事術ツール",
         "cta": "Notionを無料で始める →"
-    }
+    },
+
+    # === Amazonアソシエイト（もしもアフィリエイト経由 or 直接）===
+    # AMAZON_ASSOCIATE_TAG を .env に設定（例: yourtag-22）
+    "amazon_kindle": {
+        "name": "Kindle Unlimited",
+        "commission": "販売価格の3〜10%",
+        "category": "副業",
+        "url": "https://www.amazon.co.jp/kindle-dbs/hz/subscribe/ku?tag={AMAZON_TAG}",
+        "description": "200万冊以上読み放題・月980円・30日無料体験あり",
+        "cta": "Kindle Unlimitedを30日無料で試す →",
+        "_tag_required": True,
+    },
+    "amazon_audible": {
+        "name": "Audible（オーディブル）",
+        "commission": "新規登録1件 500円〜",
+        "category": "副業",
+        "url": "https://www.amazon.co.jp/b?node=5816607051&tag={AMAZON_TAG}",
+        "description": "本をながら聴き・月1,500円・最初の30日無料",
+        "cta": "Audibleを無料で始める →",
+        "_tag_required": True,
+    },
+    "amazon_prime": {
+        "name": "Amazonプライム",
+        "commission": "新規登録1件 200〜400円",
+        "category": "副業",
+        "url": "https://www.amazon.co.jp/prime?tag={AMAZON_TAG}",
+        "description": "配送無料・Prime Video・月600円（年4,900円）",
+        "cta": "30日間無料体験を始める →",
+        "_tag_required": True,
+    },
 }
 
 # コンテンツ × アフィリエイトのマッピング
@@ -166,6 +196,21 @@ CONTENT_AFFILIATE_MAP = {
     "productivity": ["notion", "onamae_domain", "canva_pro"],
 }
 
+def _resolve_affiliate_url(program: dict) -> dict:
+    """AmazonアソシエイトタグなどをURLに埋め込む"""
+    import os
+    if "{AMAZON_TAG}" in program.get("url", ""):
+        tag = os.environ.get("AMAZON_ASSOCIATE_TAG", "")
+        if tag:
+            program = program.copy()
+            program["url"] = program["url"].replace("{AMAZON_TAG}", tag)
+        else:
+            # タグ未設定ならもしもアフィリエイト経由のURLに差し替え
+            program = program.copy()
+            program["url"] = "https://af.moshimo.com/af/c/click?a_id=XXXX"  # 要設定
+            program["description"] = "(要設定) " + program.get("description", "")
+    return program
+
 def get_keywords_for_category(category: str) -> list:
     """カテゴリのキーワードリストを取得"""
     cat = KEYWORD_CATEGORIES.get(category, {})
@@ -174,7 +219,7 @@ def get_keywords_for_category(category: str) -> list:
 def get_affiliates_for_category(category: str) -> list:
     """カテゴリに合ったアフィリエイトを取得"""
     affiliate_ids = CONTENT_AFFILIATE_MAP.get(category, [])
-    return [AFFILIATE_PROGRAMS[aid] for aid in affiliate_ids if aid in AFFILIATE_PROGRAMS]
+    return [_resolve_affiliate_url(AFFILIATE_PROGRAMS[aid]) for aid in affiliate_ids if aid in AFFILIATE_PROGRAMS]
 
 def _get_dynamic_keywords() -> list:
     """data_collectorが収集した動的キーワードを取得"""
@@ -196,8 +241,11 @@ def _get_dynamic_keywords() -> list:
         return []
 
 
-def get_next_keyword(used_keywords: list = None, _depth: int = 0) -> dict:
-    """未使用の次のキーワードを選択"""
+def get_next_keyword(used_keywords: list = None, _depth: int = 0, preferred_category: str = None) -> dict:
+    """未使用の次のキーワードを選択
+
+    preferred_category: SNS分析から推奨されたカテゴリ（重みを3倍にする）
+    """
     import random
     used = used_keywords or []
     all_kws = []
@@ -229,14 +277,15 @@ def get_next_keyword(used_keywords: list = None, _depth: int = 0) -> dict:
                 "intent": "commercial", "volume": "high"
             }
         # 全部使い切ったらリセット（1回のみ）
-        return get_next_keyword([], _depth=_depth + 1)
+        return get_next_keyword([], _depth=_depth + 1, preferred_category=preferred_category)
 
-    # 商業意図 × 検索ボリュームで重み付け
+    # 商業意図 × 検索ボリューム × SNS推奨カテゴリで重み付け
     weights = []
     for kw in all_kws:
         w = 1
         if kw["intent"] == "commercial": w *= 3
         if kw["volume"] == "high": w *= 2
+        if preferred_category and kw["category"] == preferred_category: w *= 3
         weights.append(w)
 
     return random.choices(all_kws, weights=weights, k=1)[0]

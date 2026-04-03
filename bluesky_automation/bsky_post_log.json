@@ -18,5 +18,115 @@
     "success": true,
     "url": "https://bsky.app/profile/smart-earn.bsky.social/post/3mhzedz4bvr2z",
     "dry_run": false
+  },
+  {
+    "datetime": "2026-03-27T18:00:18.450541",
+    "type": "product",
+    "label": "商品紹介",
+    "chars": 68,
+    "text": "副業で稼いでる人と稼げてない人の差、観察してきた。\n\nスキルより「情報の質」の差だった。\n\n参考にしてよかったサービスをプロフィールに。",
+    "success": true,
+    "url": "https://bsky.app/profile/smart-earn.bsky.social/post/3mhzqxivnyx25",
+    "dry_run": false
+  },
+  {
+    "datetime": "2026-03-29T08:00:10.591115",
+    "type": "empathy",
+    "label": "共感・体験",
+    "chars": 75,
+    "text": "「忙しくて副業する時間ない」←1年前の自分。\n\n1日15分だけって決めてやり始めたら\n3ヶ月で月1万になってた。\n\n時間じゃなくてやり方の問題だった。",
+    "success": true,
+    "url": "https://bsky.app/profile/smart-earn.bsky.social/post/3mi5qe7zrhj2m",
+    "dry_run": false
+  },
+  {
+    "datetime": "2026-03-30T08:05:25.952735",
+    "type": "trivia",
+    "label": "雑学・ネタ",
+    "chars": 77,
+    "text": "ChatGPTの1回の返答、Google検索の10倍以上の電力を使うらしい。\n\nそれでも世界中で毎日何億回も使われてる。\n\nすごい時代になったな、と思う。",
+    "success": true,
+    "url": "https://bsky.app/profile/smart-earn.bsky.social/post/3miab4kebe72a",
+    "dry_run": false
+  },
+  {
+    "datetime": "2026-03-30T12:00:20.458522",
+    "type": "useful",
+    "label": "役立つ情報",
+    "chars": 73,
+    "text": "Gemini、無料なのに使い倒せる。\n\n1日1500回まで文章生成OKなので\n副業のコンテンツ作成にめちゃ使ってる。\n\n有料ツール要らなくなった。",
+    "success": true,
+    "url": "https://bsky.app/profile/smart-earn.bsky.social/post/3miaoaltz2k2a",
+    "dry_run": false
+  },
+  {
+    "datetime": "2026-03-30T18:00:12.170396",
+    "type": "useful",
+    "label": "役立つ情報",
+    "chars": 84,
+    "text": "朝の最初の30分、一番大事なこと1つだけやる。\n\nこれだけで1日の生産性が全然変わった。\n\nTodoリストを全部こなそうとするより、1つ確実に終わらせる方が気持ちいい。",
+    "success": true,
+    "url": "https://bsky.app/profile/smart-earn.bsky.social/post/3mibce3al3r22",
+    "dry_run": false
+  },
+  {
+    "datetime": "2026-03-31T12:00:23.264483",
+    "type": "useful",
+    "label": "役立つ情報",
+    "chars": 71,
+    "text": "副業で稼ぐのに、特別なスキルは要らないと気づいた。\n\n必要なのは「情報」と「行動」だけ。\n\n知ってる人と知らない人の差が、収入の差になってる。",
+    "success": true,
+    "url": "https://bsky.app/profile/smart-earn.bsky.social/post/3mid6plxaps22",
+    "dry_run": false
+  },
+  {
+    "datetime": "2026-03-31T22:00:14.293060",
+    "type": "useful",
+    "label": "役立つ情報",
+    "chars": 84,
+    "text": "朝の最初の30分、一番大事なこと1つだけやる。\n\nこれだけで1日の生産性が全然変わった。\n\nTodoリストを全部こなそうとするより、1つ確実に終わらせる方が気持ちいい。",
+    "success": true,
+    "url": "https://bsky.app/profile/smart-earn.bsky.social/post/3mieaa7pr2d2i",
+    "dry_run": false
+  },
+  {
+    "datetime": "2026-04-01T08:00:10.595789",
+    "type": "useful",
+    "label": "役立つ情報",
+    "chars": 71,
+    "text": "副業で稼ぐのに、特別なスキルは要らないと気づいた。\n\n必要なのは「情報」と「行動」だけ。\n\n知ってる人と知らない人の差が、収入の差になってる。",
+    "success": true,
+    "url": "https://bsky.app/profile/smart-earn.bsky.social/post/3mifbqygogx2d",
+    "dry_run": false
+  },
+  {
+    "datetime": "2026-04-01T18:00:26.931035",
+    "type": "trivia",
+    "label": "雑学・ネタ",
+    "chars": 69,
+    "text": "Blueskyは広告がない分、純粋に「面白い投稿」が広がりやすい。\n\nXと使い分けてると、なんか落ち着く。\n\nここがもっと広まってほしい。",
+    "success": true,
+    "url": "https://bsky.app/profile/smart-earn.bsky.social/post/3migdcebpfx2x",
+    "dry_run": false
+  },
+  {
+    "datetime": "2026-04-02T08:15:16.783689",
+    "type": "useful",
+    "label": "役立つ情報",
+    "chars": 92,
+    "text": "AI副業、月3万円は現実的です。\n\n理由はシンプルで\n・AI記事作成\n・AI翻訳\n・AI画像\n\nこの3つは初心者でも今日から始められる。\n\n気になるツールはプロフィールにまとめてます👆",
+    "success": true,
+    "url": "https://bsky.app/profile/smart-earn.bsky.social/post/3miht2w3wa72x",
+    "dry_run": false
+  },
+  {
+    "datetime": "2026-04-02T18:23:16.380267",
+    "type": "useful",
+    "label": "役立つ情報",
+    "chars": 92,
+    "text": "AI副業、月3万円は現実的です。\n\n理由はシンプルで\n・AI記事作成\n・AI翻訳\n・AI画像\n\nこの3つは初心者でも今日から始められる。\n\n気になるツールはプロフィールにまとめてます👆",
+    "success": true,
+    "url": "https://bsky.app/profile/smart-earn.bsky.social/post/3miiv23t25u22",
+    "dry_run": false
   }
 ]

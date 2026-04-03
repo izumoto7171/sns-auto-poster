@@ -4,3 +4,4 @@ tweepy
 atproto
 playwright
 requests
+Pillow

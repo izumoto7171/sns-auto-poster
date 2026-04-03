@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>楽天証券 | おすすめ副業・アフィリエイト</title>
+  <meta name="description" content="初心者でも今日から始められる副収入の作り方">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+      background: #0f0f28;
+      color: #fff;
+      line-height: 1.6;
+    }
+
+    /* ─ ヘッダー ─ */
+    .header {
+      background: linear-gradient(135deg, #0f0f28 0%, #1a1a2e 100%);
+      padding: 60px 20px 80px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .header::before {
+      content: "";
+      position: absolute;
+      top: -50%; left: -50%;
+      width: 200%; height: 200%;
+      background: radial-gradient(circle at center, #A050FF22 0%, transparent 60%);
+      animation: pulse 4s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+    .badge {
+      display: inline-block;
+      background: #A050FF;
+      color: #000;
+      font-weight: bold;
+      font-size: 13px;
+      padding: 6px 16px;
+      border-radius: 20px;
+      margin-bottom: 20px;
+      letter-spacing: 1px;
+    }
+    .catchcopy {
+      font-size: clamp(28px, 7vw, 52px);
+      font-weight: bold;
+      line-height: 1.3;
+      margin-bottom: 16px;
+      background: linear-gradient(90deg, #fff 0%, #cc88ff 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .subtitle {
+      font-size: clamp(15px, 3.5vw, 20px);
+      color: #ccc;
+      max-width: 600px;
+      margin: 0 auto 40px;
+    }
+    .cta-btn {
+      display: inline-block;
+      background: linear-gradient(135deg, #A050FF, #cc88ff);
+      color: #000;
+      font-size: clamp(16px, 4vw, 22px);
+      font-weight: bold;
+      padding: 18px 48px;
+      border-radius: 50px;
+      text-decoration: none;
+      box-shadow: 0 8px 32px #A050FF66;
+      transition: transform 0.2s, box-shadow 0.2s;
+      position: relative;
+      z-index: 1;
+    }
+    .cta-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 40px #A050FF88;
+    }
+
+    /* ─ 緊急性バナー ─ */
+    .urgency-bar {
+      background: linear-gradient(90deg, #A050FF, #cc88ff, #A050FF);
+      background-size: 200% auto;
+      animation: shimmer 3s linear infinite;
+      color: #000;
+      text-align: center;
+      padding: 12px;
+      font-weight: bold;
+      font-size: 15px;
+    }
+    @keyframes shimmer { 0% { background-position: 0% center; } 100% { background-position: 200% center; } }
+
+    /* ─ 商品説明 ─ */
+    .product-section {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 60px 20px;
+      text-align: center;
+    }
+    .section-title {
+      font-size: clamp(20px, 5vw, 32px);
+      font-weight: bold;
+      margin-bottom: 12px;
+      color: #cc88ff;
+    }
+    .product-desc {
+      color: #bbb;
+      font-size: 16px;
+      margin-bottom: 30px;
+    }
+    .commission-badge {
+      display: inline-block;
+      border: 2px solid #A050FF;
+      color: #cc88ff;
+      font-size: 18px;
+      font-weight: bold;
+      padding: 10px 28px;
+      border-radius: 8px;
+    }
+
+    /* ─ 特徴カード ─ */
+    .features-section {
+      background: rgba(255,255,255,0.03);
+      padding: 60px 20px;
+    }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      max-width: 800px;
+      margin: 40px auto 0;
+    }
+    .feature-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid #A050FF44;
+      border-radius: 16px;
+      padding: 28px 20px;
+      text-align: center;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .feature-card:hover {
+      border-color: #A050FF;
+      transform: translateY(-4px);
+    }
+    .feature-icon { font-size: 36px; margin-bottom: 12px; }
+    .feature-title { font-weight: bold; font-size: 17px; margin-bottom: 8px; }
+    .feature-desc { color: #aaa; font-size: 14px; }
+
+    /* ─ 声 ─ */
+    .testimonial-section {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 60px 20px;
+      text-align: center;
+    }
+    .testimonial-box {
+      background: rgba(255,255,255,0.05);
+      border-left: 4px solid #A050FF;
+      border-radius: 12px;
+      padding: 28px;
+      font-size: 18px;
+      color: #ddd;
+      font-style: italic;
+    }
+
+    /* ─ 最終CTA ─ */
+    .final-cta {
+      padding: 80px 20px;
+      text-align: center;
+      background: linear-gradient(180deg, transparent 0%, #A050FF22 100%);
+    }
+    .final-cta .cta-note {
+      color: #888;
+      font-size: 13px;
+      margin-top: 16px;
+    }
+
+    /* ─ フッター ─ */
+    footer {
+      text-align: center;
+      padding: 30px 20px;
+      color: #555;
+      font-size: 12px;
+      border-top: 1px solid #222;
+    }
+    footer a { color: #666; }
+  </style>
+</head>
+<body>
+
+  <div class="urgency-bar">🔥 期間限定キャンペーン実施中！</div>
+
+  <div class="header">
+    <div class="badge">📢 PR / アフィリエイト</div>
+    <h1 class="catchcopy">楽天証券で収入アップ</h1>
+    <p class="subtitle">初心者でも今日から始められる副収入の作り方</p>
+    <a href="https://rpx.a8.net/svt/ejp?a8mat=4AZMKI+BFEJSI+2HOM+BW8O1&rakuten=y&a8ejpredirect=http%3A%2F%2Fhb.afl.rakuten.co.jp%2Fhgc%2F0ea62065.34400275.0ea62066.204f04c0%2Fa26032392970_4AZMKI_BFEJSI_2HOM_BW8O1%3Fpc%3Dhttps%253A%252F%252Fwww.rakuten-sec.co.jp%252F%26m%3Dhttps%253A%252F%252Fwww.rakuten-sec.co.jp%252F" class="cta-btn" target="_blank" rel="noopener">
+      楽天ポイントを使って投資を始める → →
+    </a>
+  </div>
+
+  <div class="product-section">
+    <div class="section-title">💡 楽天証券とは？</div>
+    <p class="product-desc">楽天ポイントで投資できる・新NISA対応</p>
+    <div class="commission-badge">💰 報酬単価: 3,000〜15,000円/口座</div>
+  </div>
+
+  <div class="features-section">
+    <div style="text-align:center;">
+      <div class="section-title">✅ 選ばれる4つの理由</div>
+    </div>
+    <div class="features-grid">
+      
+        <div class="feature-card">
+          <div class="feature-icon">✅</div>
+          <div class="feature-title">無料で始められる</div>
+          <div class="feature-desc">初期費用0円でスタート可能</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">💰</div>
+          <div class="feature-title">高単価報酬</div>
+          <div class="feature-desc">3,000〜15,000円/口座</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🚀</div>
+          <div class="feature-title">スマホだけで完結</div>
+          <div class="feature-desc">PCなしで申請から完了まで</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🛡️</div>
+          <div class="feature-title">安心サポート</div>
+          <div class="feature-desc">充実したサポート体制</div>
+        </div>
+    </div>
+  </div>
+
+  <div class="testimonial-section">
+    <div class="section-title">💬 ユーザーの声</div>
+    <div class="testimonial-box">「登録してすぐに収益が発生しました！」</div>
+  </div>
+
+  <div class="final-cta">
+    <h2 style="font-size:clamp(22px,5vw,36px); margin-bottom:24px;">
+      今すぐ無料で楽天証券を始めよう！
+    </h2>
+    <a href="https://rpx.a8.net/svt/ejp?a8mat=4AZMKI+BFEJSI+2HOM+BW8O1&rakuten=y&a8ejpredirect=http%3A%2F%2Fhb.afl.rakuten.co.jp%2Fhgc%2F0ea62065.34400275.0ea62066.204f04c0%2Fa26032392970_4AZMKI_BFEJSI_2HOM_BW8O1%3Fpc%3Dhttps%253A%252F%252Fwww.rakuten-sec.co.jp%252F%26m%3Dhttps%253A%252F%252Fwww.rakuten-sec.co.jp%252F" class="cta-btn" target="_blank" rel="noopener">
+      楽天ポイントを使って投資を始める → →
+    </a>
+    <p class="cta-note">※本ページはアフィリエイトリンクを含みます（2026/04/01時点の情報）</p>
+  </div>
+
+  <footer>
+    <p>アフィリエイト収益化サイト | 本ページはアフィリエイト広告を利用しています</p>
+    <p style="margin-top:8px;">最終更新: 2026/04/01</p>
+  </footer>
+
+</body>
+</html>

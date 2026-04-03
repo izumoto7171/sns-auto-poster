@@ -9,13 +9,14 @@ LINE Bot ステップ配信 × 商品紹介    → 高額商品（目標1万円/
 合計目標: 月100,000円
 
 【実行フロー】
-1. キーワード選定（商業意図 × 検索ボリューム × 競合度）
-2. SEO最適化記事生成（2000〜4000文字 + アフィリエイトリンク）
-3. はてなブログに投稿（SEO設定込み）
-4. noteに同内容を投稿（無料記事として流入獲得）
-5. X / Blueskyで記事をシェア（+LINE誘導CTA）
-6. 収益ログに記録
-7. ダッシュボード更新
+1. SNSメトリクス収集 → Gemini分析（前回の伸び要因を把握）
+2. キーワード選定（商業意図 × 検索ボリューム × 競合度 × SNS傾向）
+3. SEO最適化記事生成（2000〜4000文字 + アフィリエイトリンク + insights反映）
+4. はてなブログに投稿（SEO設定込み）
+5. noteに同内容を投稿（無料記事として流入獲得）
+6. X / Blueskyで記事をシェア（+LINE誘導CTA）
+7. 収益ログに記録
+8. ダッシュボード更新
 """
 
 import os
@@ -94,6 +95,20 @@ def run_money_agent(dry_run: bool = False, force_category: str = None) -> dict:
         "revenue_estimate": 0
     }
 
+    # === STEP 0: SNS分析（フィードバックループ） ===
+    print("\n🔄 STEP 0: SNSパフォーマンス分析...")
+    try:
+        from money_agent.analytics_feedback import run_analytics_feedback, load_insights
+        feedback_insights = run_analytics_feedback()
+        print("  ✅ 分析完了 — 次の記事生成に反映します")
+    except Exception as e:
+        print(f"  ⚠️ 分析スキップ: {e}")
+        try:
+            from money_agent.analytics_feedback import load_insights
+            feedback_insights = load_insights()
+        except Exception:
+            feedback_insights = {}
+
     # === STEP 1: キーワード選定 ===
     print("\n📊 STEP 1: キーワード選定...")
 
@@ -105,8 +120,16 @@ def run_money_agent(dry_run: bool = False, force_category: str = None) -> dict:
             used_keywords = json.load(f)
 
     kw_data = get_next_keyword(used_keywords)
+
+    # force_category が未指定でも、insightsの推奨カテゴリがあれば使用
     if force_category:
         kw_data["category"] = force_category
+    elif feedback_insights:
+        strategy = feedback_insights.get("keyword_strategy", {})
+        recommended = strategy.get("recommended_categories", [])
+        if recommended:
+            kw_data = get_next_keyword(used_keywords, preferred_category=recommended[0])
+            print(f"  📊 SNS分析から推奨カテゴリ: {recommended[0]}")
 
     keyword = kw_data["keyword"]
     category = kw_data["category"]
@@ -118,8 +141,8 @@ def run_money_agent(dry_run: bool = False, force_category: str = None) -> dict:
     # === STEP 2: SEO記事生成 ===
     print("\n✍️  STEP 2: SEO記事生成...")
 
-    # Gemini APIが利用可能なら使用、なければテンプレート
-    article = _generate_article_with_ai_or_template(keyword, category)
+    # Gemini APIが利用可能なら使用、なければテンプレート（insights反映）
+    article = _generate_article_with_ai_or_template(keyword, category, feedback_insights)
 
     print(f"  ✅ タイトル: {article['title'][:50]}...")
     print(f"  📝 文字数: {article['char_count']}文字")
@@ -212,14 +235,14 @@ def run_money_agent(dry_run: bool = False, force_category: str = None) -> dict:
 # 内部ヘルパー関数
 # ============================================================
 
-def _generate_article_with_ai_or_template(keyword: str, category: str) -> dict:
+def _generate_article_with_ai_or_template(keyword: str, category: str, insights: dict = None) -> dict:
     """Gemini APIまたはテンプレートで記事生成"""
 
     api_key = os.getenv("GEMINI_API_KEY")
 
     if api_key:
         try:
-            return _generate_with_gemini(keyword, category, api_key)
+            return _generate_with_gemini(keyword, category, api_key, insights)
         except Exception as e:
             print(f"  ⚠️ Gemini失敗、テンプレート使用: {e}")
 
@@ -227,12 +250,44 @@ def _generate_article_with_ai_or_template(keyword: str, category: str) -> dict:
     return generate_seo_article(keyword, category)
 
 
-def _generate_with_gemini(keyword: str, category: str, api_key: str) -> dict:
-    """Gemini APIで高品質な記事生成"""
+def _build_insights_hint(insights: dict) -> str:
+    """insightsからプロンプトに追加するヒントテキストを構築"""
+    if not insights:
+        return ""
+
+    lines = []
+
+    # プラットフォーム別の勝ちパターン
+    for platform in ("x", "bluesky"):
+        data = insights.get(platform, {})
+        if isinstance(data, dict):
+            patterns = data.get("winning_patterns", [])
+            if patterns:
+                lines.append(f"【{platform.upper()}で伸びたパターン】" + "、".join(patterns[:2]))
+            avoid = data.get("avoid_patterns", [])
+            if avoid:
+                lines.append(f"【{platform.upper()}で避けるべきパターン】" + "、".join(avoid[:1]))
+
+    # キーワード戦略
+    strategy = insights.get("keyword_strategy", {})
+    hot_topics = strategy.get("hot_topics", [])
+    if hot_topics:
+        lines.append(f"【SNSで今ホットなトピック】" + "、".join(hot_topics[:2]))
+
+    if not lines:
+        return ""
+
+    return "\n【SNS分析からの改善ヒント（前回の伸び要因）】\n" + "\n".join(lines) + "\n"
+
+
+def _generate_with_gemini(keyword: str, category: str, api_key: str, insights: dict = None) -> dict:
+    """Gemini APIで高品質な記事生成（SNS insightsを反映）"""
     from google import genai
 
     affiliates = get_affiliates_for_category(category)
     affiliate_text = "\n".join([f"- {a['name']}: {a['description']} ({a['commission']})" for a in affiliates[:3]])
+
+    insights_hint = _build_insights_hint(insights)
 
     prompt = f"""
 あなたはSEOライターです。以下の条件で記事を書いてください。
@@ -242,7 +297,7 @@ def _generate_with_gemini(keyword: str, category: str, api_key: str) -> dict:
 【目標文字数】2500〜3500文字
 【読者】初心者〜中級者
 【目的】読者の悩みを解決し、以下のアフィリエイト商品を自然に紹介する
-
+{insights_hint}
 【紹介するアフィリエイト商品】
 {affiliate_text}
 

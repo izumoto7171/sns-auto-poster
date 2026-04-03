@@ -1,0 +1,366 @@
+"""
+SNSパフォーマンス分析 → フィードバックループ
+
+【フロー】
+SNS投稿 → X/Bluesky メトリクス収集 → Gemini分析
+→ feedback_insights.json 保存 → 次回の記事生成に反映
+
+使い方:
+  python3 money_agent/analytics_feedback.py   # 分析実行
+"""
+
+import os
+import sys
+import json
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+BASE_DIR = Path(__file__).parent
+
+INSIGHTS_FILE = BASE_DIR / "feedback_insights.json"
+ANALYTICS_HISTORY_FILE = BASE_DIR / "analytics_history.json"
+
+
+# ============================================================
+# ユーティリティ
+# ============================================================
+
+def load_insights() -> dict:
+    if INSIGHTS_FILE.exists():
+        try:
+            return json.loads(INSIGHTS_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    return {
+        "x": "",
+        "bluesky": "",
+        "best_keywords": [],
+        "avoid_patterns": [],
+        "updated_at": "",
+    }
+
+
+def save_insights(insights: dict):
+    insights["updated_at"] = datetime.now().isoformat()
+    INSIGHTS_FILE.write_text(
+        json.dumps(insights, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+
+def load_history() -> list:
+    if ANALYTICS_HISTORY_FILE.exists():
+        try:
+            return json.loads(ANALYTICS_HISTORY_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    return []
+
+
+def save_history(records: list):
+    history = load_history()
+    existing_ids = {r["id"] for r in history}
+    new_records = [r for r in records if r["id"] not in existing_ids]
+    history.extend(new_records)
+    # 最新500件のみ保持
+    ANALYTICS_HISTORY_FILE.write_text(
+        json.dumps(history[-500:], ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    return len(new_records)
+
+
+# ============================================================
+# X (Twitter) メトリクス収集
+# ============================================================
+
+def collect_x_metrics() -> list:
+    print("[Analytics/X] メトリクス収集中...")
+    records = []
+    try:
+        import tweepy
+        client = tweepy.Client(
+            bearer_token=os.getenv("X_BEARER_TOKEN"),
+            consumer_key=os.getenv("X_API_KEY"),
+            consumer_secret=os.getenv("X_API_SECRET"),
+            access_token=os.getenv("X_ACCESS_TOKEN"),
+            access_token_secret=os.getenv("X_ACCESS_TOKEN_SECRET"),
+            wait_on_rate_limit=True,
+        )
+        me = client.get_me()
+        if not me.data:
+            print("[Analytics/X] ユーザー情報取得失敗")
+            return []
+        my_id = me.data.id
+
+        tweets = client.get_users_tweets(
+            id=my_id,
+            max_results=20,
+            tweet_fields=["created_at", "text", "public_metrics"],
+        )
+        if not tweets.data:
+            return []
+
+        for t in tweets.data:
+            m = t.public_metrics or {}
+            records.append({
+                "platform": "x",
+                "id": f"x_{t.id}",
+                "text": t.text[:200],
+                "created_at": t.created_at.isoformat() if t.created_at else "",
+                "likes": m.get("like_count", 0),
+                "retweets": m.get("retweet_count", 0),
+                "replies": m.get("reply_count", 0),
+                "impressions": m.get("impression_count", 0),
+                "score": (
+                    m.get("like_count", 0) * 3
+                    + m.get("retweet_count", 0) * 5
+                    + m.get("reply_count", 0) * 2
+                    + m.get("impression_count", 0) * 0.01
+                ),
+                "collected_at": datetime.now().isoformat(),
+            })
+        print(f"[Analytics/X] {len(records)}件取得")
+    except Exception as e:
+        print(f"[Analytics/X] エラー: {e}")
+    return records
+
+
+# ============================================================
+# Bluesky メトリクス収集
+# ============================================================
+
+def collect_bluesky_metrics() -> list:
+    print("[Analytics/Bluesky] メトリクス収集中...")
+    records = []
+    try:
+        from atproto import Client as BskyClient
+        handle = os.getenv("BSKY_HANDLE", "")
+        password = os.getenv("BSKY_APP_PASSWORD", os.getenv("BSKY_PASSWORD", ""))
+        if not handle or not password:
+            print("[Analytics/Bluesky] 認証情報なし、スキップ")
+            return []
+
+        client = BskyClient()
+        client.login(handle, password)
+
+        feed = client.get_author_feed(actor=handle, limit=20)
+        for item in feed.feed:
+            post = item.post
+            text = getattr(post.record, "text", "") or ""
+            likes = getattr(post, "like_count", 0) or 0
+            reposts = getattr(post, "repost_count", 0) or 0
+            replies = getattr(post, "reply_count", 0) or 0
+            records.append({
+                "platform": "bluesky",
+                "id": f"bsky_{post.uri}",
+                "text": text[:200],
+                "created_at": getattr(post.record, "created_at", ""),
+                "likes": likes,
+                "reposts": reposts,
+                "replies": replies,
+                "impressions": 0,
+                "score": likes * 3 + reposts * 5 + replies * 2,
+                "collected_at": datetime.now().isoformat(),
+            })
+        print(f"[Analytics/Bluesky] {len(records)}件取得")
+    except Exception as e:
+        print(f"[Analytics/Bluesky] エラー: {e}")
+    return records
+
+
+# ============================================================
+# Gemini で分析
+# ============================================================
+
+def analyze_with_gemini(records: list) -> dict:
+    """収集データをGeminiで分析してinsightsを生成"""
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        print("[Analytics/AI] GEMINI_API_KEY なし、スキップ")
+        return {}
+
+    insights = {}
+
+    # プラットフォーム別に分析
+    by_platform: dict[str, list] = {}
+    for r in records:
+        by_platform.setdefault(r["platform"], []).append(r)
+
+    for platform, posts in by_platform.items():
+        if len(posts) < 3:
+            print(f"[Analytics/AI] {platform}: データ不足（{len(posts)}件）")
+            continue
+
+        sorted_posts = sorted(posts, key=lambda x: x.get("score", 0), reverse=True)
+        top3 = sorted_posts[:3]
+        bottom3 = sorted_posts[-3:]
+
+        top_text = "\n".join([
+            f"・スコア{p['score']:.0f} | いいね{p.get('likes', 0)} | {p['text'][:80]}"
+            for p in top3
+        ])
+        bottom_text = "\n".join([
+            f"・スコア{p['score']:.0f} | いいね{p.get('likes', 0)} | {p['text'][:80]}"
+            for p in bottom3
+        ])
+
+        prompt = f"""SNS投稿のパフォーマンスデータを分析してください。
+
+プラットフォーム: {platform}
+
+【スコア上位3件（いいね×3 + RT/RP×5 + リプライ×2 + インプレ×0.01）】
+{top_text}
+
+【スコア下位3件】
+{bottom_text}
+
+以下を分析して、次の投稿戦略に活かせる情報をJSON形式で出力してください:
+{{
+  "winning_patterns": ["伸びた投稿の共通パターン（3つ以内）"],
+  "avoid_patterns": ["避けるべきパターン（2つ以内）"],
+  "best_content_type": "最も反応が良いコンテンツタイプを1文で",
+  "next_action": "次の投稿で試すべきこと1つ"
+}}
+
+JSONのみ出力してください。"""
+
+        try:
+            from google import genai
+            client = genai.Client(api_key=api_key)
+            response = client.models.generate_content(
+                model="gemini-2.0-flash-lite",
+                contents=prompt,
+            )
+            text = response.text.strip()
+
+            import re
+            json_match = re.search(r'\{.*\}', text, re.DOTALL)
+            if json_match:
+                data = json.loads(json_match.group())
+                insights[platform] = data
+                print(f"[Analytics/AI] {platform} 分析完了")
+                print(f"  勝ちパターン: {data.get('winning_patterns', [])[:1]}")
+            else:
+                print(f"[Analytics/AI] {platform}: JSON解析失敗")
+        except Exception as e:
+            print(f"[Analytics/AI] {platform} エラー: {e}")
+
+    return insights
+
+
+# ============================================================
+# 全プラットフォームデータを統合してキーワード戦略を生成
+# ============================================================
+
+def generate_keyword_strategy(records: list, current_insights: dict) -> dict:
+    """
+    過去の投稿テキストからキーワード傾向を抽出し
+    次の記事生成に使えるカテゴリ優先度を返す
+    """
+    # スコア上位20件のテキストを集める
+    top_posts = sorted(records, key=lambda x: x.get("score", 0), reverse=True)[:20]
+    top_texts = [p["text"] for p in top_posts if p.get("score", 0) > 0]
+
+    if not top_texts:
+        return {}
+
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        return {}
+
+    combined = "\n".join(top_texts[:10])
+    prompt = f"""以下はSNSで反応が良かった投稿テキストです。
+
+{combined}
+
+これらを分析して、次に書くべきSEO記事のカテゴリをJSON形式で返してください:
+{{
+  "recommended_categories": ["カテゴリ1", "カテゴリ2", "カテゴリ3"],
+  "hot_topics": ["トピック1", "トピック2"],
+  "reasoning": "推奨理由を1文で"
+}}
+
+候補カテゴリ: ai_tools, side_hustle, investment_savings, productivity, lifestyle
+JSONのみ出力してください。"""
+
+    try:
+        from google import genai
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(
+            model="gemini-2.0-flash-lite",
+            contents=prompt,
+        )
+        import re
+        json_match = re.search(r'\{.*\}', response.text, re.DOTALL)
+        if json_match:
+            return json.loads(json_match.group())
+    except Exception as e:
+        print(f"[Analytics/Strategy] エラー: {e}")
+
+    return {}
+
+
+# ============================================================
+# メイン実行
+# ============================================================
+
+def run_analytics_feedback() -> dict:
+    """
+    全プラットフォームのデータ収集 → Gemini分析 → insights保存
+    Returns: 保存したinsights
+    """
+    print(f"\n[Analytics] {datetime.now().strftime('%Y/%m/%d %H:%M')} 分析開始")
+
+    # データ収集
+    all_records = []
+    all_records += collect_x_metrics()
+    all_records += collect_bluesky_metrics()
+
+    if not all_records:
+        print("[Analytics] 収集データなし")
+        return load_insights()
+
+    # 履歴に保存
+    new_count = save_history(all_records)
+    print(f"[Analytics] 新規{new_count}件をhistoryに追加")
+
+    # 全履歴を使って分析（データが多いほど精度向上）
+    history = load_history()
+    print(f"[Analytics] 累計{len(history)}件で分析")
+
+    if len(history) < 3:
+        print("[Analytics] データが少ないため分析スキップ（最低3件必要）")
+        return load_insights()
+
+    # Geminiで分析
+    platform_insights = analyze_with_gemini(history)
+    keyword_strategy = generate_keyword_strategy(history, platform_insights)
+
+    # insightsを更新・保存
+    current = load_insights()
+    for platform, data in platform_insights.items():
+        current[platform] = data
+    if keyword_strategy:
+        current["keyword_strategy"] = keyword_strategy
+
+    save_insights(current)
+    print(f"[Analytics] insights保存完了: {INSIGHTS_FILE}")
+
+    return current
+
+
+if __name__ == "__main__":
+    # .envを読み込む（ローカル実行時）
+    env_path = BASE_DIR.parent / ".env"
+    if env_path.exists():
+        with open(env_path) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    os.environ.setdefault(k.strip(), v.strip())
+
+    result = run_analytics_feedback()
+    print("\n[Analytics] 最終insights:")
+    print(json.dumps(result, ensure_ascii=False, indent=2))
