@@ -150,8 +150,8 @@ Google Search Consoleデータ: {json.dumps(sc_summary, ensure_ascii=False)}
 
     # フォールバック: ルールベース分析
     # 最近少ない（=飽和していない）カテゴリを優先
-    from money_agent.keywords_db import KEYWORDS_DB
-    all_categories = list(KEYWORDS_DB.keys())
+    from money_agent.keywords_db import KEYWORD_CATEGORIES
+    all_categories = list(KEYWORD_CATEGORIES.keys())
     sorted_cats = sorted(all_categories, key=lambda c: category_counts.get(c, 0))
 
     return {

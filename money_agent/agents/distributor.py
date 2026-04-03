@@ -230,15 +230,38 @@ def run(article: dict, dry_run: bool = False) -> dict:
         return results
 
     # === はてなブログ投稿 ===
+    hatena_url = ""
     try:
         sys.path.insert(0, str(ROOT_DIR))
         from hatena_automation.hatena_poster import post_to_hatena
         hatena_result = post_to_hatena(article)
-        results["hatena"] = bool(hatena_result)
+        # post_to_hatena が URL を返す場合は取得（dict or str に対応）
+        if isinstance(hatena_result, dict):
+            hatena_url = hatena_result.get("url", "")
+            results["hatena"] = bool(hatena_result.get("success", hatena_result))
+        else:
+            results["hatena"] = bool(hatena_result)
         status = "✅" if results["hatena"] else "❌"
         print(f"  {status} [Distributor-{slot}] はてな投稿")
     except Exception as e:
         print(f"  ❌ [Distributor-{slot}] はてな失敗: {e}")
+
+    # === Google Indexing API（はてな投稿成功時）===
+    if results["hatena"]:
+        try:
+            sys.path.insert(0, str(BASE_DIR))
+            from money_agent.google_indexing import notify_article
+            idx_result = notify_article(article, hatena_url=hatena_url)
+            if idx_result.get("success"):
+                print(f"  ✅ [Distributor-{slot}] Googleインデックス通知: {idx_result.get('url','')[:50]}")
+            else:
+                err = idx_result.get("error", "")
+                if "GOOGLE_INDEXING_CREDENTIALS" in err:
+                    print(f"  ℹ️ [Distributor-{slot}] Googleインデックス通知スキップ（認証情報未設定）")
+                else:
+                    print(f"  ⚠️ [Distributor-{slot}] Googleインデックス通知失敗: {err[:60]}")
+        except Exception as e:
+            print(f"  ⚠️ [Distributor-{slot}] Googleインデックス通知スキップ: {e}")
 
     # === note投稿 ===
     try:
