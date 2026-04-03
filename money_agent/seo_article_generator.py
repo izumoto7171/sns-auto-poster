@@ -68,6 +68,21 @@ ARTICLE_TEMPLATES = {
         }
     ],
 
+    "ai_saas": [
+        {
+            "title_format": "【{year}年最新】{keyword}完全ガイド｜中小企業での実践的な使い方",
+            "structure": ["hook", "latest_news", "merit", "how_to", "tips", "affiliate_cta", "summary"],
+            "tone": "AI活用コンサルタント・最新情報重視",
+            "target": "中小企業経営者・ビジネスパーソン"
+        },
+        {
+            "title_format": "{keyword}｜実際に使ってわかった本音レビュー【{year}年版】",
+            "structure": ["hook", "latest_news", "pros_cons", "how_to", "affiliate_cta", "summary"],
+            "tone": "体験談・正直レビュー・最新情報あり",
+            "target": "AI導入を検討している経営者・管理職"
+        }
+    ],
+
     "dx_tools": [
         {
             "title_format": "【中小企業向け】{keyword}の導入メリットを現場目線で解説｜{year}年版",
@@ -525,6 +540,34 @@ def _build_affiliate_cta(affiliates: list, keyword: str) -> str:
     return content
 
 
+# AIツール・SaaS記事：キーワード → 自然言語タイトルのマッピング
+AI_SAAS_NATURAL_TITLES = {
+    "ChatGPT 中小企業 活用 事例": [
+        "ChatGPTを中小企業で使いこなす方法【2026年最新・実例つき】",
+        "社長がChatGPTを導入したら、会社の何が変わったか？実例で解説",
+    ],
+    "ChatGPT Plus 仕事 効率化 具体例": [
+        "ChatGPT Plusは月額20ドルの価値があるか？仕事で使い倒した結果を報告",
+        "ChatGPT Plusで仕事効率化【GPT-4oを使って実際に変わった5つのこと】",
+    ],
+    "Notion AI 使い方 業務効率化": [
+        "Notion AIで議事録・報告書を自動生成した話【月20時間削減の実例】",
+        "Notion AIって実際どう使う？中小企業での活用法を具体的に解説",
+    ],
+    "Notion テンプレート 中小企業 無料": [
+        "中小企業がNotionを使い始めるなら、このテンプレートから始めよ",
+        "Notionの無料テンプレート10選【中小企業の業務にそのまま使えるもの限定】",
+    ],
+    "Canva Pro 中小企業 デザイン 費用対効果": [
+        "Canva Proは月1,500円の価値があるか？中小企業目線で正直に評価する",
+        "デザイナーなしでプロ品質の資料を作る方法【Canva Proを使った結果】",
+    ],
+    "AIツール 中小企業 比較 おすすめ 2026": [
+        "中小企業のAI活用、何から始める？ChatGPT・Notion・Canvaを経営者目線で比較",
+        "2026年版：中小企業が最初に導入すべきAIツール3選と選び方",
+    ],
+}
+
 # DXツール記事：キーワード → 自然言語タイトルのマッピング
 DX_NATURAL_TITLES = {
     "freee 中小企業 クラウド会計": [
@@ -546,27 +589,72 @@ DX_NATURAL_TITLES = {
 }
 
 
-def generate_seo_article(keyword: str, category: str) -> dict:
+def _build_latest_news_section(keyword: str, latest_ai_info: dict) -> str:
+    """ai_saas 用：Geminiから取得した最新情報セクションを生成"""
+    if not latest_ai_info:
+        return ""
+
+    year = datetime.now().year
+    lines = [f"## {year}年最新アップデート情報\n\n"]
+
+    if latest_ai_info.get("update_highlight"):
+        lines.append(f"**最近の主なアップデート:** {latest_ai_info['update_highlight']}\n\n")
+
+    if latest_ai_info.get("latest_feature"):
+        lines.append(f"**注目の新機能:** {latest_ai_info['latest_feature']}\n\n")
+
+    if latest_ai_info.get("business_use_case"):
+        lines.append(f"**中小企業での活用例:** {latest_ai_info['business_use_case']}\n\n")
+
+    if latest_ai_info.get("free_vs_paid"):
+        lines.append(f"**無料 vs 有料の違い:** {latest_ai_info['free_vs_paid']}\n\n")
+
+    if latest_ai_info.get("caution"):
+        lines.append(f"**注意点:** {latest_ai_info['caution']}\n\n")
+
+    lines.append("---\n")
+    return "".join(lines)
+
+
+def generate_seo_article(keyword: str, category: str,
+                         affiliates: list = None,
+                         feedback_insights: dict = None) -> dict:
     """SEO最適化記事を生成"""
 
     year = datetime.now().year
-    affiliates = get_affiliates_for_category(category)
+    feedback_insights = feedback_insights or {}
+    latest_ai_info = feedback_insights.get("latest_ai_info", {})
+
+    # affiliates 引数が渡されなければカテゴリから取得
+    if affiliates is None:
+        affiliates = get_affiliates_for_category(category)
 
     # テンプレート選択
     templates = ARTICLE_TEMPLATES.get(category, ARTICLE_TEMPLATES["ai_tools"])
     template = random.choice(templates)
 
-    # タイトル生成 — dx_tools はキャッチーな自然言語タイトルを優先
+    # タイトル生成 — dx_tools / ai_saas はキャッチーな自然言語タイトルを優先
     if category == "dx_tools" and keyword in DX_NATURAL_TITLES:
         title = random.choice(DX_NATURAL_TITLES[keyword])
+    elif category == "ai_saas" and keyword in AI_SAAS_NATURAL_TITLES:
+        title = random.choice(AI_SAAS_NATURAL_TITLES[keyword])
     else:
         title = template["title_format"].format(keyword=keyword, year=year)
 
     # 記事構造に従ってコンテンツ生成
     body_parts = []
 
-    # 導入文
-    body_parts.append(f"""この記事では**{keyword}**について、初心者でも実践できるよう基礎から応用まで解説します。
+    # 導入文（ai_saasは鮮度をアピール）
+    if category == "ai_saas" and latest_ai_info.get("update_highlight"):
+        body_parts.append(f"""この記事では{year}年最新の**{keyword}**について、実際のビジネス活用を中心に解説します。
+
+{latest_ai_info['update_highlight']}
+
+競合記事との違いは「最新の実態」に基づいている点です。古い情報で判断して損をしないよう、ぜひ最後まで読んでください。
+
+""")
+    else:
+        body_parts.append(f"""この記事では**{keyword}**について、初心者でも実践できるよう基礎から応用まで解説します。
 
 実際に試してみた経験をもとに、失敗しないためのポイントも含めてお伝えします。
 
@@ -574,33 +662,34 @@ def generate_seo_article(keyword: str, category: str) -> dict:
 
     # 目次
     body_parts.append("## 目次\n")
+    section_titles = {
+        "hook": f"{keyword}とは",
+        "what_is": "基本知識",
+        "merit": "メリット・デメリット",
+        "how_to": "具体的な使い方・手順",
+        "tips": "活用のコツ5選",
+        "step_by_step": "稼ぐための具体的な手順",
+        "review_intro": "実際に使ってみた",
+        "pros_cons": "使ってわかったこと",
+        "comparison_table": "比較一覧",
+        "tools": "おすすめツール",
+        "affiliate_cta": "おすすめサービス",
+        "faq": "よくある質問",
+        "caution": "注意点",
+        "summary": "まとめ",
+        "author_intro": "この記事の筆者について",
+        "methods": "具体的な方法",
+        "use_cases": "活用事例",
+        "problem": "よくある悩み",
+        "solution": "解決策",
+        "detail_review": "詳細レビュー",
+        "how_to_start": "始め方",
+        "reality_check": "現実的な話",
+        "dx_hook": "はじめに",
+        "user_worries": "よくある悩みと解決策",
+        "latest_news": f"{year}年最新アップデート情報",
+    }
     for i, section in enumerate(template["structure"], 1):
-        section_titles = {
-            "hook": f"{keyword}とは",
-            "what_is": "基本知識",
-            "merit": "メリット・デメリット",
-            "how_to": "具体的な使い方・手順",
-            "tips": "活用のコツ5選",
-            "step_by_step": "稼ぐための具体的な手順",
-            "review_intro": "実際に使ってみた",
-            "pros_cons": "使ってわかったこと",
-            "comparison_table": "比較一覧",
-            "tools": "おすすめツール",
-            "affiliate_cta": "おすすめサービス",
-            "faq": "よくある質問",
-            "caution": "注意点",
-            "summary": "まとめ",
-            "author_intro": "この記事の筆者について",
-            "methods": "具体的な方法",
-            "use_cases": "活用事例",
-            "problem": "よくある悩み",
-            "solution": "解決策",
-            "detail_review": "詳細レビュー",
-            "how_to_start": "始め方",
-            "reality_check": "現実的な話",
-            "dx_hook": "はじめに",
-            "user_worries": "よくある悩みと解決策",
-        }
         title_text = section_titles.get(section, section)
         body_parts.append(f"{i}. {title_text}\n")
 
@@ -608,12 +697,16 @@ def generate_seo_article(keyword: str, category: str) -> dict:
 
     # 各セクションのコンテンツ
     for section in template["structure"]:
-        content = generate_section(section, keyword, category, affiliates)
+        if section == "latest_news":
+            content = _build_latest_news_section(keyword, latest_ai_info)
+        else:
+            content = generate_section(section, keyword, category, affiliates)
         body_parts.append(content)
 
     body = "".join(body_parts)
 
     # メタ情報
+    has_fresh_info = bool(latest_ai_info)
     return {
         "title": title,
         "body": body,
@@ -623,6 +716,7 @@ def generate_seo_article(keyword: str, category: str) -> dict:
         "affiliate_count": len(affiliates),
         "template": template["tone"],
         "target": template["target"],
+        "has_fresh_info": has_fresh_info,
         "generated_at": datetime.now().isoformat()
     }
 

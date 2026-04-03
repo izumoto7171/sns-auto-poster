@@ -19,8 +19,11 @@ from pathlib import Path
 from datetime import datetime
 
 HATENA_BLOG_DOMAIN = os.environ.get("HATENA_BLOG_DOMAIN", "smart-earn-life.hateblo.jp")
+HATENA_SITEMAP_URL = f"https://{HATENA_BLOG_DOMAIN}/sitemap.xml"
 INDEXING_ENDPOINT  = "https://indexing.googleapis.com/v3/urlNotifications:publish"
+GOOGLE_PING_URL    = "https://www.google.com/ping"
 LOG_FILE           = Path(__file__).parent / "indexing_log.json"
+SITEMAP_FILE       = Path(__file__).parent / "sitemap.xml"
 
 
 def _get_credentials():
@@ -166,6 +169,71 @@ def notify_bulk(urls: list, interval_sec: float = 1.0) -> list:
     return results
 
 
+def ping_google_sitemap(sitemap_url: str = None) -> dict:
+    """
+    Google にサイトマップURLを通知する（Indexing APIとは独立した安全な手段）
+    Googlebotが自然に巡回しやすくなる二段構えの対策
+
+    はてなブログはサイトマップを自動生成するので、URLをpingするだけでOK
+    """
+    sitemap_url = sitemap_url or HATENA_SITEMAP_URL
+    try:
+        import requests as req
+        resp = req.get(GOOGLE_PING_URL, params={"sitemap": sitemap_url}, timeout=10)
+        success = resp.status_code == 200
+        result = {
+            "type": "sitemap_ping",
+            "success": success,
+            "sitemap_url": sitemap_url,
+            "status_code": resp.status_code,
+            "notified_at": datetime.now().isoformat(),
+        }
+        _save_log(result)
+        status = "OK" if success else f"NG({resp.status_code})"
+        print(f"  🗺️ [Indexing] Sitemapping: {status} → {sitemap_url}")
+        return result
+    except Exception as e:
+        return {"type": "sitemap_ping", "success": False, "error": str(e)}
+
+
+def generate_local_sitemap(post_log_path: str = None) -> str:
+    """
+    投稿ログからsitemap.xmlを生成してローカルに保存する
+    （はてなの自動サイトマップで十分だが、バックアップ・確認用として）
+
+    Returns: 生成したXMLの文字列
+    """
+    log_path = Path(post_log_path) if post_log_path else (
+        Path(__file__).parent.parent / "hatena_automation" / "hatena_post_log.json"
+    )
+
+    entries = []
+    if log_path.exists():
+        try:
+            entries = json.loads(log_path.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+
+    urls = [e["url"] for e in entries if e.get("url") and e["url"].startswith("http")]
+
+    # ブログトップを追加
+    urls = [f"https://{HATENA_BLOG_DOMAIN}/"] + urls
+
+    lines = ['<?xml version="1.0" encoding="UTF-8"?>']
+    lines.append('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">')
+    for url in urls:
+        lines.append("  <url>")
+        lines.append(f"    <loc>{url}</loc>")
+        lines.append(f"    <changefreq>weekly</changefreq>")
+        lines.append("  </url>")
+    lines.append("</urlset>")
+
+    xml = "\n".join(lines)
+    SITEMAP_FILE.write_text(xml, encoding="utf-8")
+    print(f"  🗺️ [Indexing] sitemap.xml生成: {len(urls)}件のURL → {SITEMAP_FILE}")
+    return xml
+
+
 def run(state: dict = None) -> dict:
     """
     CEOエージェントから呼び出されるエントリポイント
@@ -205,7 +273,16 @@ def run(state: dict = None) -> dict:
     results = notify_bulk(targets)
     ok = sum(1 for r in results if r["success"])
     print(f"  ✅ [GoogleIndexing] 完了: {ok}/{len(targets)}件 通知成功")
-    return {"notified": ok, "total": len(targets), "results": results}
+
+    # 二段構え: Indexing API と並行してサイトマップPingも実行
+    ping_result = ping_google_sitemap()
+
+    return {
+        "notified": ok,
+        "total": len(targets),
+        "results": results,
+        "sitemap_ping": ping_result.get("success", False),
+    }
 
 
 if __name__ == "__main__":

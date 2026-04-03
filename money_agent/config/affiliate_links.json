@@ -1,0 +1,66 @@
+{
+  "_version": 1,
+  "_note": "A8.net提携承認後、URLをここだけ書き換えれば全記事に自動反映される",
+  "_update_tool": "python3 money_agent/config/update_affiliate.py <program_id> <new_url>",
+
+  "freee_accounting": {
+    "url": "https://px.a8.net/svt/ejp?a8mat=3Z1234+FREEE1+0000+0000A",
+    "status": "pending",
+    "note": "A8.net提携承認待ち。承認メール受信後にURLを更新してください"
+  },
+  "moneyforward_cloud": {
+    "url": "https://px.a8.net/svt/ejp?a8mat=3Z1234+MFWD01+0000+0000A",
+    "status": "pending",
+    "note": "A8.net提携承認待ち"
+  },
+  "chatwork": {
+    "url": "https://px.a8.net/svt/ejp?a8mat=3Z1234+CWORK1+0000+0000A",
+    "status": "pending",
+    "note": "A8.net提携承認待ち"
+  },
+  "tossy": {
+    "url": "https://px.a8.net/svt/ejp?a8mat=4AZPOR+A94RUA+1WP2+1HLNLE",
+    "status": "active",
+    "note": "承認済み"
+  },
+  "rakuten_card": {
+    "url": "https://rpx.a8.net/svt/ejp?a8mat=4AZMKI+BFEJSI+2HOM+BW8O1&rakuten=y&a8ejpredirect=http%3A%2F%2Fhb.afl.rakuten.co.jp%2Fhgc%2F0ea62065.34400275.0ea62066.204f04c0%2Fa26032392970_4AZMKI_BFEJSI_2HOM_BW8O1%3Fpc%3Dhttps%253A%252F%252Fcard.rakuten.co.jp%252F%26m%3Dhttps%253A%252F%252Fcard.rakuten.co.jp%252F",
+    "status": "active",
+    "note": "承認済み"
+  },
+  "rakuten_securities": {
+    "url": "https://rpx.a8.net/svt/ejp?a8mat=4AZMKI+BFEJSI+2HOM+BW8O1&rakuten=y&a8ejpredirect=http%3A%2F%2Fhb.afl.rakuten.co.jp%2Fhgc%2F0ea62065.34400275.0ea62066.204f04c0%2Fa26032392970_4AZMKI_BFEJSI_2HOM_BW8O1%3Fpc%3Dhttps%253A%252F%252Fwww.rakuten-sec.co.jp%252F%26m%3Dhttps%253A%252F%252Fwww.rakuten-sec.co.jp%252F",
+    "status": "active",
+    "note": "承認済み"
+  },
+  "sbi_securities": {
+    "url": "https://rpx.a8.net/svt/ejp?a8mat=4AZMKI+BFEJSI+2HOM+BW8O1&rakuten=y&a8ejpredirect=http%3A%2F%2Fhb.afl.rakuten.co.jp%2Fhgc%2F0ea62065.34400275.0ea62066.204f04c0%2Fa26032392970_4AZMKI_BFEJSI_2HOM_BW8O1%3Fpc%3Dhttps%253A%252F%252Fwww.rakuten-sec.co.jp%252F%26m%3Dhttps%253A%252F%252Fwww.rakuten-sec.co.jp%252F",
+    "status": "active",
+    "note": "楽天証券と共通"
+  },
+  "onamae_domain": {
+    "url": "https://px.a8.net/svt/ejp?a8mat=4AZMKI+BRWNHU+50+2HEG76",
+    "status": "active",
+    "note": "承認済み"
+  },
+  "canva_pro": {
+    "url": "https://www.canva.com/affiliates/",
+    "status": "pending",
+    "note": "Canvaアフィリエイトプログラムへの申請が必要"
+  },
+  "notion": {
+    "url": "https://www.notion.so/",
+    "status": "pending",
+    "note": "Notionアフィリエイトプログラムへの申請が必要"
+  },
+  "crowdworks": {
+    "url": "https://crowdworks.jp/",
+    "status": "active",
+    "note": "直リンク（アフィリエイト申請推奨）"
+  },
+  "lancers": {
+    "url": "https://www.lancers.jp/",
+    "status": "active",
+    "note": "直リンク（アフィリエイト申請推奨）"
+  }
+}

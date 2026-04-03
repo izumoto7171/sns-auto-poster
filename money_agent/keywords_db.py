@@ -85,6 +85,31 @@ KEYWORD_CATEGORIES = {
     }
 }
 
+def _load_affiliate_urls() -> dict:
+    """
+    money_agent/config/affiliate_links.json からURLを動的に読み込む
+    提携URLが更新されたときに、このファイルだけ書き換えればOK
+    """
+    import os
+    config_file = os.path.join(os.path.dirname(__file__), "config", "affiliate_links.json")
+    try:
+        import json
+        with open(config_file, encoding="utf-8") as f:
+            data = json.load(f)
+        # _で始まるメタキーを除外してURL辞書を返す
+        return {k: v.get("url", "") for k, v in data.items() if not k.startswith("_") and v.get("url")}
+    except Exception:
+        return {}
+
+# 外部設定ファイルからURLを取得（なければfallbackURLを使う）
+_AFFILIATE_URLS = _load_affiliate_urls()
+
+
+def _url(program_id: str, fallback: str) -> str:
+    """config/affiliate_links.json のURLを優先。なければfallback"""
+    return _AFFILIATE_URLS.get(program_id, fallback)
+
+
 # アフィリエイトプログラム（単価が高い順）
 AFFILIATE_PROGRAMS = {
 
@@ -93,7 +118,7 @@ AFFILIATE_PROGRAMS = {
         "name": "TOSSY（DMM.com証券）",
         "commission": "15,000円/件",
         "category": "投資",
-        "url": "https://px.a8.net/svt/ejp?a8mat=4AZPOR+A94RUA+1WP2+1HLNLE",
+        "url": _url("tossy", "https://px.a8.net/svt/ejp?a8mat=4AZPOR+A94RUA+1WP2+1HLNLE"),
         "description": "株式・FX・暗号資産を1アプリで完結・新規登録+1回取引",
         "cta": "TOSSYで投資を始める →"
     },
@@ -101,7 +126,7 @@ AFFILIATE_PROGRAMS = {
         "name": "楽天カード",
         "commission": "7,000〜10,000円/件",
         "category": "クレカ",
-        "url": "https://rpx.a8.net/svt/ejp?a8mat=4AZMKI+BFEJSI+2HOM+BW8O1&rakuten=y&a8ejpredirect=http%3A%2F%2Fhb.afl.rakuten.co.jp%2Fhgc%2F0ea62065.34400275.0ea62066.204f04c0%2Fa26032392970_4AZMKI_BFEJSI_2HOM_BW8O1%3Fpc%3Dhttps%253A%252F%252Fcard.rakuten.co.jp%252F%26m%3Dhttps%253A%252F%252Fcard.rakuten.co.jp%252F",
+        "url": _url("rakuten_card", "https://rpx.a8.net/svt/ejp?a8mat=4AZMKI+BFEJSI+2HOM+BW8O1&rakuten=y&a8ejpredirect=http%3A%2F%2Fhb.afl.rakuten.co.jp%2Fhgc%2F0ea62065.34400275.0ea62066.204f04c0%2Fa26032392970_4AZMKI_BFEJSI_2HOM_BW8O1%3Fpc%3Dhttps%253A%252F%252Fcard.rakuten.co.jp%252F%26m%3Dhttps%253A%252F%252Fcard.rakuten.co.jp%252F"),
         "description": "年会費永年無料・ポイント還元率1%",
         "cta": "今すぐ無料で作る →"
     },
@@ -109,7 +134,7 @@ AFFILIATE_PROGRAMS = {
         "name": "楽天証券（NISA）",
         "commission": "3,000〜15,000円/口座",
         "category": "証券",
-        "url": "https://rpx.a8.net/svt/ejp?a8mat=4AZMKI+BFEJSI+2HOM+BW8O1&rakuten=y&a8ejpredirect=http%3A%2F%2Fhb.afl.rakuten.co.jp%2Fhgc%2F0ea62065.34400275.0ea62066.204f04c0%2Fa26032392970_4AZMKI_BFEJSI_2HOM_BW8O1%3Fpc%3Dhttps%253A%252F%252Fwww.rakuten-sec.co.jp%252F%26m%3Dhttps%253A%252F%252Fwww.rakuten-sec.co.jp%252F",
+        "url": _url("sbi_securities", "https://rpx.a8.net/svt/ejp?a8mat=4AZMKI+BFEJSI+2HOM+BW8O1&rakuten=y&a8ejpredirect=http%3A%2F%2Fhb.afl.rakuten.co.jp%2Fhgc%2F0ea62065.34400275.0ea62066.204f04c0%2Fa26032392970_4AZMKI_BFEJSI_2HOM_BW8O1%3Fpc%3Dhttps%253A%252F%252Fwww.rakuten-sec.co.jp%252F%26m%3Dhttps%253A%252F%252Fwww.rakuten-sec.co.jp%252F"),
         "description": "楽天ポイントで投資・新NISA完全対応",
         "cta": "楽天証券で口座開設（無料）→"
     },
@@ -117,7 +142,7 @@ AFFILIATE_PROGRAMS = {
         "name": "楽天証券",
         "commission": "3,000〜15,000円/口座",
         "category": "証券",
-        "url": "https://rpx.a8.net/svt/ejp?a8mat=4AZMKI+BFEJSI+2HOM+BW8O1&rakuten=y&a8ejpredirect=http%3A%2F%2Fhb.afl.rakuten.co.jp%2Fhgc%2F0ea62065.34400275.0ea62066.204f04c0%2Fa26032392970_4AZMKI_BFEJSI_2HOM_BW8O1%3Fpc%3Dhttps%253A%252F%252Fwww.rakuten-sec.co.jp%252F%26m%3Dhttps%253A%252F%252Fwww.rakuten-sec.co.jp%252F",
+        "url": _url("rakuten_securities", "https://rpx.a8.net/svt/ejp?a8mat=4AZMKI+BFEJSI+2HOM+BW8O1&rakuten=y&a8ejpredirect=http%3A%2F%2Fhb.afl.rakuten.co.jp%2Fhgc%2F0ea62065.34400275.0ea62066.204f04c0%2Fa26032392970_4AZMKI_BFEJSI_2HOM_BW8O1%3Fpc%3Dhttps%253A%252F%252Fwww.rakuten-sec.co.jp%252F%26m%3Dhttps%253A%252F%252Fwww.rakuten-sec.co.jp%252F"),
         "description": "楽天ポイントで投資できる・新NISA対応",
         "cta": "楽天ポイントを使って投資を始める →"
     },
@@ -127,7 +152,7 @@ AFFILIATE_PROGRAMS = {
         "name": "お名前.com",
         "commission": "1,150〜5,100円/件",
         "category": "ドメイン",
-        "url": "https://px.a8.net/svt/ejp?a8mat=4AZMKI+BRWNHU+50+2HEG76",
+        "url": _url("onamae_domain", "https://px.a8.net/svt/ejp?a8mat=4AZMKI+BRWNHU+50+2HEG76"),
         "description": "国内シェアNo.1ドメイン取得サービス・ドメインカテゴリNO.1報酬！レンタルサーバー同時申請なら5,100円",
         "cta": "お名前.comでドメインを取得する →"
     },
@@ -135,7 +160,7 @@ AFFILIATE_PROGRAMS = {
         "name": "クラウドワークス",
         "commission": "2,000〜3,000円/登録",
         "category": "副業",
-        "url": "https://crowdworks.jp/",
+        "url": _url("crowdworks", "https://crowdworks.jp/"),
         "description": "日本最大級のクラウドソーシング",
         "cta": "無料登録して副業を始める →"
     },
@@ -143,7 +168,7 @@ AFFILIATE_PROGRAMS = {
         "name": "ランサーズ",
         "commission": "1,500〜2,500円/登録",
         "category": "副業",
-        "url": "https://www.lancers.jp/",
+        "url": _url("lancers", "https://www.lancers.jp/"),
         "description": "スキルを活かして在宅で稼ぐ",
         "cta": "ランサーズで仕事を探す →"
     },
@@ -151,39 +176,35 @@ AFFILIATE_PROGRAMS = {
         "name": "楽天市場",
         "commission": "1〜3%",
         "category": "物販",
-        "url": "https://rpx.a8.net/svt/ejp?a8mat=4AZMKI+BFEJSI+2HOM+BW8O1&rakuten=y&a8ejpredirect=http%3A%2F%2Fhb.afl.rakuten.co.jp%2Fhgc%2F0ea62065.34400275.0ea62066.204f04c0%2Fa26032392970_4AZMKI_BFEJSI_2HOM_BW8O1%3Fpc%3Dhttps%253A%252F%252Fwww.rakuten.co.jp%26m%3Dhttps%253A%252F%252Fwww.rakuten.co.jp",
+        "url": _url("rakuten_market", "https://rpx.a8.net/svt/ejp?a8mat=4AZMKI+BFEJSI+2HOM+BW8O1&rakuten=y&a8ejpredirect=http%3A%2F%2Fhb.afl.rakuten.co.jp%2Fhgc%2F0ea62065.34400275.0ea62066.204f04c0%2Fa26032392970_4AZMKI_BFEJSI_2HOM_BW8O1%3Fpc%3Dhttps%253A%252F%252Fwww.rakuten.co.jp%26m%3Dhttps%253A%252F%252Fwww.rakuten.co.jp"),
         "description": "日本最大のネットショッピングモール",
         "cta": "楽天市場で探す →"
     },
 
-    # === DX・業務効率化ツール（A8.net）===
-    # ※ 実際のA8.netプログラムURLは提携承認後に差し替えること
+    # === DX・業務効率化ツール（config/affiliate_links.jsonで管理）===
     "freee_accounting": {
         "name": "freee会計",
         "commission": "2,000円/無料トライアル登録",
         "category": "DXツール",
-        "url": "https://px.a8.net/svt/ejp?a8mat=3Z1234+FREEE1+0000+0000A",  # 要: A8.net提携後に差し替え
+        "url": _url("freee_accounting", "https://px.a8.net/svt/ejp?a8mat=3Z1234+FREEE1+0000+0000A"),
         "description": "中小企業・個人事業主向けクラウド会計ソフト。確定申告・帳簿づけをAIが自動化",
         "cta": "freeeを無料で試してみる（30日間）→",
-        "_note": "A8.net提携URL: https://www.a8.net/svt/bgt?aid=&wid=&eno=01&mid=s00000025203001015000&mc=1"
     },
     "moneyforward_cloud": {
         "name": "マネーフォワード クラウド",
         "commission": "1,500円/無料登録",
         "category": "DXツール",
-        "url": "https://px.a8.net/svt/ejp?a8mat=3Z1234+MFWD01+0000+0000A",  # 要: A8.net提携後に差し替え
+        "url": _url("moneyforward_cloud", "https://px.a8.net/svt/ejp?a8mat=3Z1234+MFWD01+0000+0000A"),
         "description": "給与計算・経費精算・請求書をまとめて自動化。連携サービス5,000以上",
         "cta": "マネーフォワード クラウドを無料で試す →",
-        "_note": "A8.net提携URL: https://biz.moneyforward.com/"
     },
     "chatwork": {
         "name": "Chatwork",
         "commission": "3,000円/有料プラン契約",
         "category": "DXツール",
-        "url": "https://px.a8.net/svt/ejp?a8mat=3Z1234+CWORK1+0000+0000A",  # 要: A8.net提携後に差し替え
+        "url": _url("chatwork", "https://px.a8.net/svt/ejp?a8mat=3Z1234+CWORK1+0000+0000A"),
         "description": "国内利用者数No.1のビジネスチャット。メール・電話を減らして社内連絡を効率化",
         "cta": "Chatworkを無料で始める →",
-        "_note": "A8.net提携URL: https://go.chatwork.com/ja/"
     },
 
     # === SaaS/AIツール（継続課金）===
@@ -191,7 +212,7 @@ AFFILIATE_PROGRAMS = {
         "name": "Canva Pro",
         "commission": "初回購入の36%",
         "category": "AIツール",
-        "url": "https://www.canva.com/affiliates/",
+        "url": _url("canva_pro", "https://www.canva.com/affiliates/"),
         "description": "AI搭載デザインツール・月1,500円〜",
         "cta": "Canva Proを試す（30日無料）→"
     },
@@ -199,7 +220,7 @@ AFFILIATE_PROGRAMS = {
         "name": "Notion Plus",
         "commission": "3ヶ月分の50%",
         "category": "生産性",
-        "url": "https://www.notion.so/",
+        "url": _url("notion", "https://www.notion.so/"),
         "description": "オールインワン仕事術ツール",
         "cta": "Notionを無料で始める →"
     },
