@@ -52,10 +52,16 @@ ARTICLE_TEMPLATES = {
 
     "investment_savings": [
         {
-            "title_format": "【初心者向け】{keyword}徹底比較｜{year}年おすすめランキング",
+            "title_format": "【{year}年最新制度対応】{keyword}徹底比較｜初心者向けおすすめランキング",
             "structure": ["hook", "comparison_table", "detail_review", "how_to_start", "affiliate_cta", "caution", "summary"],
             "tone": "比較・ランキング形式",
             "target": "投資初心者・比較検討層"
+        },
+        {
+            "title_format": "{keyword}【{year}年最新】｜新NISA・iDeCo制度改正に完全対応した選び方",
+            "structure": ["hook", "comparison_table", "how_to_start", "affiliate_cta", "caution", "summary"],
+            "tone": "制度対応・最新情報重視",
+            "target": "制度変更を気にする投資初心者"
         }
     ],
 
@@ -644,13 +650,21 @@ def generate_seo_article(keyword: str, category: str,
     # 記事構造に従ってコンテンツ生成
     body_parts = []
 
-    # 導入文（ai_saasは鮮度をアピール）
+    # 導入文（カテゴリ別に最新性をアピール）
     if category == "ai_saas" and latest_ai_info.get("update_highlight"):
         body_parts.append(f"""この記事では{year}年最新の**{keyword}**について、実際のビジネス活用を中心に解説します。
 
 {latest_ai_info['update_highlight']}
 
 競合記事との違いは「最新の実態」に基づいている点です。古い情報で判断して損をしないよう、ぜひ最後まで読んでください。
+
+""")
+    elif category == "investment_savings":
+        body_parts.append(f"""この記事では**{keyword}**について、{year}年の最新制度に対応した情報をもとに解説します。
+
+新NISA・iDeCoの制度改正など、税制優遇ルールは毎年変わります。古い情報のまま口座開設すると損をする可能性があるため、{year}年最新の制度対応情報をまとめました。
+
+初心者の方でも迷わず始められるよう、選び方のポイントから手続きの流れまでわかりやすくお伝えします。
 
 """)
     else:
@@ -704,6 +718,14 @@ def generate_seo_article(keyword: str, category: str,
         body_parts.append(content)
 
     body = "".join(body_parts)
+
+    # 免責事項（投資・金融カテゴリは必須、それ以外も共通で付与）
+    INVESTMENT_CATEGORIES = {"investment_savings"}
+    if category in INVESTMENT_CATEGORIES:
+        disclaimer = f"""\n\n---\n\n> **【免責事項】** 本記事の情報は{year}年{datetime.now().month}月時点のものです。投資は自己責任でお願いします。制度・金利・手数料は変更される場合があります。最終的な投資判断はご自身でご確認ください。\n"""
+    else:
+        disclaimer = f"""\n\n---\n\n> **【免責事項】** 本記事の情報は{year}年{datetime.now().month}月時点のものです。サービス内容・料金は変更される場合があります。最新情報は各公式サイトでご確認ください。\n"""
+    body += disclaimer
 
     # メタ情報
     has_fresh_info = bool(latest_ai_info)
