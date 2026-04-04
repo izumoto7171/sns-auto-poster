@@ -2,7 +2,6 @@
   "_version": 1,
   "_note": "A8.net提携承認後、URLをここだけ書き換えれば全記事に自動反映される",
   "_update_tool": "python3 money_agent/config/update_affiliate.py <program_id> <new_url>",
-
   "freee_accounting": {
     "url": "https://px.a8.net/svt/ejp?a8mat=3Z1234+FREEE1+0000+0000A",
     "status": "pending",
@@ -19,9 +18,9 @@
     "note": "A8.net提携承認待ち"
   },
   "tossy": {
-    "url": "https://px.a8.net/svt/ejp?a8mat=4AZPOR+A94RUA+1WP2+1HLNLE",
+    "url": "https://px.a8.net/svt/ejp?a8mat=4AZPOR+A94RUA+1WP2+1HL85U",
     "status": "active",
-    "note": "承認済み"
+    "note": "提携承認済み・URL更新済み"
   },
   "rakuten_card": {
     "url": "https://rpx.a8.net/svt/ejp?a8mat=4AZMKI+BFEJSI+2HOM+BW8O1&rakuten=y&a8ejpredirect=http%3A%2F%2Fhb.afl.rakuten.co.jp%2Fhgc%2F0ea62065.34400275.0ea62066.204f04c0%2Fa26032392970_4AZMKI_BFEJSI_2HOM_BW8O1%3Fpc%3Dhttps%253A%252F%252Fcard.rakuten.co.jp%252F%26m%3Dhttps%253A%252F%252Fcard.rakuten.co.jp%252F",
@@ -39,9 +38,14 @@
     "note": "楽天証券と共通"
   },
   "onamae_domain": {
-    "url": "https://px.a8.net/svt/ejp?a8mat=4AZMKI+BRWNHU+50+2HEG76",
+    "url": "https://px.a8.net/svt/ejp?a8mat=4AZMKI+BRWNHU+50+2HV61T",
     "status": "active",
-    "note": "承認済み"
+    "note": "提携承認済み・URL更新済み"
+  },
+  "matsui_ideco": {
+    "url": "https://px.a8.net/svt/ejp?a8mat=4AZPOR+8OKLDE+3XCC+BXIYQ",
+    "status": "active",
+    "note": "承認済み・松井証券iDeCo・500円/新規口座開設申込"
   },
   "canva_pro": {
     "url": "https://www.canva.com/affiliates/",

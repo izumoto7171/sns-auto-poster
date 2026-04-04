@@ -52,6 +52,10 @@ KEYWORD_CATEGORIES = {
             {"kw": "電気代 節約 方法 一人暮らし", "intent": "commercial", "volume": "high"},
             {"kw": "格安SIM おすすめ 2026 比較", "intent": "commercial", "volume": "high"},
             {"kw": "節約 アプリ おすすめ 無料", "intent": "commercial", "volume": "mid"},
+            {"kw": "iDeCo おすすめ 証券会社 2026", "intent": "commercial", "volume": "high"},
+            {"kw": "iDeCo 松井証券 メリット", "intent": "commercial", "volume": "mid"},
+            {"kw": "iDeCo 始め方 会社員 節税", "intent": "how-to", "volume": "high"},
+            {"kw": "iDeCo 手数料 無料 比較", "intent": "commercial", "volume": "mid"},
         ]
     },
 
@@ -181,6 +185,16 @@ AFFILIATE_PROGRAMS = {
         "cta": "楽天市場で探す →"
     },
 
+    # === iDeCo（節税×老後対策・中高単価）===
+    "matsui_ideco": {
+        "name": "松井証券 iDeCo",
+        "commission": "500円/新規口座開設申込",
+        "category": "iDeCo",
+        "url": _url("matsui_ideco", "https://px.a8.net/svt/ejp?a8mat=4AZPOR+8OKLDE+3XCC+BXIYQ"),
+        "description": "運用管理手数料ずっと無料・100円から積立可能・老後資金を節税しながら積み立て",
+        "cta": "松井証券でiDeCoを始める（無料）→",
+    },
+
     # === DX・業務効率化ツール（config/affiliate_links.jsonで管理）===
     "freee_accounting": {
         "name": "freee会計",
@@ -260,7 +274,7 @@ AFFILIATE_PROGRAMS = {
 CONTENT_AFFILIATE_MAP = {
     "ai_tools": ["canva_pro", "notion", "onamae_domain"],
     "side_hustle": ["crowdworks", "lancers", "onamae_domain"],
-    "investment_savings": ["tossy", "rakuten_card", "rakuten_securities"],
+    "investment_savings": ["tossy", "rakuten_card", "rakuten_securities", "matsui_ideco"],
     "productivity": ["notion", "onamae_domain", "canva_pro"],
     "dx_tools": ["freee_accounting", "moneyforward_cloud", "chatwork"],
 }

@@ -526,7 +526,7 @@ def _build_affiliate_cta(affiliates: list, keyword: str) -> str:
 
     content = "## この記事で紹介したおすすめサービス\n\n"
 
-    for af in affiliates[:3]:  # 最大3件
+    for af in affiliates[:4]:  # 最大4件
         content += f"""### 🔗 {af['name']}
 
 **{af['description']}**
