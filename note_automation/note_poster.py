@@ -90,7 +90,8 @@ async def post_article_async(title: str, body: str, headless: bool = True) -> bo
             timezone_id="Asia/Tokyo",
         )
 
-        # Cookie読み込み
+        # Cookie読み込み（importで呼ばれる場合もload_envを実行）
+        load_env()
         if COOKIES_FILE.exists():
             with open(COOKIES_FILE) as f:
                 cookies = json.load(f)
