@@ -233,14 +233,11 @@ def run(article: dict, dry_run: bool = False) -> dict:
     hatena_url = ""
     try:
         sys.path.insert(0, str(ROOT_DIR))
-        from hatena_automation.hatena_poster import post_to_hatena
-        hatena_result = post_to_hatena(article)
-        # post_to_hatena が URL を返す場合は取得（dict or str に対応）
-        if isinstance(hatena_result, dict):
-            hatena_url = hatena_result.get("url", "")
-            results["hatena"] = bool(hatena_result.get("success", hatena_result))
-        else:
-            results["hatena"] = bool(hatena_result)
+        from hatena_automation.hatena_poster import post_article as hatena_post_article
+        title = article.get("title", "")
+        body = article.get("body", "")
+        category = article.get("category", "")
+        results["hatena"] = hatena_post_article(title, body, category=category)
         status = "✅" if results["hatena"] else "❌"
         print(f"  {status} [Distributor-{slot}] はてな投稿")
     except Exception as e:
@@ -265,9 +262,10 @@ def run(article: dict, dry_run: bool = False) -> dict:
 
     # === note投稿 ===
     try:
-        from note_automation.note_poster import post_to_note
-        note_result = post_to_note(article)
-        results["note"] = bool(note_result)
+        from note_automation.note_poster import post_article as note_post_article
+        title = article.get("title", "")
+        body = article.get("body", "")
+        results["note"] = note_post_article(title, body)
         status = "✅" if results["note"] else "❌"
         print(f"  {status} [Distributor-{slot}] note投稿")
     except Exception as e:
@@ -277,6 +275,7 @@ def run(article: dict, dry_run: bool = False) -> dict:
     sns_texts = _generate_sns_texts(article)
 
     try:
+        sys.path.insert(0, str(ROOT_DIR / "x_automation"))
         from x_automation.x_poster import post_with_tweepy
         post_with_tweepy(sns_texts["x"])
         results["x"] = True

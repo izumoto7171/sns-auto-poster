@@ -346,10 +346,11 @@ def run_ceo(dry_run: bool = False, auto_approve: bool = False):
                 mark_as_published(article["_filename"])
             # 収益ログ記録
             record_post(
+                platform="hatena+note+x+bsky",
+                title=article.get("title", ""),
                 keyword=article.get("keyword", ""),
                 category=article.get("category", ""),
-                platform="hatena+note+x+bsky",
-                success=any(result.values()),
+                affiliate_count=article.get("affiliate_count", 0),
             )
         except Exception as e:
             print(f"  ❌ Distributor エラー: {e}")
