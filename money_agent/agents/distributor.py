@@ -276,10 +276,19 @@ def run(article: dict, dry_run: bool = False) -> dict:
 
     try:
         sys.path.insert(0, str(ROOT_DIR / "x_automation"))
-        from x_automation.x_poster import post_with_tweepy
-        post_with_tweepy(sns_texts["x"])
-        results["x"] = True
-        print(f"  ✅ [Distributor-{slot}] X投稿")
+        from x_automation.x_poster import post_with_tweepy, post_with_twikit, post_with_browser
+        x_text = sns_texts["x"]
+        # tweepy（公式・有料）→ twikit（非公式・無料）→ browser（Playwright）の順でフォールバック
+        x_ok = post_with_tweepy(x_text)
+        if not x_ok:
+            print(f"  ⚠️ [Distributor-{slot}] tweepy失敗、twikit で再試行...")
+            x_ok = post_with_twikit(x_text)
+        if not x_ok:
+            print(f"  ⚠️ [Distributor-{slot}] twikit失敗、ブラウザ で再試行...")
+            x_ok = post_with_browser(x_text)
+        results["x"] = x_ok
+        status = "✅" if x_ok else "❌"
+        print(f"  {status} [Distributor-{slot}] X投稿")
     except Exception as e:
         print(f"  ❌ [Distributor-{slot}] X失敗: {e}")
 

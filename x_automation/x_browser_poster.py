@@ -11,6 +11,18 @@ from playwright.async_api import async_playwright
 COOKIES_FILE = Path(__file__).parent / "x_browser_cookies.json"
 
 
+def _load_env_cookies():
+    """GitHub Actions: X_BROWSER_COOKIES環境変数からCookieファイルを復元"""
+    env_cookies = os.environ.get("X_BROWSER_COOKIES", "")
+    if env_cookies and not COOKIES_FILE.exists():
+        try:
+            with open(COOKIES_FILE, "w") as f:
+                f.write(env_cookies)
+            print(f"✅ X_BROWSER_COOKIES環境変数からCookieを復元（{len(env_cookies)}文字）")
+        except Exception as e:
+            print(f"⚠️ Cookie書き出しエラー: {e}")
+
+
 async def login_and_save(username, email, password, headless=False):
     """ブラウザでXにログインしてCookieを保存"""
     async with async_playwright() as p:
@@ -66,13 +78,14 @@ async def post_tweet(text: str, headless=True) -> str:
         browser = await p.chromium.launch(headless=headless)
         context = await browser.new_context()
 
-        # Cookie読み込み
+        # Cookie読み込み（環境変数からの復元も試みる）
+        _load_env_cookies()
         if COOKIES_FILE.exists():
             with open(COOKIES_FILE) as f:
                 cookies = json.load(f)
             await context.add_cookies(cookies)
         else:
-            print("⚠️ Cookie未保存。先にログインしてください")
+            print("⚠️ Cookie未保存。先にログインしてください（X_BROWSER_COOKIES環境変数も未設定）")
             await browser.close()
             return None
 

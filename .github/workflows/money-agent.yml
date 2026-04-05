@@ -30,7 +30,7 @@ jobs:
 
       - name: 依存関係インストール
         run: |
-          pip install google-genai python-dotenv playwright atproto tweepy
+          pip install google-genai python-dotenv playwright atproto tweepy twikit
 
       - name: Playwrightブラウザキャッシュ
         uses: actions/cache@v5
