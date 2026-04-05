@@ -1,0 +1,36 @@
+{
+  "total_articles": 0,
+  "today_articles": 0,
+  "last_run": "2026-04-05T13:00:05.097634",
+  "analyst_report": {
+    "top_categories": [
+      "ai_tools",
+      "side_hustle",
+      "investment_savings"
+    ],
+    "avoid_categories": [
+      "productivity",
+      "dx_tools"
+    ],
+    "today_strategy": "投稿数の少ないカテゴリを優先して記事を量産する",
+    "title_tips": "数字・具体性・疑問形を組み合わせてクリック率を上げる",
+    "cta_tips": "記事末尾に「今すぐ申し込む」ボタンを設置する"
+  },
+  "used_keywords": [],
+  "daily_log": [],
+  "last_date": "2026-04-05",
+  "data_analysis": {
+    "total_articles": 26,
+    "rewrite_queue": [],
+    "category_distribution": {
+      "unknown": 13,
+      "AIツール": 2,
+      "副業": 5,
+      "節約・お金": 2,
+      "ライフハック": 1,
+      "AI活用": 1,
+      "AI副業": 2
+    },
+    "insights": {}
+  }
+}
