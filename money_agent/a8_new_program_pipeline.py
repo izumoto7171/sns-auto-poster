@@ -1,0 +1,346 @@
+"""
+A8.net 新着案件 → 記事自動生成 → はてなブログ投稿パイプライン
+
+【フロー】
+1. A8.net 公開ページから新着案件を取得（スクレイピング）
+2. 未処理の案件をフィルタリング（seen_programs.json で重複排除）
+3. Gemini API で紹介記事を自動生成（2000〜3000文字）
+4. はてなブログ AtomPub API で投稿（Playwright不要）
+5. 処理済み案件を記録
+
+【実行方法】
+  python3 money_agent/a8_new_program_pipeline.py          # 通常実行（最大3件投稿）
+  python3 money_agent/a8_new_program_pipeline.py dry-run  # 記事生成のみ（投稿なし）
+  python3 money_agent/a8_new_program_pipeline.py status   # 処理済み案件数を表示
+"""
+
+import os
+import sys
+import json
+import time
+import requests
+from datetime import datetime
+from pathlib import Path
+
+# .env読み込み
+def load_env():
+    env_path = Path(__file__).parent.parent / ".env"
+    if env_path.exists():
+        with open(env_path) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    os.environ.setdefault(k.strip(), v.strip())
+
+load_env()
+
+# ============================================================
+# 定数
+# ============================================================
+SEEN_FILE = Path(__file__).parent / "seen_a8_programs.json"
+MAX_POSTS_PER_RUN = 3  # 1実行あたりの最大投稿数
+HATENA_ID = os.environ.get("HATENA_ID", "pi-natu-butter")
+HATENA_BLOG_ID = os.environ.get("HATENA_BLOG_ID", "smart-earn-life.hateblo.jp")
+HATENA_API_KEY = os.environ.get("HATENA_API_KEY", "")
+
+A8_SEARCH_URL = "https://www.a8.net/a8a/search_program.do"
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+    "Accept-Language": "ja,en;q=0.9",
+}
+
+# ============================================================
+# 見込み高単価ジャンル（優先的に取得・記事化）
+# ============================================================
+TARGET_GENRES = [
+    {"genre": "クレジットカード", "min_reward": 3000, "kw": "クレジットカード おすすめ"},
+    {"genre": "証券・FX", "min_reward": 5000, "kw": "証券口座 開設 おすすめ"},
+    {"genre": "プログラミングスクール", "min_reward": 8000, "kw": "プログラミングスクール 比較"},
+    {"genre": "英会話", "min_reward": 3000, "kw": "英会話オンライン おすすめ"},
+    {"genre": "転職", "min_reward": 5000, "kw": "転職エージェント おすすめ"},
+    {"genre": "動画配信", "min_reward": 1000, "kw": "VOD 動画配信 比較"},
+    {"genre": "クラウド会計", "min_reward": 3000, "kw": "クラウド会計 比較"},
+    {"genre": "電力", "min_reward": 2000, "kw": "電力会社 乗り換え"},
+]
+
+
+# ============================================================
+# 既読管理
+# ============================================================
+def load_seen() -> set:
+    if SEEN_FILE.exists():
+        return set(json.loads(SEEN_FILE.read_text(encoding="utf-8")))
+    return set()
+
+def save_seen(seen: set):
+    SEEN_FILE.write_text(json.dumps(sorted(seen), ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+# ============================================================
+# A8.net 公開プログラム検索（スクレイピング）
+# ============================================================
+def fetch_a8_new_programs(genre: str, limit: int = 10):
+    """
+    A8.net のプログラム検索ページから案件を取得する。
+    公開情報のみ（ログイン不要）。
+    """
+    try:
+        from bs4 import BeautifulSoup
+    except ImportError:
+        print("[A8] BeautifulSoup4 未インストール。スキップ。")
+        return []
+
+    programs = []
+    try:
+        params = {
+            "genre": genre,
+            "sort": "new",
+            "p": 1,
+        }
+        resp = requests.get(A8_SEARCH_URL, params=params, headers=HEADERS, timeout=15)
+        if resp.status_code != 200:
+            print(f"[A8] HTTPエラー {resp.status_code} ジャンル={genre}")
+            return []
+
+        soup = BeautifulSoup(resp.text, "html.parser")
+        # A8.netのプログラム一覧セレクタ（構造変更時は更新）
+        items = soup.select(".program-list-item, .prg-item, li.item")
+
+        for item in items[:limit]:
+            name_el = item.select_one(".program-name, .prg-name, h3, h4")
+            reward_el = item.select_one(".reward, .commission, .fee")
+            desc_el = item.select_one(".description, .desc, p")
+            link_el = item.select_one("a[href]")
+
+            if not name_el:
+                continue
+
+            name = name_el.get_text(strip=True)
+            reward = reward_el.get_text(strip=True) if reward_el else ""
+            desc = desc_el.get_text(strip=True)[:200] if desc_el else ""
+            link = link_el.get("href", "") if link_el else ""
+
+            prog_id = f"a8_{genre}_{name[:20]}"
+            programs.append({
+                "id": prog_id,
+                "name": name,
+                "genre": genre,
+                "reward": reward,
+                "description": desc,
+                "link": link,
+            })
+
+    except Exception as e:
+        print(f"[A8] スクレイピングエラー ({genre}): {e}")
+
+    return programs
+
+
+def fetch_programs_via_ddg(limit: int = 15):
+    """
+    DuckDuckGoで新着A8案件を検索（スクレイピングが取れない場合のフォールバック）
+    """
+    try:
+        from ddgs import DDGS
+    except ImportError:
+        return []
+
+    seen = load_seen()
+    programs = []
+    queries = [
+        "A8.net 新着プログラム 2026 高単価 アフィリエイト",
+        "A8.net 新規プログラム クレジットカード 証券 2026",
+        "A8.net プログラム プログラミングスクール 英会話 転職 2026",
+    ]
+
+    ddgs = DDGS()
+    for query in queries:
+        try:
+            results = list(ddgs.text(query, region="jp-jp", max_results=8))
+            for r in results:
+                link = r.get("href", r.get("url", ""))
+                title = r.get("title", "")
+                body = r.get("body", r.get("snippet", ""))[:300]
+                prog_id = f"ddg_{link[:80]}"
+                if prog_id in seen or not title:
+                    continue
+                # A8関連フィルタ
+                if not any(kw in (title + body).lower() for kw in ["a8", "アフィリエイト", "報酬"]):
+                    continue
+                programs.append({
+                    "id": prog_id,
+                    "name": title,
+                    "genre": "未分類",
+                    "reward": "",
+                    "description": body,
+                    "link": link,
+                })
+                if len(programs) >= limit:
+                    break
+        except Exception as e:
+            print(f"[DDG] エラー: {e}")
+        time.sleep(1)
+
+    return programs
+
+
+# ============================================================
+# Gemini API で紹介記事を生成
+# ============================================================
+def generate_program_article(program: dict):
+    """A8.net案件情報をもとにGeminiで紹介記事を生成"""
+    api_key = os.environ.get("GEMINI_API_KEY", "")
+    if not api_key:
+        print("[Gemini] GEMINI_API_KEY未設定")
+        return None
+
+    try:
+        from google import genai
+        client = genai.Client(api_key=api_key)
+
+        genre = program.get("genre", "")
+        name = program.get("name", "")
+        reward = program.get("reward", "")
+        desc = program.get("description", "")
+        year = datetime.now().year
+
+        prompt = f"""あなたはアフィリエイトブログの専門ライターです。
+以下のA8.net新着プログラムを紹介するSEO最適化記事を書いてください。
+
+【案件情報】
+- サービス名: {name}
+- ジャンル: {genre}
+- 報酬: {reward}
+- 概要: {desc}
+
+【記事要件】
+- 文字数: 2000〜3000文字
+- 対象読者: 副業・節約に興味があるサラリーマン・主婦
+- 構成: 導入 → サービス概要 → メリット3〜5個 → こんな人におすすめ → 登録方法 → まとめ
+- タイトルはSEOキーワードを含む（例: 「【{year}年】{name}の評判は？メリット・デメリットを徹底解説」）
+- 自然な口調で読みやすく
+- アフィリエイト感を出しすぎない（第三者的な視点）
+- 見出しはMarkdown（## / ###）を使用
+- 最後にCTA（公式サイトで詳細を確認する）を入れる
+
+以下のJSON形式で返してください（コードブロック不要）:
+{{
+  "title": "記事タイトル",
+  "keyword": "SEOメインキーワード（20文字以内）",
+  "category": "カテゴリ（副業/投資/節約/ビジネスツールのいずれか）",
+  "tags": ["タグ1", "タグ2", "タグ3"],
+  "body": "本文（Markdown）"
+}}"""
+
+        resp = client.models.generate_content(
+            model="gemini-2.0-flash-lite",
+            contents=prompt,
+        )
+        text = resp.text.strip()
+        # コードブロック除去
+        if text.startswith("```"):
+            text = text.split("```", 2)[1]
+            if text.startswith("json"):
+                text = text[4:]
+            text = text.rsplit("```", 1)[0]
+
+        article = json.loads(text.strip())
+        article["program_id"] = program["id"]
+        article["program_name"] = name
+        article["generated_at"] = datetime.now().isoformat()
+        return article
+
+    except Exception as e:
+        print(f"[Gemini] 記事生成エラー ({program.get('name', '')}): {e}")
+        return None
+
+
+import sys as _sys
+_sys.path.insert(0, str(Path(__file__).parent))
+from hatena_atomapi import post as _hatena_post
+
+def post_to_hatena(article: dict, draft: bool = False):
+    return _hatena_post(article, draft=draft)
+
+
+# ============================================================
+# メインパイプライン
+# ============================================================
+def run_pipeline(dry_run: bool = False):
+    """新着A8案件を取得 → 記事生成 → はてな投稿"""
+    print(f"\n=== A8新着案件パイプライン開始 {'[DRY RUN]' if dry_run else ''} ===")
+    print(f"実行時刻: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+
+    seen = load_seen()
+    print(f"処理済み案件数: {len(seen)}")
+
+    # 案件取得
+    all_programs = []
+
+    # ① A8.net スクレイピング（各ジャンルから取得）
+    for genre_info in TARGET_GENRES[:4]:  # 1実行4ジャンルまで
+        programs = fetch_a8_new_programs(genre_info["genre"], limit=5)
+        all_programs.extend(programs)
+        time.sleep(2)  # リクエスト間隔
+
+    # ② スクレイピングで取れなかった場合はDDG検索
+    if not all_programs:
+        print("[Pipeline] スクレイピング失敗 → DuckDuckGo検索にフォールバック")
+        all_programs = fetch_programs_via_ddg()
+
+    # 未処理のみフィルタ
+    new_programs = [p for p in all_programs if p["id"] not in seen]
+    print(f"新着案件数: {len(new_programs)} (全{len(all_programs)}件中)")
+
+    if not new_programs:
+        print("新着案件なし。終了。")
+        return
+
+    # 最大MAX_POSTS_PER_RUN件処理
+    processed = 0
+    for program in new_programs[:MAX_POSTS_PER_RUN]:
+        print(f"\n--- 案件処理: {program['name']} ({program['genre']}) ---")
+
+        # 記事生成
+        article = generate_program_article(program)
+        if not article:
+            seen.add(program["id"])
+            continue
+
+        print(f"  タイトル: {article['title'][:60]}")
+        print(f"  キーワード: {article.get('keyword', '')}")
+        print(f"  文字数: {len(article.get('body', ''))}文字")
+
+        if not dry_run:
+            url = post_to_hatena(article)
+            if url:
+                processed += 1
+                seen.add(program["id"])
+            time.sleep(3)  # 投稿間隔
+        else:
+            # dry-run: 本文の冒頭を表示
+            print(f"  本文冒頭: {article.get('body', '')[:200]}...")
+            seen.add(program["id"])
+            processed += 1
+
+    save_seen(seen)
+    print(f"\n=== パイプライン完了: {processed}件投稿 ===")
+
+
+def show_status():
+    seen = load_seen()
+    print(f"処理済み案件数: {len(seen)}")
+    for prog_id in sorted(seen)[-10:]:
+        print(f"  {prog_id}")
+
+
+if __name__ == "__main__":
+    args = sys.argv[1:]
+    if "status" in args:
+        show_status()
+    elif "dry-run" in args or "dry_run" in args:
+        run_pipeline(dry_run=True)
+    else:
+        run_pipeline(dry_run=False)
