@@ -1,0 +1,102 @@
+name: Money Agent (アフィリエイト記事生成)
+
+on:
+  schedule:
+    # JST 3:00（UTC 18:00）— SNS投稿と時間をずらしてGemini API競合を回避
+    - cron: '0 18 * * *'
+  workflow_dispatch:  # 手動実行ボタン
+
+# git pushに必要な書き込み権限
+permissions:
+  contents: write
+
+jobs:
+  # ============================================================
+  # 🏢 CEO AIエージェント（Analyst→Researcher→Writer×3→Distributor）
+  # 1日1回 × 3記事 = 月90記事
+  # ============================================================
+  ceo-agent:
+    name: 🏢 CEO AIエージェント
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Python セットアップ
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 依存関係インストール
+        run: |
+          pip install google-genai python-dotenv playwright atproto tweepy
+
+      - name: Playwrightブラウザキャッシュ
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('**/requirements*.txt') }}
+          restore-keys: |
+            playwright-chromium-${{ runner.os }}-
+
+      - name: Chromiumインストール（キャッシュミス時のみ）
+        run: playwright install chromium --with-deps
+
+      - name: CEO AIエージェント実行
+        env:
+          CI: "true"
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          HATENA_COOKIES: ${{ secrets.HATENA_COOKIES }}
+          NOTE_COOKIES: ${{ secrets.NOTE_COOKIES }}
+          BSKY_HANDLE: ${{ secrets.BSKY_HANDLE }}
+          BSKY_APP_PASSWORD: ${{ secrets.BSKY_APP_PASSWORD }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+        run: |
+          python3 money_agent/ceo_agent.py run
+
+      - name: ステート変更をコミット
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add money_agent/agent_state.json money_agent/approved.json || true
+          git diff --staged --quiet || git commit -m "chore: CEOエージェント実行ログ更新 $(date +'%Y-%m-%d %H:%M')"
+          git push
+
+  # ============================================================
+  # 📡 トレンドデータ収集（毎日JST 3:00 に同時実行）
+  # ============================================================
+  collect-trends:
+    name: 📡 トレンド収集
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Python セットアップ
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 依存関係インストール
+        run: pip install google-genai python-dotenv requests
+
+      - name: トレンドデータ収集
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python3 money_agent/data_collector.py collect
+
+      - name: 収集結果をコミット
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add money_agent/dynamic_keywords.json || true
+          git diff --staged --quiet || git commit -m "chore: トレンドキーワード自動更新 $(date +'%Y-%m-%d')"
+          git push

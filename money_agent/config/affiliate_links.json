@@ -5,17 +5,17 @@
   "freee_accounting": {
     "url": "https://px.a8.net/svt/ejp?a8mat=3Z1234+FREEE1+0000+0000A",
     "status": "pending",
-    "note": "A8.net提携承認待ち。承認メール受信後にURLを更新してください"
+    "note": "A8.net申請未完了（承認メールなし）。a8.netにログインして申請すること"
   },
   "moneyforward_cloud": {
     "url": "https://px.a8.net/svt/ejp?a8mat=3Z1234+MFWD01+0000+0000A",
     "status": "pending",
-    "note": "A8.net提携承認待ち"
+    "note": "A8.net申請未完了（承認メールなし）。a8.netにログインして申請すること"
   },
   "chatwork": {
-    "url": "https://px.a8.net/svt/ejp?a8mat=3Z1234+CWORK1+0000+0000A",
-    "status": "pending",
-    "note": "A8.net提携承認待ち"
+    "url": "https://go.chatwork.com/ja/",
+    "status": "rejected",
+    "note": "A8.netにChatworkプログラムが存在しない（2026-04-05確認）。直リンクのまま維持"
   },
   "tossy": {
     "url": "https://px.a8.net/svt/ejp?a8mat=4AZPOR+A94RUA+1WP2+1HL85U",
@@ -33,9 +33,9 @@
     "note": "承認済み"
   },
   "sbi_securities": {
-    "url": "https://rpx.a8.net/svt/ejp?a8mat=4AZMKI+BFEJSI+2HOM+BW8O1&rakuten=y&a8ejpredirect=http%3A%2F%2Fhb.afl.rakuten.co.jp%2Fhgc%2F0ea62065.34400275.0ea62066.204f04c0%2Fa26032392970_4AZMKI_BFEJSI_2HOM_BW8O1%3Fpc%3Dhttps%253A%252F%252Fwww.rakuten-sec.co.jp%252F%26m%3Dhttps%253A%252F%252Fwww.rakuten-sec.co.jp%252F",
-    "status": "active",
-    "note": "楽天証券と共通"
+    "url": "https://www.sbisec.co.jp/",
+    "status": "rejected",
+    "note": "SBI証券本体はA8.net未掲載。SBIネオトレード証券(s00000008867002)→提携否認（2026-04-05）。直リンクのまま維持"
   },
   "onamae_domain": {
     "url": "https://px.a8.net/svt/ejp?a8mat=4AZMKI+BRWNHU+50+2HV61T",
@@ -48,23 +48,23 @@
     "note": "承認済み・松井証券iDeCo・500円/新規口座開設申込"
   },
   "canva_pro": {
-    "url": "https://www.canva.com/affiliates/",
-    "status": "pending",
-    "note": "Canvaアフィリエイトプログラムへの申請が必要"
+    "url": "https://www.canva.com/",
+    "status": "rejected",
+    "note": "Canvassadorプログラムは現在申請受付停止中（2026-04-05確認）。直リンクのまま維持"
   },
   "notion": {
     "url": "https://www.notion.so/",
-    "status": "pending",
-    "note": "Notionアフィリエイトプログラムへの申請が必要"
+    "status": "rejected",
+    "note": "PartnerStack経由の申請ページあるが新規受付停止中・自動却下（2026-04-05確認）。直リンクのまま維持"
   },
   "crowdworks": {
     "url": "https://crowdworks.jp/",
-    "status": "active",
-    "note": "直リンク（アフィリエイト申請推奨）"
+    "status": "rejected",
+    "note": "A8.netにCrowdWorksプログラムが存在しない（2026-04-05確認）。直リンクのまま維持"
   },
   "lancers": {
     "url": "https://www.lancers.jp/",
-    "status": "active",
-    "note": "直リンク（アフィリエイト申請推奨）"
+    "status": "rejected",
+    "note": "A8.net申請→見送り（2026-04-01）。直リンクのまま維持"
   }
 }
