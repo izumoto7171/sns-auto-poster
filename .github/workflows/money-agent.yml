@@ -56,7 +56,7 @@ jobs:
           X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
           X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
         run: |
-          python3 money_agent/ceo_agent.py run
+          python3 money_agent/ceo_agent.py run-auto
 
       - name: ステート変更をコミット
         if: always()
@@ -65,7 +65,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add money_agent/agent_state.json money_agent/approved.json || true
           git diff --staged --quiet || git commit -m "chore: CEOエージェント実行ログ更新 $(date +'%Y-%m-%d %H:%M')"
-          git push
+          git pull --rebase origin main && git push || true
 
   # ============================================================
   # 📡 トレンドデータ収集（毎日JST 3:00 に同時実行）
@@ -99,4 +99,4 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add money_agent/dynamic_keywords.json || true
           git diff --staged --quiet || git commit -m "chore: トレンドキーワード自動更新 $(date +'%Y-%m-%d')"
-          git push
+          git pull --rebase origin main && git push || true
