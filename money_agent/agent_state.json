@@ -1,7 +1,7 @@
 {
-  "total_articles": 3,
-  "today_articles": 3,
-  "last_run": "2026-04-05T13:07:30.796462",
+  "total_articles": 6,
+  "today_articles": 6,
+  "last_run": "2026-04-05T13:24:08.157243",
   "analyst_report": {
     "top_categories": [
       "ai_tools",
@@ -19,7 +19,10 @@
   "used_keywords": [
     "ChatGPT 仕事 活用 具体例",
     "せどり 副業 初心者 Amazon",
-    "SBI証券 口座開設 方法"
+    "SBI証券 口座開設 方法",
+    "AI 動画生成 無料",
+    "業務効率化 ツール 無料 中小企業",
+    "節約 アプリ おすすめ 無料"
   ],
   "daily_log": [
     {
@@ -34,6 +37,20 @@
         1,
         1,
         1
+      ]
+    },
+    {
+      "time": "2026-04-05T13:24:08.157230",
+      "articles": 3,
+      "keywords": [
+        "AI 動画生成 無料",
+        "業務効率化 ツール 無料 中小企業",
+        "節約 アプリ おすすめ 無料"
+      ],
+      "dist_success": [
+        2,
+        2,
+        2
       ]
     }
   ],
