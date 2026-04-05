@@ -1,7 +1,7 @@
 {
-  "total_articles": 0,
-  "today_articles": 0,
-  "last_run": "2026-04-05T13:00:05.097634",
+  "total_articles": 3,
+  "today_articles": 3,
+  "last_run": "2026-04-05T13:07:30.796462",
   "analyst_report": {
     "top_categories": [
       "ai_tools",
@@ -16,8 +16,27 @@
     "title_tips": "数字・具体性・疑問形を組み合わせてクリック率を上げる",
     "cta_tips": "記事末尾に「今すぐ申し込む」ボタンを設置する"
   },
-  "used_keywords": [],
-  "daily_log": [],
+  "used_keywords": [
+    "ChatGPT 仕事 活用 具体例",
+    "せどり 副業 初心者 Amazon",
+    "SBI証券 口座開設 方法"
+  ],
+  "daily_log": [
+    {
+      "time": "2026-04-05T13:07:30.796445",
+      "articles": 3,
+      "keywords": [
+        "ChatGPT 仕事 活用 具体例",
+        "せどり 副業 初心者 Amazon",
+        "SBI証券 口座開設 方法"
+      ],
+      "dist_success": [
+        1,
+        1,
+        1
+      ]
+    }
+  ],
   "last_date": "2026-04-05",
   "data_analysis": {
     "total_articles": 26,
