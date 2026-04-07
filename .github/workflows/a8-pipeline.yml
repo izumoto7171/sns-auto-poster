@@ -95,7 +95,7 @@ jobs:
           cache: 'pip'
 
       - name: 依存関係インストール
-        run: pip install google-genai requests
+        run: pip install google-genai requests beautifulsoup4
 
       - name: 承認済みプログラム記事生成・投稿
         env:
@@ -103,15 +103,17 @@ jobs:
           HATENA_ID: ${{ secrets.HATENA_ID }}
           HATENA_BLOG_ID: ${{ secrets.HATENA_BLOG_ID }}
           HATENA_API_KEY: ${{ secrets.HATENA_API_KEY }}
-        run: python3 money_agent/post_approved_programs.py
+          A8_MEDIA_ID: ${{ secrets.A8_MEDIA_ID }}
+          A8_PASSWORD: ${{ secrets.A8_PASSWORD }}
+        run: python3 money_agent/a8_approved_auto.py
 
       - name: 処理済みリストをコミット
         if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add money_agent/seen_a8_programs.json || true
-          git diff --staged --quiet || git commit -m "chore: 承認済みプログラム記事投稿 $(date +'%Y-%m-%d')"
+          git add money_agent/seen_a8_approved.json || true
+          git diff --staged --quiet || git commit -m "chore: A8承認済みプログラム記事投稿 $(date +'%Y-%m-%d')"
           git pull --rebase origin main && git push || true
 
   # ===========================================================
