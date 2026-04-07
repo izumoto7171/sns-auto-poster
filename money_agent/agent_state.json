@@ -1,7 +1,7 @@
 {
-  "total_articles": 15,
-  "today_articles": 15,
-  "last_run": "2026-04-05T19:54:42.502720",
+  "total_articles": 18,
+  "today_articles": 3,
+  "last_run": "2026-04-07T20:09:49.234848",
   "analyst_report": {
     "top_categories": [
       "ai_tools",
@@ -31,7 +31,10 @@
     "AI ライティング 副業",
     "楽天証券 メリット デメリット",
     "在宅 副業 スマホ 稼ぐ",
-    "freee 中小企業 クラウド会計"
+    "freee 中小企業 クラウド会計",
+    "Gemini 無料 使い方",
+    "AI ライティング 副業",
+    "楽天証券 メリット デメリット"
   ],
   "daily_log": [
     {
@@ -103,9 +106,23 @@
         3,
         3
       ]
+    },
+    {
+      "time": "2026-04-07T20:09:49.234837",
+      "articles": 3,
+      "keywords": [
+        "Gemini 無料 使い方",
+        "AI ライティング 副業",
+        "楽天証券 メリット デメリット"
+      ],
+      "dist_success": [
+        3,
+        3,
+        3
+      ]
     }
   ],
-  "last_date": "2026-04-05",
+  "last_date": "2026-04-07",
   "data_analysis": {
     "total_articles": 26,
     "rewrite_queue": [],
