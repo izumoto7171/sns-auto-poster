@@ -70,6 +70,51 @@ jobs:
           git pull --rebase origin main && git push || true
 
   # ===========================================================
+  # 承認済みプログラム → 記事生成 → はてな投稿
+  # a8-new-program の後に実行（Gemini クォータ競合を避けるため）
+  # seen_a8_programs.json で管理 → 全件処理済みなら何もしない
+  # ===========================================================
+  approved-programs:
+    name: 承認済みプログラム記事生成
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: a8-new-program
+    if: |
+      always() &&
+      (github.event.inputs.mode == 'auto' || github.event.inputs.mode == '' || github.event_name == 'schedule')
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main  # a8-new-program のコミット後の最新を取得
+
+      - name: Python セットアップ
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 依存関係インストール
+        run: pip install google-genai requests
+
+      - name: 承認済みプログラム記事生成・投稿
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          HATENA_ID: ${{ secrets.HATENA_ID }}
+          HATENA_BLOG_ID: ${{ secrets.HATENA_BLOG_ID }}
+          HATENA_API_KEY: ${{ secrets.HATENA_API_KEY }}
+        run: python3 money_agent/post_approved_programs.py
+
+      - name: 処理済みリストをコミット
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add money_agent/seen_a8_programs.json || true
+          git diff --staged --quiet || git commit -m "chore: 承認済みプログラム記事投稿 $(date +'%Y-%m-%d')"
+          git pull --rebase origin main && git push || true
+
+  # ===========================================================
   # ランキング記事生成（週2回：火・金 JST 10:00）
   # ===========================================================
   ranking-article:
