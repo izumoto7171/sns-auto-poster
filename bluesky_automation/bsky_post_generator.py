@@ -1,8 +1,9 @@
 """
 Bluesky投稿文 自動生成
-戦略：役立つ情報60% / 共感20% / 雑学10% / 商品紹介10%
-特徴：X投稿のリライト対応 / コミュニティ感 / ハッシュタグ少なめ
+戦略：検証ログ50% / 共感30% / ライフハック（AI活用で浮いた時間）20%
+特徴：Build in Public（現在進行形の検証データ）/ カスタムフィード対応キーワード
 文字数：100〜200文字
+インプレ強化：ハッシュタグ + バイラルフック + エンゲージCTA
 """
 import os
 import random
@@ -12,30 +13,79 @@ from datetime import datetime
 # 投稿タイプ
 # ─────────────────────────────────────────
 POST_TYPES = [
-    {"type": "useful",   "label": "役立つ情報",   "weight": 60},
-    {"type": "empathy",  "label": "共感・体験",   "weight": 20},
-    {"type": "trivia",   "label": "雑学・ネタ",   "weight": 10},
-    {"type": "product",  "label": "商品紹介",     "weight": 10},
+    {"type": "verification", "label": "検証ログ",       "weight": 50},
+    {"type": "empathy",      "label": "共感・体験",     "weight": 30},
+    {"type": "lifehack",     "label": "AIで浮いた時間", "weight": 20},
 ]
 
 TIME_SLOTS = [(7, 9), (11, 13), (17, 19), (21, 23)]
 
 # ─────────────────────────────────────────
-# Bluesky用テンプレート（X版より会話的・コミュニティ感強め）
+# Bluesky カスタムフィード対応キーワード
+# ─────────────────────────────────────────
+FEED_KEYWORDS = {
+    "ai":    ["Gemini", "AI自動化", "ChatGPT", "API", "生成AI", "LLM"],
+    "side":  ["副業", "アフィリエイト", "自動投稿", "収益化", "Lancers"],
+    "tech":  ["Python", "GitHub Actions", "スクリプト", "自動化", "ワークフロー"],
+}
+
+# ─────────────────────────────────────────
+# ハッシュタグ（タイプ別 × 2〜3個）
+# Blueskyはハッシュタグがカスタムフィード流入に直結する
+# ─────────────────────────────────────────
+HASHTAGS_BY_TYPE = {
+    "verification": ["#副業", "#AI自動化", "#BuildInPublic"],
+    "empathy":      ["#副業", "#副業初心者", "#フリーランス"],
+    "lifehack":     ["#AI活用", "#自動化", "#ライフハック"],
+}
+
+# エンゲージメントCTA
+ENGAGEMENT_CTAS = [
+    "同じ状況の人いる？",
+    "試してみた人いたら教えてほしい",
+    "引き続き記録していきます",
+    "気になった人はフォローしてね",
+    "次の結果もここで公開します",
+]
+
+# バイラルフックパターン
+VIRAL_HOOK_PATTERNS = [
+    "〇〇を試した結果、△△だった（数字入り）",
+    "失敗した話を正直に書く",
+    "「〇〇できない」と思ってたら実は××だった",
+    "〇〇の前後比較（時間・コスト）",
+    "3ヶ月やってみてわかったこと",
+]
+
+
+def append_hashtags(text: str, post_type: str) -> str:
+    """投稿テキストにハッシュタグを追加（300文字以内に収める）"""
+    tags = HASHTAGS_BY_TYPE.get(post_type, HASHTAGS_BY_TYPE["verification"])
+    # ランダムに2個選ぶ
+    selected = random.sample(tags, min(2, len(tags)))
+    hashtag_str = " ".join(selected)
+    full = f"{text}\n\n{hashtag_str}"
+    if len(full) <= 300:
+        return full
+    return f"{text}\n\n{selected[0]}"
+
+
+# ─────────────────────────────────────────
+# テンプレート（APIなしのフォールバック）
 # ─────────────────────────────────────────
 TEMPLATES = {
-    "useful": [
+    "verification": [
         {
-            "text": "AI副業、月3万円は現実的です。\n\n理由はシンプルで\n・AI記事作成\n・AI翻訳\n・AI画像\n\nこの3つは初心者でも今日から始められる。\n\n気になるツールはプロフィールにまとめてます👆",
+            "text": "【検証】Gemini APIで記事の下書きを自動生成して1週間。\n\n結果：1記事あたり約40分 → 8分に短縮。\n\n品質はまだ粗いけど、叩き台として使えばむしろ早い。\n\nAI自動化の実態、引き続き記録していきます。",
         },
         {
-            "text": "朝の最初の30分、一番大事なこと1つだけやる。\n\nこれだけで1日の生産性が全然変わった。\n\nTodoリストを全部こなそうとするより、1つ確実に終わらせる方が気持ちいい。",
+            "text": "GitHub Actionsで副業の自動投稿を組んで2週間。\n\n失敗ログ：Cookieの期限切れで3回投稿がスキップ。\n成功ログ：手動ゼロで28回投稿完了。\n\n自動化は「動いてからが本番」だと痛感してる。",
         },
         {
-            "text": "副業で稼ぐのに、特別なスキルは要らないと気づいた。\n\n必要なのは「情報」と「行動」だけ。\n\n知ってる人と知らない人の差が、収入の差になってる。",
+            "text": "Gemini無料プランの実力を測ってみた。\n\n1日1500回呼び出しOK → 副業コンテンツなら余裕で足りる。\n\n無料でどこまでできるか、引き続き検証中。",
         },
         {
-            "text": "Gemini、無料なのに使い倒せる。\n\n1日1500回まで文章生成OKなので\n副業のコンテンツ作成にめちゃ使ってる。\n\n有料ツール要らなくなった。",
+            "text": "アフィリエイト記事をAIで量産して1ヶ月。\n\nSEO流入：0 → 少しずつ増加中（まだ微量）。\n\nわかったこと：記事数より「キーワード選定」が全て。\n\n次の1ヶ月はキーワードを絞って検証します。",
         },
     ],
     "empathy": [
@@ -46,26 +96,21 @@ TEMPLATES = {
             "text": "「忙しくて副業する時間ない」←1年前の自分。\n\n1日15分だけって決めてやり始めたら\n3ヶ月で月1万になってた。\n\n時間じゃなくてやり方の問題だった。",
         },
         {
-            "text": "完璧にやろうとして何も始められない問題、ありませんか。\n\n自分もそうだった。\n\n今は「60点でいいから動く」を意識してる。\nそっちの方が結果出る。",
+            "text": "完璧にやろうとして何も始められない問題、ありませんか。\n\n今は「60点でいいから動く」を意識してる。\nそっちの方が結果出る。",
+        },
+        {
+            "text": "Lancersで最初の案件を取るまで10連敗した。\n\n提案文を変えたら次の週に受注できた。\n変えたのは「相手が何を不安に思っているか」を書いたこと。",
         },
     ],
-    "trivia": [
+    "lifehack": [
         {
-            "text": "ChatGPTの1回の返答、Google検索の10倍以上の電力を使うらしい。\n\nそれでも世界中で毎日何億回も使われてる。\n\nすごい時代になったな、と思う。",
+            "text": "AI自動化で浮いた時間で何をしてるか、正直に言うと。\n\nGeminiに任せた作業：2時間 → 20分。\n浮いた時間でLancers受注1件。\n\nAIは「楽をする道具」じゃなく「時間を生む道具」だった。",
         },
         {
-            "text": "Blueskyは広告がない分、純粋に「面白い投稿」が広がりやすい。\n\nXと使い分けてると、なんか落ち着く。\n\nここがもっと広まってほしい。",
+            "text": "Python + GitHub Actionsで自動投稿を組んだ。\n\n毎日4回、SNS3つに自動で投稿されてる。\n\n浮いた時間：1日約30分 → 月15時間。\nその時間で次の自動化を考えてる。複利みたいな感覚。",
         },
         {
-            "text": "AIに「ありがとう」って言う人、意外と多いらしい。\n\n自分も言ってしまう派。\n\n優しい人はAIにも優しい説、ある。",
-        },
-    ],
-    "product": [
-        {
-            "text": "AIツール、結局どれが使いやすいか全部試した結論。\n\n無料で始めるならGemini一択だった。\n\n精度・使い勝手・コスパ、全部いい。\nプロフィールに詳しくまとめてます。",
-        },
-        {
-            "text": "副業で稼いでる人と稼げてない人の差、観察してきた。\n\nスキルより「情報の質」の差だった。\n\n参考にしてよかったサービスをプロフィールに。",
+            "text": "生成AIで「下書き」を作らせるようになってから、\nブログ記事を書くのが怖くなくなった。\n\nAIに雛形を作らせて、自分は「編集者」になる。\nこれだけで作業量が体感半分以下になった。",
         },
     ],
 }
@@ -85,7 +130,7 @@ def pick_post_type() -> dict:
 _used: dict = {}
 
 def generate_with_template(post_type: str) -> str:
-    templates = TEMPLATES.get(post_type, TEMPLATES["useful"])
+    templates = TEMPLATES.get(post_type, TEMPLATES["verification"])
     today = datetime.now().strftime("%Y%m%d")
     key = f"{today}_{post_type}"
     used = _used.get(key, [])
@@ -96,11 +141,11 @@ def generate_with_template(post_type: str) -> str:
     t = random.choice(available)
     idx = templates.index(t)
     _used.setdefault(key, []).append(idx)
-    return t["text"]
+    return append_hashtags(t["text"], post_type)
 
 
 def rewrite_x_to_bsky(x_text: str, api_key: str) -> str:
-    """X投稿をBluesky用にリライト"""
+    """X投稿をBluesky用にリライト（検証ログスタイルに変換）"""
     try:
         from google import genai
         client = genai.Client(api_key=api_key)
@@ -110,12 +155,12 @@ def rewrite_x_to_bsky(x_text: str, api_key: str) -> str:
 【元のX投稿】
 {x_text}
 
-【Bluesky用のルール】
+【Blueskyの戦略・ルール】
 - 文字数：100〜200文字程度
-- コミュニティ感を意識した、自然な会話口調
-- ハッシュタグは使わない
-- 同じ内容でも表現を変える（コピペにならないよう）
-- 読んだ人が「わかる」「試したい」と思える内容にする
+- スタイル：「Build in Public」（現在進行形の検証ログ・生データを出す）
+- 温度感：広告感ゼロ・「一緒に実験している」感
+- ハッシュタグは不要（後から追加する）
+- カスタムフィード対応：AI・副業・技術系のキーワードを文中に自然に入れる
 - 改行を適度に使い読みやすく
 
 リライトした投稿文のみ出力してください。
@@ -127,40 +172,63 @@ def rewrite_x_to_bsky(x_text: str, api_key: str) -> str:
         return resp.text.strip()
     except Exception as e:
         print(f"⚠️ Gemini失敗: {e}")
-        return x_text  # フォールバック：元のテキストをそのまま使用
+        return x_text
 
 
 def generate_with_gemini(post_type: str, label: str, api_key: str) -> str:
     try:
         from google import genai
         client = genai.Client(api_key=api_key)
-        type_instructions = {
-            "useful":  "AI副業・時短・節約・生産性向上に関する役立つ情報",
-            "empathy": "副業や生活改善での失敗談・体験談・共感を呼ぶ内容",
-            "trivia":  "AI・テクノロジー・お金に関する意外な雑学・ネタ",
-            "product": "AIツールや副業サービスを体験談として自然に紹介（広告表現禁止）",
-        }
-        prompt = f"""
-あなたはBlueskyで副業・AI・ライフハック情報を発信しているユーザーです。
 
-【投稿タイプ】{label}（{type_instructions[post_type]}）
+        ai_kw   = random.choice(FEED_KEYWORDS["ai"])
+        side_kw = random.choice(FEED_KEYWORDS["side"])
+        tech_kw = random.choice(FEED_KEYWORDS["tech"])
+        hook_pattern = random.choice(VIRAL_HOOK_PATTERNS)
+        cta = random.choice(ENGAGEMENT_CTAS)
+
+        type_instructions = {
+            "verification": (
+                "AI・副業・自動化に関する「現在進行形の検証ログ」。"
+                "数字（時間・回数・金額）を入れ、成功・失敗を正直に書く。"
+                "「〇〇を試した結果〜だった」形式。広告感ゼロ。"
+            ),
+            "empathy": (
+                "副業・AI活用での失敗談・体験談・共感を呼ぶ内容。"
+                "「自分も最初は〜」という等身大の言葉で書く。"
+            ),
+            "lifehack": (
+                "AI・自動化で浮いた時間を何に使ったかのリアルな話。"
+                "「AIに任せた作業：〇時間 → △分」という前後比較や、"
+                "浮いた時間でやったことを具体的に書く。"
+            ),
+        }
+
+        prompt = f"""
+あなたはBlueskyで副業・AI自動化を「現在進行形」で実験・公開しているユーザーです。
+読者と一緒に試行錯誤している「Build in Public」スタイルで投稿してください。
+
+【投稿タイプ】{label}
+【内容の方向性】{type_instructions[post_type]}
+
+【バイラルフックの参考（そのまま使わずアレンジする）】
+{hook_pattern}
 
 【Blueskyのルール】
-- 文字数：100〜200文字
-- コミュニティ感を意識した自然な口調
-- ハッシュタグは使わない（または1つだけ）
+- 文字数：100〜200文字（ハッシュタグ除く）
+- ハッシュタグは不要（後から追加する）
+- カスタムフィード対応：以下のキーワードを文中に1〜2個、自然に入れること
+  → {ai_kw}、{side_kw}、{tech_kw}
 - 改行多めで読みやすく
-- 「プロフィールに〜」で締めてもOK
-- 広告っぽくしない
+- 「教える」口調NG → 「やってみた」「わかった」「失敗した」口調でOK
+- 広告・PR感ゼロ
+- 最後は「{cta}」で締める
 
 【構造】
-1行目：興味を引く一文
+1行目：今やっていることや結果（数字入り）
 ↓（空行）
-2〜3行：共感 or 問題提起
+2〜3行：背景・気づき・失敗ポイント
 ↓（空行）
-2〜3行：解決策 or 情報
-↓（空行）
-最終行：まとめ（短く）
+最終行：{cta}
 
 投稿文のみ出力してください。
 """
@@ -168,7 +236,8 @@ def generate_with_gemini(post_type: str, label: str, api_key: str) -> str:
             model="gemini-2.0-flash-lite",
             contents=prompt,
         )
-        return resp.text.strip()
+        text = resp.text.strip()
+        return append_hashtags(text, post_type)
     except Exception as e:
         print(f"⚠️ Gemini失敗、テンプレート使用: {e}")
         return generate_with_template(post_type)
@@ -189,6 +258,7 @@ def generate_post(force_type: str = None, x_text: str = None) -> dict:
             text = rewrite_x_to_bsky(x_text, api_key)
         else:
             text = x_text
+        text = append_hashtags(text, post_type)
         return {"type": "rewrite", "label": "Xリライト", "text": text, "chars": len(text)}
 
     # 通常生成
@@ -225,23 +295,14 @@ if __name__ == "__main__":
                     os.environ.setdefault(k.strip(), v.strip())
 
     print("=" * 55)
-    print("🦋 Bluesky 投稿プレビュー")
+    print("Bluesky 投稿プレビュー（Build in Public戦略）")
     print("=" * 55)
 
     schedule = get_today_schedule(4)
-    types_cycle = ["useful", "empathy", "useful", "trivia"]
+    types_cycle = ["verification", "empathy", "verification", "lifehack"]
 
     for i, (t, pt) in enumerate(zip(schedule, types_cycle)):
         post = generate_post(force_type=pt)
         print(f"\n【{t.strftime('%H:%M')}】{post['label']} ({post['chars']}文字)")
         print("─" * 45)
         print(post["text"])
-
-    # X→Blueskyリライトのデモ
-    print("\n\n【X→Blueskyリライトデモ】")
-    print("─" * 45)
-    x_sample = "スマホ1台でできる副業、3選。\n\n「パソコンないから副業できない」\n\nそんなことないです。\n\n① ポイ活（月5,000円〜）\n② アンケートモニター\n③ AI画像販売\n\n全部スマホだけでOK。\n\nまず1つ試すだけで感覚つかめます✅"
-    rewritten = generate_post(x_text=x_sample)
-    print(f"元のX投稿 → Bluesky用リライト ({rewritten['chars']}文字)")
-    print("─" * 45)
-    print(rewritten["text"])

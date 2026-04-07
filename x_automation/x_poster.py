@@ -1,11 +1,13 @@
 """
 X（Twitter）自動投稿スクリプト
 tweepy（公式API）または twikit（非公式・無料）で投稿
+画像カード付き投稿でインプレッション向上
 """
 import os
 import sys
 import json
 import time
+import tempfile
 from datetime import datetime
 from x_post_generator import generate_post, get_today_schedule
 
@@ -27,25 +29,56 @@ def save_log(entry: dict):
     log.append(entry)
     with open(LOG_FILE, "w", encoding="utf-8") as f:
         json.dump(log, f, ensure_ascii=False, indent=2)
-    print(f"📝 ログ保存: {LOG_FILE}")
 
 
 # ─────────────────────────────────────────
-# Playwright ブラウザ自動投稿（Chrome Cookie使用）
+# 画像カード生成
 # ─────────────────────────────────────────
-def post_with_tweepy(text: str) -> bool:
-    """tweepy（公式API v2）でXに投稿"""
+def _generate_card_file(text: str, post_type: str) -> str:
+    """投稿テキストからカード画像を生成してファイルパスを返す。失敗時は空文字列。"""
+    try:
+        sys.path.insert(0, os.path.dirname(__file__))
+        from image_card_generator import extract_hook, generate_and_save
+
+        username = os.getenv("X_USERNAME", "")
+        hook     = extract_hook(text)
+        tmp_path = os.path.join(tempfile.gettempdir(), f"x_card_{int(time.time())}.png")
+        return generate_and_save(hook, post_type, username, output_path=tmp_path)
+    except Exception as e:
+        print(f"⚠️ カード生成スキップ: {e}")
+        return ""
+
+
+# ─────────────────────────────────────────
+# tweepy（公式API v2 + v1.1 media upload）
+# ─────────────────────────────────────────
+def post_with_tweepy(text: str, image_path: str = "") -> bool:
+    """tweepy（公式API v2）でXに投稿。画像があればv1.1でアップロードして添付。"""
     try:
         import tweepy
 
-        api_key        = os.getenv("X_API_KEY")
-        api_secret     = os.getenv("X_API_SECRET")
-        access_token   = os.getenv("X_ACCESS_TOKEN")
-        access_secret  = os.getenv("X_ACCESS_TOKEN_SECRET")
+        api_key       = os.getenv("X_API_KEY")
+        api_secret    = os.getenv("X_API_SECRET")
+        access_token  = os.getenv("X_ACCESS_TOKEN")
+        access_secret = os.getenv("X_ACCESS_TOKEN_SECRET")
 
         if not all([api_key, api_secret, access_token, access_secret]):
-            print("⚠️ X APIキーが未設定（X_API_KEY / X_API_SECRET / X_ACCESS_TOKEN / X_ACCESS_TOKEN_SECRET）")
+            print("⚠️ X APIキーが未設定")
             return False
+
+        media_ids = []
+
+        # 画像アップロード（v1.1 API）
+        if image_path and os.path.exists(image_path):
+            try:
+                auth  = tweepy.OAuth1UserHandler(api_key, api_secret, access_token, access_secret)
+                api_v1 = tweepy.API(auth)
+                media = api_v1.media_upload(filename=image_path)
+                media_ids = [media.media_id]
+                print(f"画像アップロード成功: media_id={media.media_id}")
+            except Exception as e:
+                print(f"⚠️ 画像アップロード失敗（テキストのみで投稿）: {e}")
+                media_ids = []
 
         client = tweepy.Client(
             consumer_key=api_key,
@@ -53,19 +86,79 @@ def post_with_tweepy(text: str) -> bool:
             access_token=access_token,
             access_token_secret=access_secret,
         )
-        resp = client.create_tweet(text=text)
+
+        kwargs = {"text": text}
+        if media_ids:
+            kwargs["media_ids"] = media_ids
+
+        resp     = client.create_tweet(**kwargs)
         tweet_id = resp.data["id"]
-        print(f"✅ 投稿成功！ Tweet ID: {tweet_id}")
+        print(f"投稿成功！ Tweet ID: {tweet_id}")
         return True
 
     except ImportError:
-        print("⚠️ tweepy未インストール: pip install tweepy")
+        print("⚠️ tweepy未インストール")
         return False
     except Exception as e:
         print(f"❌ tweepy投稿エラー: {e}")
         return False
 
 
+# ─────────────────────────────────────────
+# twikit（非公式・無料）
+# ─────────────────────────────────────────
+def post_with_twikit(text: str, image_path: str = "") -> bool:
+    """twikit経由でXに投稿（公式APIキー不要・無料）"""
+    try:
+        import asyncio
+        from twikit import Client
+
+        cookies_path = os.path.join(os.path.dirname(__file__), "x_cookies.json")
+
+        env_cookies = os.getenv("X_COOKIES", "")
+        if env_cookies and not os.path.exists(cookies_path):
+            with open(cookies_path, "w") as f:
+                f.write(env_cookies)
+            print("X_COOKIES環境変数からCookieを復元")
+
+        if not os.path.exists(cookies_path):
+            print("⚠️ x_cookies.json なし")
+            return False
+
+        async def _post():
+            client = Client("ja")
+            client.load_cookies(cookies_path)
+
+            media_ids = []
+            if image_path and os.path.exists(image_path):
+                try:
+                    with open(image_path, "rb") as f:
+                        img_data = f.read()
+                    media = await client.upload_media(img_data, media_type="image/png")
+                    media_ids = [media.media_id]
+                    print(f"twikit 画像アップロード成功")
+                except Exception as e:
+                    print(f"⚠️ twikit 画像アップロード失敗（テキストのみ）: {e}")
+
+            tweet = await client.create_tweet(text=text, media_ids=media_ids if media_ids else None)
+            return tweet.id
+
+        tweet_id = asyncio.run(_post())
+        print(f"投稿成功！ Tweet ID: {tweet_id}")
+        print(f"   URL: https://x.com/{os.getenv('X_USERNAME', 'user')}/status/{tweet_id}")
+        return True
+
+    except ImportError:
+        print("⚠️ twikit未インストール")
+        return False
+    except Exception as e:
+        print(f"❌ 投稿エラー: {e}")
+        return False
+
+
+# ─────────────────────────────────────────
+# ブラウザフォールバック
+# ─────────────────────────────────────────
 def post_with_browser(text: str) -> bool:
     """ChromeのCookieを使いPlaywrightで投稿（API不要・完全無料）"""
     try:
@@ -78,57 +171,17 @@ def post_with_browser(text: str) -> bool:
 
 
 # ─────────────────────────────────────────
-# twikit（非公式・無料）で投稿
+# ドライラン
 # ─────────────────────────────────────────
-def post_with_twikit(text: str) -> bool:
-    """twikit経由でXに投稿（公式APIキー不要・無料）"""
-    try:
-        import asyncio
-        from twikit import Client
-
-        cookies_path = os.path.join(os.path.dirname(__file__), "x_cookies.json")
-
-        # GitHub Actions: X_COOKIES env var からファイルに復元
-        env_cookies = os.getenv("X_COOKIES", "")
-        if env_cookies and not os.path.exists(cookies_path):
-            with open(cookies_path, "w") as f:
-                f.write(env_cookies)
-            print(f"✅ X_COOKIES環境変数からCookieを復元")
-
-        if not os.path.exists(cookies_path):
-            print("⚠️ x_cookies.json なし。python3.11 x_automation/fetch_x_cookies.py を実行してください")
-            return False
-
-        async def _post():
-            client = Client("ja")
-            client.load_cookies(cookies_path)
-            tweet = await client.create_tweet(text=text)
-            return tweet.id
-
-        tweet_id = asyncio.run(_post())
-        print(f"✅ 投稿成功！ Tweet ID: {tweet_id}")
-        print(f"   URL: https://x.com/{os.getenv('X_USERNAME', 'user')}/status/{tweet_id}")
-        return True
-
-    except ImportError:
-        print("⚠️ twikit未インストール: pip3 install twikit")
-        return False
-    except Exception as e:
-        print(f"❌ 投稿エラー: {e}")
-        return False
-
-
-# ─────────────────────────────────────────
-# ドライラン（テスト表示のみ）
-# ─────────────────────────────────────────
-def dry_run(text: str) -> bool:
-    """実際には投稿せず、内容だけ表示"""
+def dry_run(text: str, image_path: str = "") -> bool:
     print("\n" + "━" * 50)
-    print("📝 [DRY RUN] 以下を投稿予定:")
+    print("[DRY RUN] 以下を投稿予定:")
     print("━" * 50)
     print(text)
     print("━" * 50)
-    print(f"📊 文字数: {len(text)}")
+    print(f"文字数: {len(text)}")
+    if image_path:
+        print(f"添付画像: {image_path}")
     return True
 
 
@@ -136,34 +189,45 @@ def dry_run(text: str) -> bool:
 # メイン投稿関数
 # ─────────────────────────────────────────
 def post_now(force_type: str = None, test_mode: bool = False) -> bool:
-    """投稿文を生成してXに投稿"""
+    """投稿文を生成してXに投稿（画像カード付き）"""
     post = generate_post(force_type)
     text = post["text"]
 
-    print(f"\n🎯 投稿タイプ: {post['label']} ({post['chars']}文字)")
-    print(f"🕐 投稿時刻: {datetime.now().strftime('%Y/%m/%d %H:%M')}")
+    print(f"\n投稿タイプ: {post['label']} ({post['chars']}文字)")
+    print(f"投稿時刻: {datetime.now().strftime('%Y/%m/%d %H:%M')}")
+
+    # 画像カード生成（テストモードでも生成して確認）
+    image_path = _generate_card_file(text, post["type"])
 
     # 投稿実行（tweepy → twikit → browser の順でフォールバック）
     if test_mode:
-        success = dry_run(text)
+        success = dry_run(text, image_path)
     else:
-        success = post_with_tweepy(text)
+        success = post_with_tweepy(text, image_path)
         if not success:
             print("⚠️ tweepy失敗、twikitで再試行...")
-            success = post_with_twikit(text)
+            success = post_with_twikit(text, image_path)
         if not success:
-            print("⚠️ twikit失敗、ブラウザで再試行...")
+            print("⚠️ twikit失敗、ブラウザで再試行（画像なし）...")
             success = post_with_browser(text)
+
+    # 一時ファイル削除
+    if image_path and os.path.exists(image_path):
+        try:
+            os.remove(image_path)
+        except Exception:
+            pass
 
     # ログ保存
     save_log({
-        "datetime": datetime.now().isoformat(),
-        "type":     post["type"],
-        "label":    post["label"],
-        "chars":    post["chars"],
-        "text":     text,
-        "success":  success,
-        "mode":     "dry_run" if test_mode else "live",
+        "datetime":   datetime.now().isoformat(),
+        "type":       post["type"],
+        "label":      post["label"],
+        "chars":      post["chars"],
+        "text":       text,
+        "success":    success,
+        "mode":       "dry_run" if test_mode else "live",
+        "has_image":  bool(image_path),
     })
 
     return success
@@ -173,29 +237,29 @@ def post_now(force_type: str = None, test_mode: bool = False) -> bool:
 # 今日のスケジュール実行
 # ─────────────────────────────────────────
 def run_today_schedule(test_mode: bool = False):
-    """今日の4投稿スケジュールを実行（時間になったら投稿）"""
+    """今日の4投稿スケジュールを実行"""
     schedule = get_today_schedule()
-    types_cycle = ["useful", "empathy", "useful", "trivia"]  # 今日の順番
+    types_cycle = ["useful", "empathy", "useful", "trivia"]
 
     print("=" * 50)
-    print("📅 今日のX投稿スケジュール")
+    print("今日のX投稿スケジュール")
     print("=" * 50)
     for i, t in enumerate(schedule):
         print(f"  {i+1}. {t.strftime('%H:%M')}  [{types_cycle[i]}]")
     print()
 
     for i, post_time in enumerate(schedule):
-        now = datetime.now()
+        now      = datetime.now()
         wait_sec = (post_time - now).total_seconds()
 
         if wait_sec > 0:
-            print(f"⏳ 投稿{i+1}: {post_time.strftime('%H:%M')} まで {int(wait_sec//60)}分待機中...")
+            print(f"投稿{i+1}: {post_time.strftime('%H:%M')} まで {int(wait_sec//60)}分待機中...")
             time.sleep(wait_sec)
 
-        print(f"\n🚀 投稿{i+1}/{len(schedule)} 実行!")
+        print(f"\n投稿{i+1}/{len(schedule)} 実行!")
         post_now(force_type=types_cycle[i], test_mode=test_mode)
 
-    print("\n✅ 今日の全投稿完了！")
+    print("\n今日の全投稿完了！")
 
 
 # ─────────────────────────────────────────
@@ -208,7 +272,7 @@ def show_log(days: int = 7):
         print("ログなし")
         return
 
-    print(f"\n📊 直近{days}日間の投稿ログ ({len(log)}件)")
+    print(f"\n直近{days}日間の投稿ログ ({len(log)}件)")
     print("─" * 50)
     from datetime import timedelta
     cutoff = datetime.now() - timedelta(days=days)
@@ -218,13 +282,12 @@ def show_log(days: int = 7):
         if dt < cutoff:
             continue
         status = "✅" if entry["success"] else "❌"
-        mode = "🧪" if entry.get("mode") == "dry_run" else "🚀"
-        print(f"{status}{mode} {dt.strftime('%m/%d %H:%M')} [{entry['label']}] {entry['chars']}文字")
+        mode   = "🧪" if entry.get("mode") == "dry_run" else "🚀"
+        img    = "🖼" if entry.get("has_image") else "  "
+        print(f"{status}{mode}{img} {dt.strftime('%m/%d %H:%M')} [{entry['label']}] {entry['chars']}文字")
 
 
 if __name__ == "__main__":
-    import sys
-
     # .envを読み込む
     env_path = os.path.join(os.path.dirname(__file__), "..", ".env")
     if os.path.exists(env_path):
@@ -238,8 +301,7 @@ if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else "test"
 
     if cmd == "test":
-        # テスト：全タイプのプレビュー
-        print("🧪 テストモード（各タイプ1件ずつ生成）\n")
+        print("テストモード（各タイプ1件ずつ生成）\n")
         for pt in ["useful", "empathy", "trivia", "product"]:
             post = generate_post(force_type=pt)
             print(f"【{post['label']}】{post['chars']}文字")
@@ -248,15 +310,12 @@ if __name__ == "__main__":
             print()
 
     elif cmd == "post":
-        # 今すぐ1件投稿（テスト）
         post_now(test_mode=True)
 
     elif cmd == "live":
-        # 今すぐ1件投稿（本番・GitHub Actions用）
         post_now(test_mode=False)
 
     elif cmd == "schedule":
-        # 今日のスケジュール実行
         run_today_schedule(test_mode=True)
 
     elif cmd == "log":
