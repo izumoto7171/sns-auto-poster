@@ -61,17 +61,31 @@ VIRAL_HOOK_PATTERNS = [
 ]
 
 
+MAX_TWEET_CHARS = 280
+
+
 def append_hashtags(text: str, post_type: str) -> str:
     """投稿テキストにハッシュタグを追加（280文字以内に収める）"""
     tags = HASHTAGS_BY_TYPE.get(post_type, HASHTAGS_BY_TYPE["useful"])
-    # ランダムに2個選ぶ
     selected = random.sample(tags, min(2, len(tags)))
     hashtag_str = " ".join(selected)
+
+    # ベーステキストが既に280超えなら切り詰める
+    if len(text) > MAX_TWEET_CHARS:
+        text = text[:MAX_TWEET_CHARS - 3] + "..."
+
     full = f"{text}\n\n{hashtag_str}"
-    if len(full) <= 280:
+    if len(full) <= MAX_TWEET_CHARS:
         return full
-    # 280を超える場合は1個だけ
-    return f"{text}\n\n{selected[0]}"
+
+    # ハッシュタグ2個で超える場合は1個
+    one_tag = f"{text}\n\n{selected[0]}"
+    if len(one_tag) <= MAX_TWEET_CHARS:
+        return one_tag
+
+    # それでも超える場合はテキストを削ってハッシュタグ1個
+    suffix = f"\n\n{selected[0]}"
+    return text[: MAX_TWEET_CHARS - len(suffix)] + suffix
 
 
 # ─────────────────────────────────────────
@@ -202,7 +216,7 @@ def generate_with_gemini(post_type: str, label: str, api_key: str) -> str:
 {hook_pattern}
 
 【必須ルール】
-・全体130〜230文字程度（ハッシュタグは含めない）
+・全体130〜230文字（ハッシュタグ含めず厳守、240文字超は不可）
 ・改行を多めに使い、読みやすくする
 ・1行目に強烈なフック（数字・逆説・体験談のどれか）を必ず入れる
 ・「〇〇した結果〜」「知らないと損する〇〇」「実は△△だった」系のフックが高インプレ
