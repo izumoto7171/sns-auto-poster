@@ -106,30 +106,42 @@ async def post_tweet(text: str, headless=True) -> str:
             try:
                 await page_login.goto("https://x.com/login")
                 await page_login.wait_for_load_state("domcontentloaded")
-                await page_login.fill('input[autocomplete="username"]', username)
+                await page_login.wait_for_timeout(1500)
+
+                # ユーザー名入力
+                username_input = await page_login.wait_for_selector(
+                    'input[autocomplete="username"]', timeout=10000
+                )
+                await username_input.fill(username)
                 await page_login.keyboard.press("Enter")
                 await page_login.wait_for_timeout(2000)
 
-                # メール確認が求められた場合
+                # 中間認証（メール/電話番号確認）が出た場合は対応
                 try:
-                    email_input = await page_login.wait_for_selector(
-                        'input[data-testid="ocfEnterTextTextInput"]', timeout=3000
+                    mid_input = await page_login.wait_for_selector(
+                        'input[data-testid="ocfEnterTextTextInput"]', timeout=4000
                     )
-                    await email_input.fill(email)
+                    print("📧 中間認証画面 → メールアドレスを入力")
+                    await mid_input.fill(email)
                     await page_login.keyboard.press("Enter")
                     await page_login.wait_for_timeout(2000)
                 except Exception:
                     pass
 
-                await page_login.fill('input[name="password"]', password)
+                # パスワード入力（セレクタで待機）
+                pw_input = await page_login.wait_for_selector(
+                    'input[name="password"]', timeout=15000
+                )
+                await pw_input.fill(password)
                 await page_login.keyboard.press("Enter")
-                await page_login.wait_for_timeout(4000)
+                await page_login.wait_for_timeout(5000)
 
-                if "home" not in page_login.url and "/login" in page_login.url:
-                    print(f"❌ ログイン失敗（URL: {page_login.url}）。2FA/CAPTCHAの可能性")
+                current_url = page_login.url
+                if "/login" in current_url or "/i/flow" in current_url:
+                    print(f"❌ ログイン失敗（URL: {current_url}）。2FA/CAPTCHAの可能性")
                     await browser.close()
                     return None
-                print(f"✅ ログイン成功（URL: {page_login.url}）")
+                print(f"✅ ログイン成功（URL: {current_url}）")
             except Exception as e:
                 print(f"❌ ログインエラー: {e}")
                 await browser.close()
