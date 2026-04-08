@@ -229,19 +229,25 @@ def post_amazon_thread(thread: dict) -> bool:
 
         c = Client("ja")
         c.load_cookies(cookies_path)
+
         t1 = c.create_tweet(text=tweet1)
         print(f"Tweet1(twikit)成功: {t1.id}")
-        reply_id = t1.id
-        if tweet2:
-            t2 = c.create_tweet(text=tweet2, reply_to=reply_id)
-            reply_id = t2.id
-            print(f"Tweet2(twikit)成功: {t2.id}")
-        if tweet3:
-            t3 = c.create_tweet(text=tweet3, reply_to=reply_id)
-            print(f"Tweet3(twikit)成功: {t3.id}")
-        return True
+        # tweet1 成功後は例外が出ても再投稿しない
+        reply_id = str(t1.id)
+        try:
+            if tweet2:
+                t2 = c.create_tweet(text=tweet2, reply_to=reply_id)
+                reply_id = str(t2.id)
+                print(f"Tweet2(twikit)成功: {t2.id}")
+            if tweet3:
+                t3 = c.create_tweet(text=tweet3, reply_to=reply_id)
+                print(f"Tweet3(twikit)成功: {t3.id}")
+        except Exception as e2:
+            print(f"⚠️ twikit tweet2/3エラー（tweet1は投稿済み）: {e2}")
+        return True  # tweet1 が投稿できていれば成功とみなす
+
     except Exception as e:
-        print(f"❌ twikit スレッド投稿エラー: {e}")
+        print(f"❌ twikit スレッド投稿エラー（tweet1未投稿）: {e}")
 
     # ブラウザフォールバック（tweet1のみ・スレッド不可）
     print("⚠️ ブラウザフォールバック（tweet1のみ投稿）...")
