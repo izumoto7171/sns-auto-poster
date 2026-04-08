@@ -73,10 +73,16 @@ async def login_and_save(username, email, password, headless=False):
 
 
 async def post_tweet(text: str, headless=True) -> str:
-    """保存済みCookieを使ってツイートを投稿"""
+    """保存済みCookieを使ってツイートを投稿。Cookieがなければ自動ログインを試みる"""
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=headless)
-        context = await browser.new_context()
+        browser = await p.chromium.launch(
+            headless=headless,
+            args=["--disable-blink-features=AutomationControlled"],
+        )
+        context = await browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            viewport={"width": 1280, "height": 800},
+        )
 
         # Cookie読み込み（環境変数からの復元も試みる）
         _load_env_cookies()
@@ -84,10 +90,52 @@ async def post_tweet(text: str, headless=True) -> str:
             with open(COOKIES_FILE) as f:
                 cookies = json.load(f)
             await context.add_cookies(cookies)
+            print("✅ Cookie読み込み成功")
         else:
-            print("⚠️ Cookie未保存。先にログインしてください（X_BROWSER_COOKIES環境変数も未設定）")
-            await browser.close()
-            return None
+            # Cookie未設定 → 認証情報でログインを試みる
+            username = os.environ.get("X_USERNAME", "")
+            email    = os.environ.get("X_EMAIL", "")
+            password = os.environ.get("X_PASSWORD", "")
+            if not (username and password):
+                print("⚠️ Cookie未保存かつX_USERNAME/X_PASSWORDも未設定")
+                await browser.close()
+                return None
+
+            print("🔐 Cookie未設定 → 認証情報でログインを試みます...")
+            page_login = await context.new_page()
+            try:
+                await page_login.goto("https://x.com/login")
+                await page_login.wait_for_load_state("domcontentloaded")
+                await page_login.fill('input[autocomplete="username"]', username)
+                await page_login.keyboard.press("Enter")
+                await page_login.wait_for_timeout(2000)
+
+                # メール確認が求められた場合
+                try:
+                    email_input = await page_login.wait_for_selector(
+                        'input[data-testid="ocfEnterTextTextInput"]', timeout=3000
+                    )
+                    await email_input.fill(email)
+                    await page_login.keyboard.press("Enter")
+                    await page_login.wait_for_timeout(2000)
+                except Exception:
+                    pass
+
+                await page_login.fill('input[name="password"]', password)
+                await page_login.keyboard.press("Enter")
+                await page_login.wait_for_timeout(4000)
+
+                if "home" not in page_login.url and "/login" in page_login.url:
+                    print(f"❌ ログイン失敗（URL: {page_login.url}）。2FA/CAPTCHAの可能性")
+                    await browser.close()
+                    return None
+                print(f"✅ ログイン成功（URL: {page_login.url}）")
+            except Exception as e:
+                print(f"❌ ログインエラー: {e}")
+                await browser.close()
+                return None
+            finally:
+                await page_login.close()
 
         page = await context.new_page()
         await page.goto("https://x.com/home")
