@@ -61,31 +61,69 @@ VIRAL_HOOK_PATTERNS = [
 ]
 
 
-MAX_TWEET_CHARS = 280
+MAX_TWEET_UNITS = 280  # Xの文字単位上限
+
+
+def x_char_count(text: str) -> int:
+    """Xの文字数カウント（CJK・全角 = 2単位、ASCII = 1単位）"""
+    count = 0
+    for ch in text:
+        cp = ord(ch)
+        # CJK統合漢字・ひらがな・カタカナ・全角記号 etc.
+        if (0x1100 <= cp <= 0x115F or  # ハングル
+            0x2E80 <= cp <= 0x9FFF or  # CJK・部首・漢字
+            0xA000 <= cp <= 0xA4CF or  # 彝文字
+            0xA960 <= cp <= 0xA97F or
+            0xAC00 <= cp <= 0xD7FF or  # ハングル音節
+            0xF900 <= cp <= 0xFAFF or  # CJK互換漢字
+            0xFE10 <= cp <= 0xFE1F or
+            0xFE30 <= cp <= 0xFE6F or  # CJK互換形
+            0xFF00 <= cp <= 0xFF60 or  # 全角英数
+            0xFFE0 <= cp <= 0xFFE6 or
+            0x1B000 <= cp <= 0x1B0FF or
+            0x1F004 <= cp <= 0x1F0CF or
+            0x1F200 <= cp <= 0x1F2FF or
+            0x20000 <= cp <= 0x2A6DF or
+            0x2A700 <= cp <= 0x2CEAF or
+            0x2CEB0 <= cp <= 0x2EBEF or
+            0x2F800 <= cp <= 0x2FA1F or
+            0x30000 <= cp <= 0x3134F):
+            count += 2
+        else:
+            count += 1
+    return count
+
+
+def _truncate_to_x_units(text: str, max_units: int) -> str:
+    """X文字単位でmax_units以内に切り詰める"""
+    count = 0
+    for i, ch in enumerate(text):
+        units = 2 if x_char_count(ch) == 2 else 1
+        if count + units > max_units:
+            return text[:i] + "…"
+        count += units
+    return text
 
 
 def append_hashtags(text: str, post_type: str) -> str:
-    """投稿テキストにハッシュタグを追加（280文字以内に収める）"""
+    """投稿テキストにハッシュタグを追加（X換算280単位以内に収める）"""
     tags = HASHTAGS_BY_TYPE.get(post_type, HASHTAGS_BY_TYPE["useful"])
     selected = random.sample(tags, min(2, len(tags)))
     hashtag_str = " ".join(selected)
 
-    # ベーステキストが既に280超えなら切り詰める
-    if len(text) > MAX_TWEET_CHARS:
-        text = text[:MAX_TWEET_CHARS - 3] + "..."
-
     full = f"{text}\n\n{hashtag_str}"
-    if len(full) <= MAX_TWEET_CHARS:
+    if x_char_count(full) <= MAX_TWEET_UNITS:
         return full
 
     # ハッシュタグ2個で超える場合は1個
     one_tag = f"{text}\n\n{selected[0]}"
-    if len(one_tag) <= MAX_TWEET_CHARS:
+    if x_char_count(one_tag) <= MAX_TWEET_UNITS:
         return one_tag
 
     # それでも超える場合はテキストを削ってハッシュタグ1個
     suffix = f"\n\n{selected[0]}"
-    return text[: MAX_TWEET_CHARS - len(suffix)] + suffix
+    max_text_units = MAX_TWEET_UNITS - x_char_count(suffix)
+    return _truncate_to_x_units(text, max_text_units) + suffix
 
 
 # ─────────────────────────────────────────
@@ -216,7 +254,8 @@ def generate_with_gemini(post_type: str, label: str, api_key: str) -> str:
 {hook_pattern}
 
 【必須ルール】
-・全体130〜230文字（ハッシュタグ含めず厳守、240文字超は不可）
+・全体80〜110文字（日本語なので半角換算で160〜220単位。ハッシュタグ未含）
+・絶対に120文字（日本語）を超えないこと
 ・改行を多めに使い、読みやすくする
 ・1行目に強烈なフック（数字・逆説・体験談のどれか）を必ず入れる
 ・「〇〇した結果〜」「知らないと損する〇〇」「実は△△だった」系のフックが高インプレ

@@ -23,51 +23,89 @@ def _load_env_cookies():
             print(f"⚠️ Cookie書き出しエラー: {e}")
 
 
+STEALTH_SCRIPT = """
+Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+Object.defineProperty(navigator, 'languages', { get: () => ['ja-JP', 'ja', 'en-US'] });
+window.chrome = { runtime: {} };
+"""
+
+
 async def login_and_save(username, email, password, headless=False):
     """ブラウザでXにログインしてCookieを保存"""
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=headless)
-        context = await browser.new_context()
+        browser = await p.chromium.launch(
+            headless=headless,
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+            ],
+        )
+        context = await browser.new_context(
+            user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            viewport={"width": 1280, "height": 800},
+        )
+        await context.add_init_script(STEALTH_SCRIPT)
         page = await context.new_page()
 
         print("🌐 X.comを開いています...")
         await page.goto("https://x.com/login")
         await page.wait_for_load_state("domcontentloaded")
+        await page.wait_for_timeout(1500)
 
         # ユーザー名入力
         print("📝 ユーザー名を入力中...")
-        await page.fill('input[autocomplete="username"]', username)
-        await page.keyboard.press("Enter")
-        await page.wait_for_timeout(2000)
+        username_el = await page.wait_for_selector('input[autocomplete="username"]', timeout=10000)
+        await username_el.fill(username)
+        await page.wait_for_timeout(500)
 
-        # メールアドレス確認が求められる場合
+        # 「次へ」ボタンをクリック（test-idなしのテキストで探す）
         try:
-            email_input = await page.wait_for_selector(
-                'input[data-testid="ocfEnterTextTextInput"]',
-                timeout=3000
-            )
-            print("📧 メール確認入力中...")
-            await email_input.fill(email)
+            next_btn = await page.wait_for_selector('button:has-text("Next"), button:has-text("次へ")', timeout=3000)
+            await next_btn.click()
+        except Exception:
             await page.keyboard.press("Enter")
+        await page.wait_for_timeout(2500)
+
+        print(f"  現在のURL: {page.url}")
+
+        # 中間認証（メール/電話番号確認）が求められる場合
+        try:
+            mid_el = await page.wait_for_selector(
+                'input[data-testid="ocfEnterTextTextInput"]', timeout=5000
+            )
+            print("📧 中間認証画面 → メールアドレスを入力中...")
+            await mid_el.fill(email)
+            try:
+                next_btn2 = await page.wait_for_selector('button:has-text("Next"), button:has-text("次へ")', timeout=2000)
+                await next_btn2.click()
+            except Exception:
+                await page.keyboard.press("Enter")
             await page.wait_for_timeout(2000)
         except Exception:
             pass
 
-        # パスワード入力
+        # パスワード入力（wait_for_selectorで確実に待機）
+        print(f"  現在のURL: {page.url}")
         print("🔑 パスワードを入力中...")
-        await page.fill('input[name="password"]', password)
+        pw_el = await page.wait_for_selector('input[name="password"]', timeout=15000)
+        await pw_el.fill(password)
         await page.keyboard.press("Enter")
-        await page.wait_for_timeout(3000)
+        await page.wait_for_timeout(4000)
 
         # ログイン確認
-        if "home" in page.url or "x.com" in page.url:
-            print("✅ ログイン成功！Cookieを保存...")
+        current_url = page.url
+        if "/login" in current_url or "/i/flow" in current_url:
+            print(f"⚠️ ログイン確認できませんでした。URL: {current_url}")
+            print("  → 2FA / CAPTCHA / 不審なログイン検知の可能性")
+        else:
+            print(f"✅ ログイン成功！Cookieを保存... (URL: {current_url})")
             cookies = await context.cookies()
             with open(COOKIES_FILE, "w") as f:
                 json.dump(cookies, f)
             print(f"   保存先: {COOKIES_FILE}")
-        else:
-            print(f"⚠️ ログイン確認できませんでした。URL: {page.url}")
+            print(f"   Cookie数: {len(cookies)}")
 
         await browser.close()
 
@@ -154,25 +192,51 @@ async def post_tweet(text: str, headless=True) -> str:
         await page.wait_for_load_state("domcontentloaded")
         await page.wait_for_timeout(2000)
 
-        # ツイート入力欄をクリック
+        # ツイート入力欄をクリック（複数セレクタでフォールバック）
         print("✏️  ツイート入力中...")
-        tweet_box = await page.wait_for_selector(
+        tweet_box = None
+        for selector in [
             '[data-testid="tweetTextarea_0"]',
-            timeout=10000
-        )
+            '[data-testid="tweetTextarea_0Root"] div[contenteditable="true"]',
+            'div[contenteditable="true"][data-testid]',
+        ]:
+            try:
+                tweet_box = await page.wait_for_selector(selector, timeout=5000)
+                break
+            except Exception:
+                continue
+
+        if not tweet_box:
+            print("❌ ツイート入力欄が見つかりません")
+            await browser.close()
+            return None
+
         await tweet_box.click()
         await page.wait_for_timeout(500)
 
-        # テキストを入力（改行対応）
-        await tweet_box.fill(text)
-        await page.wait_for_timeout(1000)
+        # テキストを入力（keyboard.typeでReactイベントを確実に発火）
+        await page.keyboard.type(text, delay=30)
+        await page.wait_for_timeout(1500)
 
-        # 投稿ボタンをクリック
+        # 投稿ボタンをクリック（複数セレクタでフォールバック）
         print("🚀 投稿ボタンをクリック...")
-        post_btn = await page.wait_for_selector(
+        post_btn = None
+        for selector in [
             '[data-testid="tweetButtonInline"]',
-            timeout=5000
-        )
+            '[data-testid="tweetButton"]',
+            'button[data-testid="tweetButtonInline"]:not([disabled])',
+        ]:
+            try:
+                post_btn = await page.wait_for_selector(selector, timeout=5000)
+                break
+            except Exception:
+                continue
+
+        if not post_btn:
+            print("❌ 投稿ボタンが見つかりません")
+            await browser.close()
+            return None
+
         await post_btn.click()
         await page.wait_for_timeout(3000)
 
