@@ -237,7 +237,19 @@ async def post_tweet(text: str, headless=True) -> str:
             await browser.close()
             return None
 
-        await post_btn.click()
+        # オーバーレイを閉じてからクリック試行
+        await page.keyboard.press("Escape")
+        await page.wait_for_timeout(500)
+
+        try:
+            await post_btn.click(timeout=10000)
+        except Exception:
+            # オーバーレイが邪魔する場合はJSクリックで回避
+            print("⚠️ ネイティブクリック失敗 → JSクリック")
+            await page.evaluate(
+                'btn => btn.click()',
+                await post_btn.element_handle() if hasattr(post_btn, 'element_handle') else post_btn
+            )
         await page.wait_for_timeout(3000)
 
         print("✅ 投稿完了！")
