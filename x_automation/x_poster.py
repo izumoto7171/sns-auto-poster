@@ -110,7 +110,6 @@ def post_with_tweepy(text: str, image_path: str = "") -> bool:
 def post_with_twikit(text: str, image_path: str = "") -> bool:
     """twikit経由でXに投稿（公式APIキー不要・無料）"""
     try:
-        import asyncio
         from twikit import Client
 
         cookies_path = os.path.join(os.path.dirname(__file__), "x_cookies.json")
@@ -125,27 +124,23 @@ def post_with_twikit(text: str, image_path: str = "") -> bool:
             print("⚠️ x_cookies.json なし")
             return False
 
-        async def _post():
-            client = Client("ja")
-            client.load_cookies(cookies_path)
+        client = Client("ja")
+        client.load_cookies(cookies_path)
 
-            media_ids = []
-            if image_path and os.path.exists(image_path):
-                try:
-                    with open(image_path, "rb") as f:
-                        img_data = f.read()
-                    media = await client.upload_media(img_data, media_type="image/png")
-                    media_ids = [media.media_id]
-                    print(f"twikit 画像アップロード成功")
-                except Exception as e:
-                    print(f"⚠️ twikit 画像アップロード失敗（テキストのみ）: {e}")
+        media_ids = []
+        if image_path and os.path.exists(image_path):
+            try:
+                with open(image_path, "rb") as f:
+                    img_data = f.read()
+                media = client.upload_media(img_data, media_type="image/png")
+                media_ids = [media.media_id]
+                print("twikit 画像アップロード成功")
+            except Exception as e:
+                print(f"⚠️ twikit 画像アップロード失敗（テキストのみ）: {e}")
 
-            tweet = await client.create_tweet(text=text, media_ids=media_ids if media_ids else None)
-            return tweet.id
-
-        tweet_id = asyncio.run(_post())
-        print(f"投稿成功！ Tweet ID: {tweet_id}")
-        print(f"   URL: https://x.com/{os.getenv('X_USERNAME', 'user')}/status/{tweet_id}")
+        tweet = client.create_tweet(text=text, media_ids=media_ids if media_ids else None)
+        print(f"投稿成功！ Tweet ID: {tweet.id}")
+        print(f"   URL: https://x.com/{os.getenv('X_USERNAME', 'user')}/status/{tweet.id}")
         return True
 
     except ImportError:
@@ -171,6 +166,89 @@ def post_with_browser(text: str) -> bool:
 
 
 # ─────────────────────────────────────────
+# Amazonスレッド投稿（tweet1 → reply tweet2 → reply tweet3）
+# ─────────────────────────────────────────
+def post_amazon_thread(thread: dict) -> bool:
+    """Amazonアフィリエイトスレッドを3ツイートで投稿する（tweepy → twikit フォールバック）"""
+    tweet1 = thread.get("tweet1", "")
+    tweet2 = thread.get("tweet2", "")
+    tweet3 = thread.get("tweet3", "")
+    if not tweet1:
+        print("❌ スレッドのtweet1が空")
+        return False
+
+    # tweepy でスレッド投稿
+    try:
+        import tweepy
+
+        api_key       = os.getenv("X_API_KEY")
+        api_secret    = os.getenv("X_API_SECRET")
+        access_token  = os.getenv("X_ACCESS_TOKEN")
+        access_secret = os.getenv("X_ACCESS_TOKEN_SECRET")
+
+        if all([api_key, api_secret, access_token, access_secret]):
+            client = tweepy.Client(
+                consumer_key=api_key,
+                consumer_secret=api_secret,
+                access_token=access_token,
+                access_token_secret=access_secret,
+            )
+            resp1 = client.create_tweet(text=tweet1)
+            id1   = resp1.data["id"]
+            print(f"Tweet1投稿成功: {id1}")
+
+            if tweet2:
+                resp2 = client.create_tweet(text=tweet2, in_reply_to_tweet_id=id1)
+                id2   = resp2.data["id"]
+                print(f"Tweet2投稿成功: {id2}")
+            else:
+                id2 = id1
+
+            if tweet3:
+                resp3 = client.create_tweet(text=tweet3, in_reply_to_tweet_id=id2)
+                print(f"Tweet3投稿成功（アフィリンク）: {resp3.data['id']}")
+
+            return True
+    except Exception as e:
+        print(f"⚠️ tweepy スレッド投稿失敗: {e}")
+
+    # twikit でフォールバック
+    try:
+        import asyncio
+        from twikit import Client
+
+        cookies_path = os.path.join(os.path.dirname(__file__), "x_cookies.json")
+        env_cookies = os.getenv("X_COOKIES", "")
+        if env_cookies and not os.path.exists(cookies_path):
+            with open(cookies_path, "w") as f:
+                f.write(env_cookies)
+
+        if not os.path.exists(cookies_path):
+            print("⚠️ x_cookies.json なし")
+            return False
+
+        c = Client("ja")
+        c.load_cookies(cookies_path)
+        t1 = c.create_tweet(text=tweet1)
+        print(f"Tweet1(twikit)成功: {t1.id}")
+        reply_id = t1.id
+        if tweet2:
+            t2 = c.create_tweet(text=tweet2, reply_to=reply_id)
+            reply_id = t2.id
+            print(f"Tweet2(twikit)成功: {t2.id}")
+        if tweet3:
+            t3 = c.create_tweet(text=tweet3, reply_to=reply_id)
+            print(f"Tweet3(twikit)成功: {t3.id}")
+        return True
+    except Exception as e:
+        print(f"❌ twikit スレッド投稿エラー: {e}")
+
+    # ブラウザフォールバック（tweet1のみ・スレッド不可）
+    print("⚠️ ブラウザフォールバック（tweet1のみ投稿）...")
+    return post_with_browser(tweet1)
+
+
+# ─────────────────────────────────────────
 # ドライラン
 # ─────────────────────────────────────────
 def dry_run(text: str, image_path: str = "") -> bool:
@@ -190,11 +268,46 @@ def dry_run(text: str, image_path: str = "") -> bool:
 # ─────────────────────────────────────────
 def post_now(force_type: str = None, test_mode: bool = False) -> bool:
     """投稿文を生成してXに投稿（画像カード付き）"""
+    from x_post_generator import generate_amazon_product_post
+
     post = generate_post(force_type)
-    text = post["text"]
 
     print(f"\n投稿タイプ: {post['label']} ({post['chars']}文字)")
     print(f"投稿時刻: {datetime.now().strftime('%Y/%m/%d %H:%M')}")
+
+    # Amazon商品タイプはスレッド投稿
+    if post["type"] == "product":
+        amazon_post = generate_amazon_product_post()
+        if amazon_post and amazon_post.get("thread"):
+            thread = amazon_post["thread"]
+            product_title = amazon_post.get("product", {}).get("title", "")
+            print(f"Amazon商品: {product_title}")
+            if test_mode:
+                print("\n[DRY RUN] Amazonスレッド投稿プレビュー:")
+                print("── Tweet1 ──")
+                print(thread.get("tweet1", ""))
+                print("── Tweet2 ──")
+                print(thread.get("tweet2", ""))
+                print("── Tweet3 ──")
+                print(thread.get("tweet3", ""))
+                success = True
+            else:
+                success = post_amazon_thread(thread)
+            save_log({
+                "datetime": datetime.now().isoformat(),
+                "type":     "amazon_thread",
+                "label":    "Amazon商品紹介",
+                "chars":    len(thread.get("tweet1", "")),
+                "text":     thread.get("tweet1", ""),
+                "success":  success,
+                "mode":     "dry_run" if test_mode else "live",
+                "has_image": False,
+            })
+            return success
+        else:
+            print("⚠️ Amazon商品取得失敗、通常投稿にフォールバック")
+
+    text = post["text"]
 
     # 画像カード生成（テストモードでも生成して確認）
     image_path = _generate_card_file(text, post["type"])

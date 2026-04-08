@@ -14,10 +14,10 @@ from datetime import datetime, timedelta
 # 投稿タイプの定義と重み
 # ─────────────────────────────────────────
 POST_TYPES = [
-    {"type": "useful",   "label": "役立つ情報",   "weight": 60},
-    {"type": "empathy",  "label": "共感・体験",   "weight": 20},
+    {"type": "useful",   "label": "役立つ情報",   "weight": 25},
+    {"type": "empathy",  "label": "共感・体験",   "weight": 10},
     {"type": "trivia",   "label": "雑学・ネタ",   "weight": 10},
-    {"type": "product",  "label": "商品紹介",     "weight": 10},
+    {"type": "product",  "label": "Amazon商品紹介", "weight": 55},
 ]
 
 # ─────────────────────────────────────────

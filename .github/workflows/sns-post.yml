@@ -46,6 +46,7 @@ jobs:
           X_PASSWORD: ${{ secrets.X_PASSWORD }}
           X_COOKIES: ${{ secrets.X_COOKIES }}
           X_BROWSER_COOKIES: ${{ secrets.X_BROWSER_COOKIES }}
+          AMAZON_ASSOCIATE_TAG: ${{ secrets.AMAZON_ASSOCIATE_TAG }}
         run: |
           cd x_automation
           python3 x_poster.py live

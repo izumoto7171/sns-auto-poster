@@ -53,6 +53,31 @@ MIN_INTERVAL_MINUTES = 30
 DISCLOSURE_REQUIRED = "#PR"
 ASSOCIATE_DISCLOSURE = "※Amazonアソシエイトに参加しています"
 
+def _normalize_url(url: str) -> str:
+    """
+    AmazonアフィリエイトURLをX投稿用に正規化する。
+    - スペース・全角文字・改行を除去
+    - https:// で始まることを保証
+    - クエリパラメータのスペースを除去
+    """
+    import re
+    url = url.strip()
+    # 全角スペース・改行・タブを除去
+    url = re.sub(r'[\u3000\s\n\r\t]', '', url)
+    # URLエンコードされていない全角文字をASCIIに変換（タグ部分限定）
+    # 基本的に amazon.co.jp/dp/{ASIN}?tag={TAG} の形を強制
+    m = re.match(r'https?://[^\s]+', url)
+    if not m:
+        return url
+    return m.group(0)
+
+
+def _strip_urls(text: str) -> str:
+    """テキスト中の http/https URL をすべて除去する（Gemini が誤挿入したURL対策）"""
+    import re
+    return re.sub(r'https?://\S+', '', text).strip()
+
+
 def enforce_disclosure(tweet3: str, amazon_url: str = "") -> str:
     """
     tweet3（リンクツイート）に #PR・Associate開示・アフィリエイトURLが
@@ -60,7 +85,7 @@ def enforce_disclosure(tweet3: str, amazon_url: str = "") -> str:
     """
     # URLが存在し、かつ tweet3 にリンクが含まれていない場合は強制挿入
     if amazon_url and "http" not in tweet3:
-        tweet3 = f"詳細はこちら→ {amazon_url}\n" + tweet3.lstrip()
+        tweet3 = f"詳細はこちら→ {_normalize_url(amazon_url)}\n" + tweet3.lstrip()
 
     if DISCLOSURE_REQUIRED not in tweet3:
         tweet3 = tweet3.rstrip() + f"\n{DISCLOSURE_REQUIRED}"
@@ -222,7 +247,7 @@ def _generate_with_gemini(
             instruction_block = f"{optimized_instruction}\n\n"
 
         prompt = f"""
-{instruction_block}あなたはX（Twitter）でガジェット情報を発信する人気アカウントの中の人です。
+{instruction_block}あなたはAmazonアソシエイトの、Amazonの主要な商品から「本当に価値のある1つ」を見つけ出すキュレーションメディアの中の人です。独自のスコアリング（価格・評価・トレンド）で、ガジェットや生活家電のセール情報を毎日配信しています。フォロワーの代わりに、今週の「買い」をピックアップするアカウントです。ステルスマーケティング防止のため、広告・PR投稿には必ず明示しています。
 
 以下の商品について、スレッド形式（3ツイート）の投稿文を作成してください。
 
@@ -249,9 +274,9 @@ def _generate_with_gemini(
 - 140文字以内
 
 ツイート3（返信2）:
-- 「詳細はこちら→ {url}」の形でリンクを入れる
-- 「#PR」を必ず末尾に
-- 100文字以内
+- URLや「#PR」は書かなくてよい（後から自動付与される）
+- 「気になる人はチェックしてみて」「詳細は下のリンクから」などの誘導文1行だけでよい
+- 50文字以内
 
 以下の形式でJSONのみ出力（説明文不要）:
 {{
@@ -274,10 +299,20 @@ def _generate_with_gemini(
             raw = raw.split("```")[1].split("```")[0].strip()
 
         data = json.loads(raw)
+
+        # tweet3 の URL は Gemini に書かせず、コードで安全に組み立てる
+        # Gemini が誤って書いた URL・リンク文字列は除去する
+        t3_body = data.get("tweet3", "").strip()
+        t3_body = _strip_urls(t3_body)
+
+        # URL を正規化して末尾に付与
+        safe_url = _normalize_url(url)
+        tweet3 = f"{t3_body}\n{safe_url}" if t3_body else safe_url
+
         return {
             "tweet1": data.get("tweet1", "").strip(),
             "tweet2": data.get("tweet2", "").strip(),
-            "tweet3": data.get("tweet3", "").strip(),
+            "tweet3": tweet3,
         }
 
     except Exception as e:
@@ -301,7 +336,7 @@ def _generate_from_template(product: dict) -> dict:
     brand_prefix = f"{brand}の" if brand else ""
     tweet1 = f"{hook}\n\n{brand_prefix}これ1個で、思ってたより全然変わった。\n\n正直ここまで効くとは思ってなかった。"
     tweet2 = f"■ {title[:40]}\n{feature_lines}\n\n価格: {price}{discount_text}\n今がチャンスかも。"
-    tweet3 = f"詳細はこちら→ {url}\n#PR"
+    tweet3 = f"詳細はこちら→ {_normalize_url(url)}\n#PR"
 
     # 文字数チェック・トリム
     if len(tweet1) > 140:
