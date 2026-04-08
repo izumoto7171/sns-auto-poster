@@ -1,0 +1,130 @@
+{
+  "source_file": "sample_search_console.csv",
+  "total_queries": 10,
+  "total_clicks": 167,
+  "total_impressions": 9410,
+  "avg_ctr": 0.0177,
+  "avg_position": 13.01,
+  "top_queries": [
+    {
+      "query": "freee 中小企業 使い方",
+      "clicks": 45,
+      "impressions": 1200,
+      "ctr": 0.0375,
+      "position": 6.2
+    },
+    {
+      "query": "freee マネーフォワード どっち",
+      "clicks": 31,
+      "impressions": 420,
+      "ctr": 0.0738,
+      "position": 4.1
+    },
+    {
+      "query": "マネーフォワード クラウド 比較",
+      "clicks": 23,
+      "impressions": 890,
+      "ctr": 0.0258,
+      "position": 8.5
+    },
+    {
+      "query": "freee 使い方 初心者",
+      "clicks": 19,
+      "impressions": 340,
+      "ctr": 0.0559,
+      "position": 5.3
+    },
+    {
+      "query": "Chatwork 導入 メリット",
+      "clicks": 18,
+      "impressions": 650,
+      "ctr": 0.0277,
+      "position": 9.1
+    },
+    {
+      "query": "バックオフィス 効率化 ツール",
+      "clicks": 12,
+      "impressions": 2100,
+      "ctr": 0.57,
+      "position": 14.3
+    },
+    {
+      "query": "クラウド会計 中小企業",
+      "clicks": 8,
+      "impressions": 1500,
+      "ctr": 0.53,
+      "position": 16.8
+    },
+    {
+      "query": "DX ツール おすすめ 2026",
+      "clicks": 6,
+      "impressions": 980,
+      "ctr": 0.61,
+      "position": 18.2
+    },
+    {
+      "query": "中小企業 DX 始め方",
+      "clicks": 3,
+      "impressions": 750,
+      "ctr": 0.4,
+      "position": 22.5
+    },
+    {
+      "query": "業務効率化 無料 ツール",
+      "clicks": 2,
+      "impressions": 580,
+      "ctr": 0.34,
+      "position": 25.1
+    }
+  ],
+  "low_position_queries": [
+    {
+      "query": "バックオフィス 効率化 ツール",
+      "impressions": 2100,
+      "position": 14.3
+    },
+    {
+      "query": "クラウド会計 中小企業",
+      "impressions": 1500,
+      "position": 16.8
+    },
+    {
+      "query": "DX ツール おすすめ 2026",
+      "impressions": 980,
+      "position": 18.2
+    }
+  ],
+  "high_impression_low_ctr": [
+    {
+      "query": "freee 中小企業 使い方",
+      "impressions": 1200,
+      "ctr": 0.0375
+    },
+    {
+      "query": "マネーフォワード クラウド 比較",
+      "impressions": 890,
+      "ctr": 0.0258
+    },
+    {
+      "query": "Chatwork 導入 メリット",
+      "impressions": 650,
+      "ctr": 0.0277
+    },
+    {
+      "query": "freee マネーフォワード どっち",
+      "impressions": 420,
+      "ctr": 0.0738
+    },
+    {
+      "query": "freee 使い方 初心者",
+      "impressions": 340,
+      "ctr": 0.0559
+    }
+  ],
+  "recommendations": [
+    "2ページ目（11〜20位）にいるキーワードを強化してください: ['バックオフィス 効率化 ツール', 'クラウド会計 中小企業', 'DX ツール おすすめ 2026']",
+    "表示されているのにクリックされないキーワードはタイトルを改善してください: ['freee 中小企業 使い方', 'マネーフォワード クラウド 比較', 'Chatwork 導入 メリット']",
+    "CTRが低いです。タイトルに数字・【】・疑問形を追加してクリック率を改善しましょう。"
+  ],
+  "analyzed_at": "2026-04-03T20:36:38.131335"
+}

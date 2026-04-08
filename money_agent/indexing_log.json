@@ -1,0 +1,34 @@
+[
+  {
+    "type": "sitemap_ping",
+    "success": false,
+    "sitemap_url": "https://smart-earn-life.hateblo.jp/sitemap.xml",
+    "status_code": 404,
+    "notified_at": "2026-04-03T22:19:26.535626"
+  },
+  {
+    "type": "sitemap_ping",
+    "success": false,
+    "sitemap_url": "https://smart-earn-life.hateblo.jp/sitemap.xml",
+    "status_code": 404,
+    "notified_at": "2026-04-05T00:06:56.671304"
+  },
+  {
+    "success": true,
+    "url": "https://smart-earn-life.hateblo.jp/",
+    "status_code": 200,
+    "response": {
+      "urlNotificationMetadata": {
+        "url": "https://smart-earn-life.hateblo.jp/"
+      }
+    },
+    "notified_at": "2026-04-05T00:06:58.003258"
+  },
+  {
+    "type": "sitemap_ping",
+    "success": false,
+    "sitemap_url": "https://smart-earn-life.hateblo.jp/sitemap.xml",
+    "status_code": 404,
+    "notified_at": "2026-04-05T00:08:14.190036"
+  }
+]

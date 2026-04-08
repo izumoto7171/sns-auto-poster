@@ -1,0 +1,575 @@
+"""
+Amazonタイムセール・おすすめ商品の取得
+PA-API が使えるときは PA-API を使用、なければ Gemini で代替生成
+
+使い方:
+  python3.11 x_automation/fetch_amazon_deals.py                   # ガジェット5件
+  python3.11 x_automation/fetch_amazon_deals.py --category all    # 全カテゴリ
+  python3.11 x_automation/fetch_amazon_deals.py --count 10        # 10件取得
+
+出力: x_automation/amazon_deals.json
+"""
+
+import os
+import sys
+import json
+import time
+import argparse
+from datetime import datetime, timedelta
+from pathlib import Path
+
+BASE_DIR  = Path(__file__).parent
+ROOT_DIR  = BASE_DIR.parent
+DEALS_JSON = BASE_DIR / "amazon_deals.json"
+
+# .env 読み込み
+env_path = ROOT_DIR / ".env"
+if env_path.exists():
+    for line in env_path.read_text().splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            k, _, v = line.partition("=")
+            os.environ.setdefault(k.strip(), v.strip())
+
+ASSOCIATE_TAG = os.getenv("AMAZON_ASSOCIATE_TAG", "smartearn22-22")
+
+
+# ─────────────────────────────────────────
+# 購買意欲（インテント）スコアリング
+# 0.5%の成約率を超えるために「今すぐ買う層」に届くキーワードを優先する
+#
+# 【高インテントキーワードとは】
+# - 比較/ランキング系: 「おすすめ」「比較」「最強」→ 購入検討中
+# - 問題解決系: 「ノイズキャンセリング 電車」→ 具体的な用途で探している
+# - 期間限定系: 「セール」「タイムセール」「値下がり」→ 購買トリガーが強い
+# - スペック指定系: 「USB-C 65W」「Bluetooth5.3」→ 仕様比較フェーズ
+# ─────────────────────────────────────────
+HIGH_INTENT_KEYWORDS = {
+    # 比較・ランキング（スコア高）
+    "おすすめ": 3, "ランキング": 3, "比較": 3, "最強": 2, "コスパ": 3, "選び方": 2,
+    "口コミ": 2, "レビュー": 2, "評判": 2, "人気": 2,
+    # 期間限定・価格（購買トリガー）
+    "セール": 3, "タイムセール": 3, "値下がり": 3, "割引": 3, "安い": 2, "お得": 2,
+    "限定": 2, "特価": 3,
+    # 問題解決系（具体的なニーズ）
+    "充電できない": 2, "バッテリー 持ち": 2, "ノイズキャンセリング": 2,
+    "軽量": 2, "防水": 2, "コンパクト": 2, "小型": 2,
+    # スペック指定（購入直前フェーズ）
+    "USB-C": 2, "Bluetooth": 1, "MagSafe": 2, "ワイヤレス": 1, "急速充電": 2,
+    "GaN": 3, "4K": 2, "HDR": 1,
+}
+
+LOW_INTENT_KEYWORDS = {
+    # 情報収集フェーズ（購入意図が低い）
+    "とは": -1, "仕組み": -1, "歴史": -2, "なぜ": -1,
+}
+
+
+def score_purchase_intent(product: dict) -> int:
+    """
+    商品の購買意欲スコアを算出する（高いほど成約率が高い層に刺さる）
+
+    スコア計算:
+    - タイトル・特徴のキーワードマッチ
+    - 割引率（10%以上で+加点）
+    - 価格帯（2,000〜15,000円が最も衝動買いされやすい）
+
+    Returns:
+        int: スコア（0〜100）
+    """
+    score = 50  # ベーススコア
+
+    text = " ".join([
+        product.get("title", ""),
+        product.get("brand", ""),
+        product.get("why_viral", ""),
+        product.get("story_hook", ""),
+        " ".join(product.get("features", [])),
+        product.get("keyword", ""),
+    ]).lower()
+
+    for kw, pts in HIGH_INTENT_KEYWORDS.items():
+        if kw.lower() in text:
+            score += pts
+
+    for kw, pts in LOW_INTENT_KEYWORDS.items():
+        if kw.lower() in text:
+            score += pts  # pts は負値
+
+    # 割引率ボーナス
+    discount = product.get("discount_rate", 0)
+    if discount >= 30:
+        score += 15
+    elif discount >= 20:
+        score += 10
+    elif discount >= 10:
+        score += 5
+
+    # 価格帯ボーナス（衝動買いゾーン: 2,000〜15,000円）
+    price = product.get("price", {}).get("amount", 0)
+    if 2000 <= price <= 15000:
+        score += 10
+    elif price < 2000:
+        score += 3   # 安すぎると「アフィ案件っぽい」と警戒される
+    elif price > 50000:
+        score -= 5   # 高額商品はXからの即決が難しい
+
+    return max(0, min(100, score))
+
+
+def sort_by_intent(products: list) -> list:
+    """商品リストを購買意欲スコアの高い順にソートして返す"""
+    for p in products:
+        p["intent_score"] = score_purchase_intent(p)
+    return sorted(products, key=lambda x: x["intent_score"], reverse=True)
+
+
+# ガジェット好きに刺さるカテゴリ定義
+CATEGORIES = {
+    "gadget":    {"label": "ガジェット",         "keywords": ["ガジェット", "スマート家電", "IoT"], "search_index": "Electronics"},
+    "audio":     {"label": "オーディオ",         "keywords": ["ワイヤレスイヤホン", "ノイキャン"],  "search_index": "Electronics"},
+    "charging":  {"label": "充電・バッテリー",   "keywords": ["モバイルバッテリー", "急速充電"],    "search_index": "Electronics"},
+    "camera":    {"label": "カメラ・映像",       "keywords": ["アクションカメラ", "ウェブカメラ"],  "search_index": "Electronics"},
+    "pc":        {"label": "PC周辺機器",         "keywords": ["メカニカルキーボード", "トラックパッド"], "search_index": "Computers"},
+    "smart_home":{"label": "スマートホーム",     "keywords": ["スマートスピーカー", "スマート電球"], "search_index": "Electronics"},
+}
+
+
+# ─────────────────────────────────────────
+# PA-API で取得
+# ─────────────────────────────────────────
+def fetch_via_paapi(category: str, count: int) -> list:
+    """Amazon PA-API でタイムセール商品を取得"""
+    access_key    = os.getenv("AMAZON_ACCESS_KEY")
+    secret_key    = os.getenv("AMAZON_SECRET_KEY")
+
+    if not access_key or not secret_key:
+        return []
+
+    try:
+        from amazon_paapi import AmazonApi
+
+        cat_info = CATEGORIES.get(category, CATEGORIES["gadget"])
+        amazon = AmazonApi(access_key, secret_key, ASSOCIATE_TAG, "JP")
+
+        products = []
+        for keyword in cat_info["keywords"]:
+            result = amazon.search_items(
+                keywords=keyword,
+                search_index=cat_info["search_index"],
+                item_count=min(count, 5),
+                resources=[
+                    "ItemInfo.Title",
+                    "ItemInfo.Features",
+                    "Offers.Listings.Price",
+                    "Offers.Listings.SavingBasis",
+                    "Offers.Summaries.OfferCount",
+                    "Images.Primary.Large",
+                ],
+                min_saving_percent=10,  # 10%以上割引のみ
+            )
+
+            if not result or not result.items:
+                continue
+
+            for item in result.items:
+                try:
+                    asin  = item.asin
+                    title = item.item_info.title.display_value if item.item_info else ""
+                    if not title:
+                        continue
+
+                    price_info = None
+                    discount_rate = 0
+                    if item.offers and item.offers.listings:
+                        listing = item.offers.listings[0]
+                        if listing.price:
+                            price_info = {
+                                "amount":   listing.price.amount,
+                                "currency": listing.price.currency,
+                                "display":  listing.price.display_amount,
+                            }
+                        if listing.saving_basis and listing.price:
+                            original = listing.saving_basis.amount
+                            current  = listing.price.amount
+                            if original and current and original > 0:
+                                discount_rate = int((original - current) / original * 100)
+
+                    image_url = ""
+                    if item.images and item.images.primary and item.images.primary.large:
+                        image_url = item.images.primary.large.url
+
+                    features = []
+                    if item.item_info and item.item_info.features:
+                        features = item.item_info.features.display_values[:3]
+
+                    products.append({
+                        "asin":          asin,
+                        "title":         title,
+                        "price":         price_info,
+                        "discount_rate": discount_rate,
+                        "category":      cat_info["label"],
+                        "keyword":       keyword,
+                        "features":      features,
+                        "image_url":     image_url,
+                        "amazon_url":    f"https://www.amazon.co.jp/dp/{asin}?tag={ASSOCIATE_TAG}",
+                        "source":        "pa-api",
+                        "fetched_at":    datetime.now().isoformat(),
+                    })
+
+                    if len(products) >= count:
+                        break
+
+                except Exception as e:
+                    print(f"⚠️  商品パースエラー: {e}")
+                    continue
+
+            if len(products) >= count:
+                break
+
+            time.sleep(1)  # PA-APIのレートリミット対策
+
+        return products[:count]
+
+    except ImportError:
+        print("⚠️  python-amazon-paapi 未インストール → Gemini fallbackを使用")
+        return []
+    except Exception as e:
+        print(f"⚠️  PA-APIエラー: {e} → Gemini fallbackを使用")
+        return []
+
+
+# ─────────────────────────────────────────
+# Gemini で代替生成（PA-API不使用時）
+# ─────────────────────────────────────────
+def fetch_via_gemini(category: str, count: int) -> list:
+    """Gemini APIで今日おすすめのガジェット商品を生成（PA-APIなし時のfallback）"""
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        print("❌ GEMINI_API_KEY 未設定")
+        return []
+
+    cat_info = CATEGORIES.get(category, CATEGORIES["gadget"])
+    today    = datetime.now().strftime("%Y年%m月%d日")
+
+    prompt = f"""
+あなたはAmazon Japanのガジェット専門バイヤーです。
+{today}時点でAmazonでタイムセールや値下がり中の実在する商品を{count}件教えてください。
+
+カテゴリ: {cat_info['label']}（{', '.join(cat_info['keywords'])}）
+
+以下のJSON配列のみ出力（説明文不要）:
+[
+  {{
+    "asin": "B0XXXXXXXXX",
+    "title": "商品名（実際のAmazon商品名に近い形式で）",
+    "brand": "メーカー名",
+    "price_yen": 価格（整数）,
+    "original_price_yen": 定価（整数、セールでなければprice_yenと同じ）,
+    "discount_rate": 割引率（0〜80の整数）,
+    "category": "{cat_info['label']}",
+    "features": ["特徴1", "特徴2", "特徴3"],
+    "why_viral": "ガジェット好きがこの商品に反応する理由（50文字以内）",
+    "story_hook": "思わずクリックしたくなる導入一文（30文字以内）"
+  }}
+]
+
+条件:
+- 実際にAmazon Japanで販売されていそうなリアルな商品名・価格にする
+- ガジェット好き（20〜40代男性）が「これは！」と思う商品
+- 割引率が高いものや、コスパが高い商品を優先
+- ニッチすぎず、話題になりやすい商品
+- JSON以外は出力しない
+"""
+
+    try:
+        from google import genai
+
+        client = genai.Client(api_key=api_key)
+        resp   = client.models.generate_content(
+            model="gemini-2.0-flash-lite",
+            contents=prompt,
+        )
+        raw = resp.text.strip()
+
+        # JSONブロック抽出
+        if "```json" in raw:
+            raw = raw.split("```json")[1].split("```")[0].strip()
+        elif "```" in raw:
+            raw = raw.split("```")[1].split("```")[0].strip()
+
+        items = json.loads(raw)
+        products = []
+
+        for item in items[:count]:
+            asin  = item.get("asin", "")
+            price = item.get("price_yen", 0)
+            orig  = item.get("original_price_yen", price)
+
+            products.append({
+                "asin":          asin,
+                "title":         item.get("title", ""),
+                "brand":         item.get("brand", ""),
+                "price": {
+                    "amount":  price,
+                    "currency": "JPY",
+                    "display":  f"¥{price:,}",
+                },
+                "original_price": {
+                    "amount":  orig,
+                    "display":  f"¥{orig:,}",
+                },
+                "discount_rate": item.get("discount_rate", 0),
+                "category":      item.get("category", cat_info["label"]),
+                "features":      item.get("features", []),
+                "why_viral":     item.get("why_viral", ""),
+                "story_hook":    item.get("story_hook", ""),
+                "amazon_url":    f"https://www.amazon.co.jp/dp/{asin}?tag={ASSOCIATE_TAG}" if asin else "",
+                "source":        "gemini-generated",
+                "fetched_at":    datetime.now().isoformat(),
+            })
+
+        return products
+
+    except json.JSONDecodeError as e:
+        print(f"❌ JSONパースエラー: {e}")
+        print(f"   Raw: {raw[:200]}")
+        return []
+    except Exception as e:
+        print(f"❌ Gemini APIエラー: {e}")
+        return []
+
+
+# ─────────────────────────────────────────
+# キャッシュ管理（同日は再取得しない）
+# ─────────────────────────────────────────
+# 静的フォールバック（APIなし・Quota超過時）
+# ─────────────────────────────────────────
+_STATIC_PRODUCTS = [
+    {
+        "asin": "B0BQZPFQ2X",
+        "title": "Anker 622 Magnetic Battery (MagGo) 5000mAh",
+        "brand": "Anker",
+        "price": {"amount": 3990, "currency": "JPY", "display": "¥3,990"},
+        "original_price": {"amount": 4990, "display": "¥4,990"},
+        "discount_rate": 20,
+        "category": "ガジェット",
+        "features": ["MagSafe対応", "5000mAh大容量", "マグネット吸着でiPhoneにピタッと装着"],
+        "why_viral": "iPhoneユーザーなら即買いレベルのコスパ。充電ケーブル不要",
+        "story_hook": "スマホの充電、どこでも気にならなくなった理由。",
+        "amazon_url": f"https://www.amazon.co.jp/dp/B0BQZPFQ2X?tag={ASSOCIATE_TAG}",
+        "source": "static",
+        "fetched_at": datetime.now().isoformat(),
+    },
+    {
+        "asin": "B09JQL3NWT",
+        "title": "Anker Soundcore Liberty 4 NC ワイヤレスイヤホン",
+        "brand": "Anker Soundcore",
+        "price": {"amount": 7990, "currency": "JPY", "display": "¥7,990"},
+        "original_price": {"amount": 9990, "display": "¥9,990"},
+        "discount_rate": 20,
+        "category": "ガジェット",
+        "features": ["アクティブノイズキャンセリング", "最大10時間再生", "外音取り込みモード"],
+        "why_viral": "1万円以下でノイキャン最強クラス。コスパ議論が盛り上がる",
+        "story_hook": "カフェでの集中力が、これを使う前と後で全然違う。",
+        "amazon_url": f"https://www.amazon.co.jp/dp/B09JQL3NWT?tag={ASSOCIATE_TAG}",
+        "source": "static",
+        "fetched_at": datetime.now().isoformat(),
+    },
+    {
+        "asin": "B0C4BXHX2V",
+        "title": "Baseus 67W USB-C 急速充電器 GaN窒化ガリウム採用",
+        "brand": "Baseus",
+        "price": {"amount": 2480, "currency": "JPY", "display": "¥2,480"},
+        "original_price": {"amount": 3280, "display": "¥3,280"},
+        "discount_rate": 24,
+        "category": "ガジェット",
+        "features": ["GaN採用で小型・軽量", "67W急速充電", "USB-C + USB-A 2ポート"],
+        "why_viral": "純正アダプタより小さくて速い。ガジェット民の定番",
+        "story_hook": "充電器を変えただけで、朝の準備が10分早くなった。",
+        "amazon_url": f"https://www.amazon.co.jp/dp/B0C4BXHX2V?tag={ASSOCIATE_TAG}",
+        "source": "static",
+        "fetched_at": datetime.now().isoformat(),
+    },
+    {
+        "asin": "B0BX4MQ3GY",
+        "title": "Logicool MX MASTER 3S パフォーマンスワイヤレスマウス",
+        "brand": "Logicool",
+        "price": {"amount": 14080, "currency": "JPY", "display": "¥14,080"},
+        "original_price": {"amount": 16500, "display": "¥16,500"},
+        "discount_rate": 15,
+        "category": "ガジェット",
+        "features": ["8000DPI高精度センサー", "電磁気スクロールホイール", "最大70日間バッテリー"],
+        "why_viral": "一度使うと普通のマウスに戻れない。PC作業勢の聖域",
+        "story_hook": "マウスって、仕事のスピードを変えるデバイスだと思ってなかった。",
+        "amazon_url": f"https://www.amazon.co.jp/dp/B0BX4MQ3GY?tag={ASSOCIATE_TAG}",
+        "source": "static",
+        "fetched_at": datetime.now().isoformat(),
+    },
+    {
+        "asin": "B0BJKCS73T",
+        "title": "UGREEN 300W USB-C ハブ 10-in-1 ドッキングステーション",
+        "brand": "UGREEN",
+        "price": {"amount": 8980, "currency": "JPY", "display": "¥8,980"},
+        "original_price": {"amount": 11980, "display": "¥11,980"},
+        "discount_rate": 25,
+        "category": "ガジェット",
+        "features": ["USB-C × 4K HDMI出力", "100W PD充電対応", "10ポート同時使用可"],
+        "why_viral": "MacBookユーザーが必ず一度は検討する拡張ハブ",
+        "story_hook": "デスクのごちゃごちゃを一発で解決したガジェット。",
+        "amazon_url": f"https://www.amazon.co.jp/dp/B0BJKCS73T?tag={ASSOCIATE_TAG}",
+        "source": "static",
+        "fetched_at": datetime.now().isoformat(),
+    },
+]
+
+
+def _static_fallback(category: str, count: int) -> list:
+    """静的な商品データを返す（全APIが利用できない場合）"""
+    return _STATIC_PRODUCTS[:count]
+
+
+# ─────────────────────────────────────────
+def load_cache() -> list:
+    """当日のキャッシュを返す。期限切れ or なければ空リスト"""
+    if not DEALS_JSON.exists():
+        return []
+    try:
+        data = json.loads(DEALS_JSON.read_text(encoding="utf-8"))
+        if not data:
+            return []
+        fetched_at = data[0].get("fetched_at", "")
+        if fetched_at:
+            age = datetime.now() - datetime.fromisoformat(fetched_at)
+            if age < timedelta(hours=6):  # 6時間以内はキャッシュ使用
+                return data
+    except Exception:
+        pass
+    return []
+
+
+def save_cache(products: list):
+    DEALS_JSON.write_text(json.dumps(products, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+# ─────────────────────────────────────────
+# メイン取得関数
+# ─────────────────────────────────────────
+def fetch_deals(category: str = "gadget", count: int = 5, force_refresh: bool = False) -> list:
+    """
+    Amazon商品を取得する（PA-API → Gemini fallback）
+
+    Args:
+        category:      カテゴリキー（gadget/audio/charging/camera/pc/smart_home/all）
+        count:         取得件数
+        force_refresh: キャッシュを無視して再取得
+
+    Returns:
+        商品リスト
+    """
+    # カテゴリ"all"は全カテゴリから取得
+    if category == "all":
+        all_products = []
+        per_cat = max(1, count // len(CATEGORIES))
+        for cat_key in CATEGORIES:
+            products = fetch_deals(cat_key, per_cat, force_refresh)
+            all_products.extend(products)
+        return all_products[:count]
+
+    # キャッシュ確認
+    if not force_refresh:
+        cached = load_cache()
+        if cached:
+            filtered = [p for p in cached if p.get("category") == CATEGORIES[category]["label"]]
+            if len(filtered) >= count:
+                print(f"📦 キャッシュ使用 ({category}: {len(filtered)}件)")
+                return filtered[:count]
+
+    print(f"🔍 {CATEGORIES[category]['label']}を{count}件取得中...")
+
+    # PA-API を試みる
+    products = fetch_via_paapi(category, count)
+
+    # Gemini fallback
+    if not products:
+        print("   → Gemini fallbackで生成中...")
+        products = fetch_via_gemini(category, count)
+
+    # 静的データ fallback（PA-APIもGeminiも使えない場合）
+    if not products:
+        print("   → 静的データfallbackを使用")
+        products = _static_fallback(category, count)
+
+    if products:
+        # 購買意欲スコアでソート（0.5%の壁対策）
+        products = sort_by_intent(products)
+
+        # コンテキストブースト（天候・給料日・時間帯で動的調整）
+        try:
+            from context_injector import apply_context_boost
+            products = apply_context_boost(products, verbose=True)
+        except Exception as e:
+            print(f"  ⚠️  コンテキストブーストスキップ: {e}")
+
+        # 既存キャッシュとマージして保存
+        existing = load_cache()
+        existing_asins = {p["asin"] for p in existing}
+        new_products = [p for p in products if p["asin"] not in existing_asins]
+        save_cache(existing + new_products)
+        print(f"✅ {len(products)}件取得完了（コンテキスト補正済みスコア順）")
+
+    return products
+
+
+# ─────────────────────────────────────────
+# 表示ユーティリティ
+# ─────────────────────────────────────────
+def print_products(products: list):
+    """取得した商品を整形表示"""
+    print(f"\n{'=' * 60}")
+    print(f"🛒 取得商品一覧 ({len(products)}件)")
+    print(f"{'=' * 60}")
+
+    for i, p in enumerate(products, 1):
+        discount = p.get("discount_rate", 0)
+        price    = p.get("price", {}).get("display", "価格不明")
+        source   = p.get("source", "")
+        hook     = p.get("story_hook", "")
+
+        intent = p.get("intent_score", score_purchase_intent(p))
+        intent_bar = "█" * (intent // 10) + "░" * (10 - intent // 10)
+
+        print(f"\n【{i}】{p['title'][:50]}")
+        print(f"   価格: {price}" + (f"  ({discount}%OFF)" if discount else ""))
+        print(f"   購買意欲スコア: {intent_bar} {intent}/100")
+        if hook:
+            print(f"   フック: {hook}")
+        print(f"   URL: {p.get('amazon_url', 'N/A')[:60]}")
+        print(f"   取得元: {'PA-API' if 'pa-api' in source else 'Gemini生成'}")
+
+    print(f"\n💾 保存先: {DEALS_JSON}")
+
+
+# ─────────────────────────────────────────
+# CLI
+# ─────────────────────────────────────────
+def main():
+    parser = argparse.ArgumentParser(description="Amazonセール商品取得")
+    parser.add_argument("--category", default="gadget",
+                        choices=list(CATEGORIES.keys()) + ["all"],
+                        help="カテゴリ (デフォルト: gadget)")
+    parser.add_argument("--count", type=int, default=5, help="取得件数 (デフォルト: 5)")
+    parser.add_argument("--refresh", action="store_true", help="キャッシュを無視して再取得")
+    args = parser.parse_args()
+
+    products = fetch_deals(args.category, args.count, args.refresh)
+
+    if products:
+        print_products(products)
+    else:
+        print("❌ 商品を取得できませんでした")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

@@ -171,29 +171,19 @@ def notify_bulk(urls: list, interval_sec: float = 1.0) -> list:
 
 def ping_google_sitemap(sitemap_url: str = None) -> dict:
     """
-    Google にサイトマップURLを通知する（Indexing APIとは独立した安全な手段）
-    Googlebotが自然に巡回しやすくなる二段構えの対策
-
-    はてなブログはサイトマップを自動生成するので、URLをpingするだけでOK
+    Google のサイトマップpingエンドポイントは2023年に廃止済み。
+    Search Console への登録は手動 or API経由で行う。
+    Indexing API (notify_url) を代わりに使用すること。
     """
     sitemap_url = sitemap_url or HATENA_SITEMAP_URL
-    try:
-        import requests as req
-        resp = req.get(GOOGLE_PING_URL, params={"sitemap": sitemap_url}, timeout=10)
-        success = resp.status_code == 200
-        result = {
-            "type": "sitemap_ping",
-            "success": success,
-            "sitemap_url": sitemap_url,
-            "status_code": resp.status_code,
-            "notified_at": datetime.now().isoformat(),
-        }
-        _save_log(result)
-        status = "OK" if success else f"NG({resp.status_code})"
-        print(f"  🗺️ [Indexing] Sitemapping: {status} → {sitemap_url}")
-        return result
-    except Exception as e:
-        return {"type": "sitemap_ping", "success": False, "error": str(e)}
+    print(f"  ℹ️ [Indexing] サイトマップpingは廃止済み。Indexing APIを使用してください。")
+    return {
+        "type": "sitemap_ping",
+        "success": False,
+        "sitemap_url": sitemap_url,
+        "error": "Google サイトマップpingエンドポイントは2023年に廃止済み",
+        "notified_at": datetime.now().isoformat(),
+    }
 
 
 def generate_local_sitemap(post_log_path: str = None) -> str:

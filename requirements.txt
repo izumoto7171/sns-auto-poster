@@ -1,7 +1,9 @@
 google-genai
 python-dotenv
 tweepy
+twikit
 atproto
 playwright
 requests
 Pillow
+python-amazon-paapi

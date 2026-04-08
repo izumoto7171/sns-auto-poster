@@ -1,64 +1,141 @@
 """
 はてなブログ記事 自動生成
 SEO特化：2000〜4000文字 / 検索キーワード対応 / 構成テンプレート付き
+記事タイプ：
+  standard    — 通常のHow-to記事（失敗談20%必須）
+  comparison  — ツール比較記事（「どっちを使うべきか」の終着駅）
+  killer_page — アフィリエイトブリッジ記事（副業インフラ導線）
 """
 import os
 import random
 from datetime import datetime
 
 # ─────────────────────────────────────────
-# 記事テーマ一覧（キーワード × 構成）
+# 記事テーマ一覧（キーワード × 構成 × タイプ）
 # ─────────────────────────────────────────
 ARTICLE_THEMES = [
+    # ── standard（通常How-to）──
     {
         "keyword":  "AI副業 始め方",
         "label":    "AI副業入門",
         "category": "AI副業",
+        "type":     "standard",
     },
     {
         "keyword":  "AIツール おすすめ 無料",
         "label":    "AIツール紹介",
         "category": "AIツール",
+        "type":     "standard",
     },
     {
         "keyword":  "副業 初心者 稼ぎ方",
         "label":    "副業初心者向け",
         "category": "副業",
+        "type":     "standard",
     },
     {
         "keyword":  "AI記事作成 方法 自動化",
         "label":    "AI記事作成",
         "category": "AI活用",
-    },
-    {
-        "keyword":  "ChatGPT 使い方 副業",
-        "label":    "ChatGPT活用",
-        "category": "ChatGPT",
-    },
-    {
-        "keyword":  "Gemini 無料 使い方",
-        "label":    "Gemini入門",
-        "category": "AIツール",
+        "type":     "standard",
     },
     {
         "keyword":  "在宅副業 スマホ 稼ぐ",
         "label":    "スマホ副業",
         "category": "副業",
+        "type":     "standard",
     },
     {
         "keyword":  "節約術 生活費 下げる 方法",
         "label":    "節約テクニック",
         "category": "節約・お金",
+        "type":     "standard",
     },
     {
         "keyword":  "アフィリエイト 始め方 初心者",
         "label":    "アフィリエイト入門",
         "category": "副業",
+        "type":     "standard",
     },
     {
         "keyword":  "生産性 上げる 方法 仕事",
         "label":    "生産性向上",
         "category": "ライフハック",
+        "type":     "standard",
+    },
+    # ── comparison（ツール比較・検索者の迷いに終止符）──
+    {
+        "keyword":  "ChatGPT Gemini 副業 比較 どっち",
+        "label":    "ChatGPT vs Gemini 副業比較",
+        "category": "AIツール比較",
+        "type":     "comparison",
+        "tool_a":   "ChatGPT",
+        "tool_b":   "Gemini",
+        "use_case": "副業・ブログ記事作成",
+    },
+    {
+        "keyword":  "ChatGPT Claude 比較 ライティング",
+        "label":    "ChatGPT vs Claude ライティング比較",
+        "category": "AIツール比較",
+        "type":     "comparison",
+        "tool_a":   "ChatGPT",
+        "tool_b":   "Claude",
+        "use_case": "ライティング・ブログ記事",
+    },
+    {
+        "keyword":  "Gemini API ChatGPT API 副業 コスト比較",
+        "label":    "Gemini API vs ChatGPT API コスト比較",
+        "category": "AIツール比較",
+        "type":     "comparison",
+        "tool_a":   "Gemini API（無料枠）",
+        "tool_b":   "ChatGPT API（従量課金）",
+        "use_case": "副業自動化・コスト最適化",
+    },
+    {
+        "keyword":  "はてなブログ WordPress アフィリエイト 比較",
+        "label":    "はてなブログ vs WordPress 比較",
+        "category": "ブログ比較",
+        "type":     "comparison",
+        "tool_a":   "はてなブログ",
+        "tool_b":   "WordPress",
+        "use_case": "アフィリエイトブログ",
+    },
+    {
+        "keyword":  "Lancers クラウドワークス 副業 どっち",
+        "label":    "Lancers vs クラウドワークス 比較",
+        "category": "副業プラットフォーム比較",
+        "type":     "comparison",
+        "tool_a":   "Lancers",
+        "tool_b":   "クラウドワークス",
+        "use_case": "副業案件獲得",
+    },
+    # ── killer_page（アフィリエイトブリッジ・副業インフラ導線）──
+    {
+        "keyword":  "楽天カード 副業 経費管理 ポイント還元",
+        "label":    "楽天カード×副業 キラーページ",
+        "category": "副業インフラ",
+        "type":     "killer_page",
+        "affiliate_product": "楽天カード",
+        "angle": "副業の経費をすべて楽天カードで払うとポイントが月〇〇円分貯まる。"
+                 "副業収益を「稼ぐ→守る」につなぐ最初のインフラ。",
+    },
+    {
+        "keyword":  "SBI証券 新NISA 副業 投資 始め方",
+        "label":    "SBI証券×新NISA×副業 キラーページ",
+        "category": "副業インフラ",
+        "type":     "killer_page",
+        "affiliate_product": "SBI証券",
+        "angle": "副業で稼いだお金の出口戦略。SBI証券の新NISAに月1万円から積立するだけで"
+                 "副業収益が複利で増える仕組みを作る。",
+    },
+    {
+        "keyword":  "副業 確定申告 経費 クレジットカード",
+        "label":    "副業経費管理×楽天カード キラーページ",
+        "category": "副業インフラ",
+        "type":     "killer_page",
+        "affiliate_product": "楽天カード",
+        "angle": "副業で確定申告する人が「経費管理用カード」を作っておかないと損する理由。"
+                 "楽天カードなら経費とポイントを同時に管理できる。",
     },
 ]
 
@@ -1278,17 +1355,152 @@ GoogleやAppleの本社にも仮眠室があるほど、科学的に効果が認
 
 
 # ─────────────────────────────────────────
-# Gemini APIで記事生成
+# Gemini APIで記事生成（タイプ別プロンプト）
 # ─────────────────────────────────────────
-def generate_with_gemini(theme: dict, api_key: str) -> dict:
-    try:
-        from google import genai
-        client = genai.Client(api_key=api_key)
+def _build_prompt(theme: dict) -> str:
+    """記事タイプに応じたプロンプトを生成"""
+    article_type = theme.get("type", "standard")
+    keyword      = theme["keyword"]
+    category     = theme["category"]
 
-        keyword  = theme["keyword"]
-        category = theme["category"]
+    # 全タイプ共通の「体験埋め込みルール」
+    experience_rule = """
+【体験・失敗埋め込みルール（必ず守ること）】
+記事全体の約20%に「AIには生成できないリアルな体験」を入れること。
+具体的には以下のどれかを1〜2箇所：
+- 実際に試してエラーが出た話と対処法（例：「rate limit exceeded が出て詰まった」）
+- 期待と違った結果（例：「精度が高いと思っていたが、〇〇の場面では使えなかった」）
+- 時間・コストの実測値（例：「10時間かかると思っていたが実際は3時間だった」）
+- 初心者がやりがちな間違いと気づき（自分が実際にやった失敗）
+これがない記事は「AIが書いた記事」と見破られる。必ず入れること。
+"""
 
-        prompt = f"""あなたはSEOに強い日本語ブログライターです。
+    # 全タイプ共通の「アフィリエイトブリッジルール」
+    affiliate_bridge_rule = """
+【アフィリエイトブリッジルール（必ず守ること）】
+楽天カードとSBI証券は「決済手段」「投資口座」として紹介しない。
+「AI副業を加速させるためのプロツール」として再定義して差し込むこと。
+
+■ 楽天カードの再定義：
+  「AI副業の経費（APIキー代・ツール代・参考書代）を一元集約し、
+  ポイント還元によって副業コストを実質削減する経費自動管理インフラ」
+
+■ SBI証券（新NISA）の再定義：
+  「副業で稼いだキャッシュを腐らせない出口戦略ツール。
+  業界最安水準の手数料で副業収益を複利運用に変換する複利変換装置」
+
+■ 差し込みタイミング（以下の文脈の直後に1〜2文で差し込む）：
+  【楽天カードを差し込む文脈】
+  ・「副業の経費管理が面倒」「ツール代がかさむ」という失敗ログや悩みの直後
+  ・「経費の自動管理」「ポイントによるコスト削減」を説明した段落の直後
+  ・「どのカード/ツールを使えばお得か？」という読者の疑問が生まれる瞬間
+
+  【SBI証券を差し込む文脈】
+  ・収益シミュレーション（「月〇万円稼ぐと1年で〇〇万円になる」）の直後
+  ・「副業の出口戦略」「稼いだお金の使い道」に触れた段落の直後
+  ・「稼ぐだけでは意味がない、増やす仕組みも必要」という文脈
+
+■ CTAの書き方（リンク文言）：
+  NG：「楽天カードの詳細を確認する」「SBI証券に申し込む」
+  OK：以下のようなベネフィット主語の能動表現にする
+  ・「副業経費を楽天カードで自動管理してコストを削減する」
+  ・「副業収益をSBI証券の新NISAで複利運用に変換する」
+  ・「AI副業の経費を楽天ポイントに変えて実質コストゼロを目指す」
+  ・「稼いだ副業収益を新NISAで増やし続ける仕組みを今日つくる」
+
+■ 配置・言及ルール：
+  ・1記事につき楽天カード1回・SBI証券1回が上限（しつこくしない）
+  ・体験談形式で：「実際に設定してから〇〇が変わった」「〇ヶ月で〇〇円のコスト削減になった」
+  ・締めは必ず「詳しい設定手順とリンクはプロフィールのリンクページにまとめています」
+"""
+
+    if article_type == "comparison":
+        tool_a   = theme.get("tool_a", "ツールA")
+        tool_b   = theme.get("tool_b", "ツールB")
+        use_case = theme.get("use_case", "副業")
+        return f"""あなたはSEOに強い日本語ブログライターです。
+「{tool_a} vs {tool_b}」を実際に両方使い込んだ経験者として、
+「どちらを使えばいいか迷っている人が、この記事を読んで決断できる」記事を書いてください。
+
+【検索キーワード】{keyword}
+【用途】{use_case}
+
+【構成（比較記事テンプレート）】
+1. タイトル（「どっち？」「比較」「結論」などの決断ワードを入れる・35文字以内）
+2. 結論を先に出す（冒頭100文字以内で「〇〇の用途なら△△一択」と断言する）
+3. ## それぞれの特徴まとめ（比較表あり）
+   | 項目 | {tool_a} | {tool_b} |
+   で比較する項目：無料枠・精度・日本語対応・副業用途の向き不向き・実際の使用感
+4. ## 【用途別】どっちを選ぶべきか（ケース分け）
+   - ブログ記事を量産したいなら → 〇〇
+   - 長文・論文調なら → 〇〇
+   - コスト重視なら → 〇〇
+   （最低3ケース）
+5. ## 実際に両方使ってみた正直なレビュー（←ここが核心）
+   実際に試して気づいた「カタログスペックに載っていない差」を書く。
+   失敗した話・想定外だった点を必ず入れる。
+6. ## 【結論】こういう人は〇〇を使え
+   読者が迷わず決断できる「判定チャート」または明確な推薦
+7. まとめ（アフィリエイトリンクへの自然な誘導）
+   「まず試すなら〇〇から。詳しい使い方はプロフィールのリンクに」
+
+{experience_rule}
+
+{affiliate_bridge_rule}
+
+【SEOルール】
+- 全体2500〜4000文字
+- Markdown形式（見出しは##、表は|で作成）
+- 「どちらが優れている」ではなく「あなたの用途にはどちらが合っているか」という視点
+- 広告っぽくしない・断言する
+
+まず1行目にタイトルを出力し、2行目以降に本文を出力してください。
+タイトルの前に「# 」は不要。本文の見出しは「## 」で始めてください。
+"""
+
+    elif article_type == "killer_page":
+        product = theme.get("affiliate_product", "楽天カード")
+        angle   = theme.get("angle", "")
+        return f"""あなたはSEOに強い日本語ブログライターです。
+「{product}」を副業インフラとして自然に紹介する「キラーページ」を書いてください。
+強引な広告感はNG。「副業をする人が知っておかないと損する情報」として書く。
+
+【検索キーワード】{keyword}
+【紹介角度】{angle}
+
+【構成（キラーページテンプレート）】
+1. タイトル（損失回避系・「知らないと損」「やっていない人は〇〇円損している」・35文字以内）
+2. 導入（「副業を始めた or 続けている人で〇〇していない人は損している」という問題提起・200文字）
+3. ## なぜ副業に{product}が必要なのか（「稼ぐ」「守る」「増やす」の三位一体に絡める）
+   - 副業の経費をすべてカードに集約するとポイントで年〇〇円得する計算
+   - 確定申告のときに経費の仕分けが楽になる（実体験）
+   - 楽天経済圏と組み合わせると節約効果が複利になる仕組み
+4. ## 実際に使ってみた正直なメリット・デメリット
+   良い点だけでなく「ここは注意が必要」も書く（信頼性UP）
+5. ## {product}の始め方（3ステップ）
+   今日中にできる具体的な手順
+6. ## こんな人には特におすすめしない（絞り込み）
+   ターゲット外を明示することで、ターゲット内の読者の信頼が上がる
+7. まとめ・行動喚起
+   「副業で月〇万円稼いでから申し込もうではなく、先に仕組みを作ることが重要」
+   「詳しい設定方法・申し込みリンクはプロフィールのリンクにまとめています」
+
+{experience_rule}
+
+{affiliate_bridge_rule}
+
+【SEOルール】
+- 全体2000〜3500文字
+- Markdown形式
+- アフィリエイト感ゼロ・体験談スタイル
+- 「楽天カードを作りましょう」ではなく「知らないと損する理由」で自然に誘導
+
+まず1行目にタイトルを出力し、2行目以降に本文を出力してください。
+タイトルの前に「# 」は不要。本文の見出しは「## 」で始めてください。
+"""
+
+    else:  # standard
+        return f"""あなたはSEOに強い日本語ブログライターです。
 
 【検索キーワード】{keyword}
 【カテゴリ】{category}
@@ -1296,16 +1508,22 @@ def generate_with_gemini(theme: dict, api_key: str) -> dict:
 以下の構成で、検索ユーザーの悩みを解決するブログ記事を作成してください。
 
 【構成】
-1. タイトル（検索キーワードを含む・30文字以内・クリックされやすい）
+1. タイトル（検索キーワードを含む・35文字以内・クリックされやすい）
 2. 導入文（読者の悩みを提示・200文字程度）
-3. H2見出し1「〜とは？背景と理由」（500文字）
-4. H2見出し2「具体的な解決方法」（600文字）
-5. H2見出し3「実践手順とおすすめツール」（600文字）
-6. よくある失敗・注意点（300文字）
+3. ## 〜とは？背景と理由（500文字）
+4. ## 具体的な解決方法（600文字）
+5. ## 実践手順とおすすめツール（600文字）
+6. ## よくある失敗・注意点（←ここが核心）
+   実際に試してエラーが出た話・期待外れだった点・初心者の陥りがちな罠を書く。
+   「こんなつまづきがあった」という体験談形式で。（400文字）
 7. まとめ（200文字）
 
-【ルール】
-- 全体2000〜3500文字
+{experience_rule}
+
+{affiliate_bridge_rule}
+
+【SEOルール】
+- 全体2500〜4000文字
 - Markdown形式（見出しは##、リストは-）
 - 読者目線の自然な口語体
 - 具体的な数字や事例を入れる
@@ -1315,11 +1533,24 @@ def generate_with_gemini(theme: dict, api_key: str) -> dict:
 タイトルの前に「# 」は不要。本文の見出しは「## 」で始めてください。
 """
 
+
+def generate_with_gemini(theme: dict, api_key: str) -> dict:
+    try:
+        from google import genai
+        client = genai.Client(api_key=api_key)
+
+        keyword      = theme["keyword"]
+        category     = theme["category"]
+        article_type = theme.get("type", "standard")
+        prompt       = _build_prompt(theme)
+
+        print(f"  記事タイプ: {article_type}")
+
         resp = client.models.generate_content(
             model="gemini-2.0-flash-lite",
             contents=prompt,
         )
-        text = resp.text.strip()
+        text  = resp.text.strip()
         lines = text.split("\n")
         title = lines[0].lstrip("# ").strip()
         body  = "\n".join(lines[1:]).strip()
@@ -1330,6 +1561,7 @@ def generate_with_gemini(theme: dict, api_key: str) -> dict:
             "keyword":  keyword,
             "category": category,
             "label":    theme["label"],
+            "type":     article_type,
             "chars":    len(title) + len(body),
         }
 
@@ -1497,6 +1729,7 @@ def generate_with_template(theme: dict) -> dict:
         "keyword":  keyword,
         "category": category,
         "label":    label,
+        "type":     theme.get("type", "standard"),
         "chars":    len(title) + len(body),
     }
 
@@ -1534,7 +1767,7 @@ def generate_article(force_keyword: str = None) -> dict:
 
 def preview_article(article: dict):
     print(f"\n{'='*60}")
-    print(f"📝 【{article['label']}】{article['chars']}文字")
+    print(f"【{article['label']}】{article['chars']}文字 [{article.get('type','standard')}]")
     print(f"{'='*60}")
     print(f"タイトル: {article['title']}")
     print(f"キーワード: {article['keyword']}")
