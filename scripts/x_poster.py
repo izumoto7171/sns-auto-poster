@@ -266,48 +266,95 @@ def validate_thread(thread: dict) -> list[str]:
 
 
 # ─────────────────────────────────────────
-# X 投稿（tweepy OAuth 1.0a）
+# X 投稿（tweepy → twikit フォールバック）
 # ─────────────────────────────────────────
+def _load_twikit_cookies() -> str | None:
+    """X_COOKIES 環境変数または x_cookies.json のパスを返す"""
+    cookies_path = DATA_DIR.parent / "x_automation" / "x_cookies.json"
+
+    env_cookies = os.getenv("X_COOKIES", "")
+    if env_cookies and not cookies_path.exists():
+        cookies_path.write_text(env_cookies, encoding="utf-8")
+        print("  X_COOKIES 環境変数からCookieを復元")
+
+    return str(cookies_path) if cookies_path.exists() else None
+
+
 def post_thread(thread: dict) -> bool:
-    """tweepy v4 でスレッド（返信チェーン）を投稿する"""
-    api_key      = os.getenv("X_API_KEY")
-    api_secret   = os.getenv("X_API_SECRET")
-    token        = os.getenv("X_ACCESS_TOKEN")
-    token_secret = os.getenv("X_ACCESS_TOKEN_SECRET")
+    """
+    スレッド（3ツイート返信チェーン）を投稿する。
+    tweepy（公式API）→ twikit（Cookie認証）の順でフォールバック。
+    """
+    tweet1 = thread.get("tweet1", "")
+    tweet2 = thread.get("tweet2", "")
+    tweet3 = thread.get("tweet3", "")
 
-    if not all([api_key, api_secret, token, token_secret]):
-        print("❌ X API認証情報が不足（X_API_KEY / X_API_SECRET / X_ACCESS_TOKEN / X_ACCESS_TOKEN_SECRET）")
-        return False
-
+    # ── tweepy（公式API） ──────────────────
     try:
         import tweepy
 
-        client = tweepy.Client(
-            consumer_key        = api_key,
-            consumer_secret     = api_secret,
-            access_token        = token,
-            access_token_secret = token_secret,
-        )
+        api_key      = os.getenv("X_API_KEY")
+        api_secret   = os.getenv("X_API_SECRET")
+        token        = os.getenv("X_ACCESS_TOKEN")
+        token_secret = os.getenv("X_ACCESS_TOKEN_SECRET")
 
-        # Tweet 1: 本文（リンクなし）
-        r1    = client.create_tweet(text=thread["tweet1"])
-        t1_id = r1.data["id"]
-        print(f"  ✅ Tweet1 投稿完了 (id: {t1_id})")
+        if all([api_key, api_secret, token, token_secret]):
+            client = tweepy.Client(
+                consumer_key        = api_key,
+                consumer_secret     = api_secret,
+                access_token        = token,
+                access_token_secret = token_secret,
+            )
+            r1    = client.create_tweet(text=tweet1)
+            t1_id = r1.data["id"]
+            print(f"  ✅ Tweet1(tweepy) (id: {t1_id})")
 
-        # Tweet 2: スペック（Tweet1への返信）
-        r2    = client.create_tweet(text=thread["tweet2"], in_reply_to_tweet_id=t1_id)
-        t2_id = r2.data["id"]
-        print(f"  ✅ Tweet2 投稿完了 (id: {t2_id})")
+            r2    = client.create_tweet(text=tweet2, in_reply_to_tweet_id=t1_id)
+            t2_id = r2.data["id"]
+            print(f"  ✅ Tweet2(tweepy) (id: {t2_id})")
 
-        # Tweet 3: リンク + 開示（Tweet2への返信）
-        r3    = client.create_tweet(text=thread["tweet3"], in_reply_to_tweet_id=t2_id)
-        t3_id = r3.data["id"]
-        print(f"  ✅ Tweet3 投稿完了 (id: {t3_id})")
-
-        return True
+            r3    = client.create_tweet(text=tweet3, in_reply_to_tweet_id=t2_id)
+            t3_id = r3.data["id"]
+            print(f"  ✅ Tweet3(tweepy) (id: {t3_id})")
+            return True
 
     except Exception as e:
-        print(f"❌ X投稿エラー: {e}")
+        print(f"  ⚠️ tweepy失敗: {e}")
+        print("  → twikit にフォールバック...")
+
+    # ── twikit（Cookie認証・無料） ────────
+    try:
+        from twikit import Client
+
+        cookies_path = _load_twikit_cookies()
+        if not cookies_path:
+            print("  ❌ x_cookies.json が見つかりません（X_COOKIES 未設定）")
+            return False
+
+        c = Client("ja")
+        c.load_cookies(cookies_path)
+
+        t1       = c.create_tweet(text=tweet1)
+        reply_id = str(t1.id)
+        print(f"  ✅ Tweet1(twikit) (id: {t1.id})")
+
+        try:
+            t2       = c.create_tweet(text=tweet2, reply_to=reply_id)
+            reply_id = str(t2.id)
+            print(f"  ✅ Tweet2(twikit) (id: {t2.id})")
+
+            t3 = c.create_tweet(text=tweet3, reply_to=reply_id)
+            print(f"  ✅ Tweet3(twikit) (id: {t3.id})")
+        except Exception as e2:
+            print(f"  ⚠️ Tweet2/3エラー（Tweet1は投稿済み）: {e2}")
+
+        return True  # Tweet1が投稿できていれば成功
+
+    except ImportError:
+        print("  ❌ twikit 未インストール")
+        return False
+    except Exception as e:
+        print(f"  ❌ twikit スレッド投稿エラー: {e}")
         return False
 
 

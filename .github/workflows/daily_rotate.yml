@@ -113,7 +113,7 @@ jobs:
           cache: 'pip'
 
       - name: 依存関係インストール
-        run: pip install google-genai tweepy
+        run: pip install google-genai tweepy "twikit==1.7.4"
 
       - name: X 投稿実行
         env:
@@ -123,6 +123,7 @@ jobs:
           X_API_SECRET:          ${{ secrets.X_API_SECRET }}
           X_ACCESS_TOKEN:        ${{ secrets.X_ACCESS_TOKEN }}
           X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+          X_COOKIES:             ${{ secrets.X_COOKIES }}
         run: python3 scripts/x_poster.py
 
       - name: 投稿ログをコミット & プッシュ
