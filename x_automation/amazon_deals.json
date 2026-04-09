@@ -1,29 +1,32 @@
 [
   {
-    "asin": "B0BQZPFQ2X",
-    "title": "Anker 622 Magnetic Battery (MagGo) 5000mAh",
-    "brand": "Anker",
+    "asin": "B0C4BXHX2V",
+    "title": "Baseus 67W USB-C 急速充電器 GaN窒化ガリウム採用",
+    "brand": "Baseus",
     "price": {
-      "amount": 3990,
+      "amount": 2480,
       "currency": "JPY",
-      "display": "¥3,990"
+      "display": "¥2,480"
     },
     "original_price": {
-      "amount": 4990,
-      "display": "¥4,990"
+      "amount": 3280,
+      "display": "¥3,280"
     },
-    "discount_rate": 20,
+    "discount_rate": 24,
     "category": "ガジェット",
     "features": [
-      "MagSafe対応",
-      "5000mAh大容量",
-      "マグネット吸着でiPhoneにピタッと装着"
+      "GaN採用で小型・軽量",
+      "67W急速充電",
+      "USB-C + USB-A 2ポート"
     ],
-    "why_viral": "iPhoneユーザーなら即買いレベルのコスパ。充電ケーブル不要",
-    "story_hook": "スマホの充電、どこでも気にならなくなった理由。",
-    "amazon_url": "https://www.amazon.co.jp/dp/B0BQZPFQ2X?tag=smartearn22-22",
+    "why_viral": "純正アダプタより小さくて速い。ガジェット民の定番",
+    "story_hook": "充電器を変えただけで、朝の準備が10分早くなった。",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0C4BXHX2V?tag=smartearn22-22",
     "source": "static",
-    "fetched_at": "2026-04-06T05:17:46.537824"
+    "fetched_at": "2026-04-09T14:20:51.305459",
+    "intent_score": 81,
+    "context_boost": 0,
+    "boost_reasons": []
   },
   {
     "asin": "B09JQL3NWT",
@@ -49,84 +52,38 @@
     "story_hook": "カフェでの集中力が、これを使う前と後で全然違う。",
     "amazon_url": "https://www.amazon.co.jp/dp/B09JQL3NWT?tag=smartearn22-22",
     "source": "static",
-    "fetched_at": "2026-04-06T05:17:46.537845"
+    "fetched_at": "2026-04-09T14:20:51.305455",
+    "intent_score": 78,
+    "context_boost": 0,
+    "boost_reasons": []
   },
   {
-    "asin": "B0C4BXHX2V",
-    "title": "Baseus 67W USB-C 急速充電器 GaN窒化ガリウム採用",
-    "brand": "Baseus",
+    "asin": "B0BQZPFQ2X",
+    "title": "Anker 622 Magnetic Battery (MagGo) 5000mAh",
+    "brand": "Anker",
     "price": {
-      "amount": 2480,
+      "amount": 3990,
       "currency": "JPY",
-      "display": "¥2,480"
+      "display": "¥3,990"
     },
     "original_price": {
-      "amount": 3280,
-      "display": "¥3,280"
+      "amount": 4990,
+      "display": "¥4,990"
     },
-    "discount_rate": 24,
+    "discount_rate": 20,
     "category": "ガジェット",
     "features": [
-      "GaN採用で小型・軽量",
-      "67W急速充電",
-      "USB-C + USB-A 2ポート"
+      "MagSafe対応",
+      "5000mAh大容量",
+      "マグネット吸着でiPhoneにピタッと装着"
     ],
-    "why_viral": "純正アダプタより小さくて速い。ガジェット民の定番",
-    "story_hook": "充電器を変えただけで、朝の準備が10分早くなった。",
-    "amazon_url": "https://www.amazon.co.jp/dp/B0C4BXHX2V?tag=smartearn22-22",
+    "why_viral": "iPhoneユーザーなら即買いレベルのコスパ。充電ケーブル不要",
+    "story_hook": "スマホの充電、どこでも気にならなくなった理由。",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0BQZPFQ2X?tag=smartearn22-22",
     "source": "static",
-    "fetched_at": "2026-04-06T05:17:46.537850"
-  },
-  {
-    "asin": "B0BX4MQ3GY",
-    "title": "Logicool MX MASTER 3S パフォーマンスワイヤレスマウス",
-    "brand": "Logicool",
-    "price": {
-      "amount": 14080,
-      "currency": "JPY",
-      "display": "¥14,080"
-    },
-    "original_price": {
-      "amount": 16500,
-      "display": "¥16,500"
-    },
-    "discount_rate": 15,
-    "category": "ガジェット",
-    "features": [
-      "8000DPI高精度センサー",
-      "電磁気スクロールホイール",
-      "最大70日間バッテリー"
-    ],
-    "why_viral": "一度使うと普通のマウスに戻れない。PC作業勢の聖域",
-    "story_hook": "マウスって、仕事のスピードを変えるデバイスだと思ってなかった。",
-    "amazon_url": "https://www.amazon.co.jp/dp/B0BX4MQ3GY?tag=smartearn22-22",
-    "source": "static",
-    "fetched_at": "2026-04-06T05:17:46.537853"
-  },
-  {
-    "asin": "B0BJKCS73T",
-    "title": "UGREEN 300W USB-C ハブ 10-in-1 ドッキングステーション",
-    "brand": "UGREEN",
-    "price": {
-      "amount": 8980,
-      "currency": "JPY",
-      "display": "¥8,980"
-    },
-    "original_price": {
-      "amount": 11980,
-      "display": "¥11,980"
-    },
-    "discount_rate": 25,
-    "category": "ガジェット",
-    "features": [
-      "USB-C × 4K HDMI出力",
-      "100W PD充電対応",
-      "10ポート同時使用可"
-    ],
-    "why_viral": "MacBookユーザーが必ず一度は検討する拡張ハブ",
-    "story_hook": "デスクのごちゃごちゃを一発で解決したガジェット。",
-    "amazon_url": "https://www.amazon.co.jp/dp/B0BJKCS73T?tag=smartearn22-22",
-    "source": "static",
-    "fetched_at": "2026-04-06T05:17:46.537856"
+    "fetched_at": "2026-04-09T14:20:51.305445",
+    "intent_score": 75,
+    "context_boost": 0,
+    "boost_reasons": []
   }
 ]

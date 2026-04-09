@@ -32,6 +32,13 @@ if env_path.exists():
             os.environ.setdefault(k.strip(), v.strip())
 
 ASSOCIATE_TAG = os.getenv("AMAZON_ASSOCIATE_TAG", "smartearn22-22")
+STATIC_JSON   = BASE_DIR / "static_products.json"
+
+
+def _make_search_url(keyword: str) -> str:
+    """Amazon検索URL生成（PA-API不使用・アフィリエイトタグ付き）"""
+    from urllib.parse import quote
+    return f"https://www.amazon.co.jp/s?k={quote(keyword)}&tag={ASSOCIATE_TAG}"
 
 
 # ─────────────────────────────────────────
@@ -261,8 +268,8 @@ def fetch_via_gemini(category: str, count: int) -> list:
 以下のJSON配列のみ出力（説明文不要）:
 [
   {{
-    "asin": "B0XXXXXXXXX",
-    "title": "商品名（実際のAmazon商品名に近い形式で）",
+    "search_keyword": "Amazon検索に使う短いキーワード（ブランド名+商品種別+スペック）",
+    "title": "商品の表示タイトル（わかりやすく簡潔に）",
     "brand": "メーカー名",
     "price_yen": 価格（整数）,
     "original_price_yen": 定価（整数、セールでなければprice_yenと同じ）,
@@ -302,29 +309,29 @@ def fetch_via_gemini(category: str, count: int) -> list:
         products = []
 
         for item in items[:count]:
-            asin  = item.get("asin", "")
-            price = item.get("price_yen", 0)
-            orig  = item.get("original_price_yen", price)
+            keyword = item.get("search_keyword", item.get("title", ""))
+            price   = item.get("price_yen", 0)
+            orig    = item.get("original_price_yen", price)
 
             products.append({
-                "asin":          asin,
-                "title":         item.get("title", ""),
-                "brand":         item.get("brand", ""),
+                "search_keyword":  keyword,
+                "title":           item.get("title", ""),
+                "brand":           item.get("brand", ""),
                 "price": {
-                    "amount":  price,
+                    "amount":   price,
                     "currency": "JPY",
                     "display":  f"¥{price:,}",
                 },
                 "original_price": {
                     "amount":  orig,
-                    "display":  f"¥{orig:,}",
+                    "display": f"¥{orig:,}",
                 },
                 "discount_rate": item.get("discount_rate", 0),
                 "category":      item.get("category", cat_info["label"]),
                 "features":      item.get("features", []),
                 "why_viral":     item.get("why_viral", ""),
                 "story_hook":    item.get("story_hook", ""),
-                "amazon_url":    f"https://www.amazon.co.jp/dp/{asin}?tag={ASSOCIATE_TAG}" if asin else "",
+                "amazon_url":    _make_search_url(keyword) if keyword else "",
                 "source":        "gemini-generated",
                 "fetched_at":    datetime.now().isoformat(),
             })
@@ -425,7 +432,21 @@ _STATIC_PRODUCTS = [
 
 
 def _static_fallback(category: str, count: int) -> list:
-    """静的な商品データを返す（全APIが利用できない場合）"""
+    """
+    静的な商品データを返す（全APIが利用できない場合）。
+    static_products.json が存在すればそちらを優先し、
+    なければコード内の _STATIC_PRODUCTS にフォールバックする。
+    """
+    if STATIC_JSON.exists():
+        try:
+            data = json.loads(STATIC_JSON.read_text(encoding="utf-8"))
+            if data:
+                cat_label = CATEGORIES.get(category, CATEGORIES["gadget"])["label"]
+                filtered  = [p for p in data if p.get("category") == cat_label]
+                result    = filtered if filtered else data  # カテゴリ一致がなければ全件
+                return result[:count]
+        except Exception as e:
+            print(f"  ⚠️  static_products.json 読み込みエラー: {e} → 内蔵データを使用")
     return _STATIC_PRODUCTS[:count]
 
 

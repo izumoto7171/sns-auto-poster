@@ -2,6 +2,8 @@ name: SNS Auto Post
 
 on:
   schedule:
+    # Amazon商品データ更新（JST 5:00 = UTC 20:00）※投稿より先に実行
+    - cron: '0 20 * * *'   # JST 5:00 → 商品ローテーション
     # 毎日 7/11/15/19/23時（JST = UTC+9）× 5投稿/日
     - cron: '0 22 * * *'   # JST 7:00
     - cron: '0 2 * * *'    # JST 11:00
@@ -11,6 +13,47 @@ on:
   workflow_dispatch:        # 手動実行ボタン
 
 jobs:
+  # ============================================================
+  # 🔄 Amazon商品データ自動ローテーション（JST 5:00 に実行）
+  # ============================================================
+  update-amazon-products:
+    name: 🔄 Amazon商品データ更新
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 20 * * *'
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Python セットアップ
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 依存関係インストール
+        run: pip install google-genai requests
+
+      - name: Amazon商品データ更新
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          AMAZON_ASSOCIATE_TAG: ${{ secrets.AMAZON_ASSOCIATE_TAG }}
+        run: |
+          cd x_automation
+          python3 product_rotator.py
+
+      - name: 更新データをコミット & プッシュ
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add x_automation/amazon_deals.json \
+                  x_automation/product_history.json \
+                  x_automation/static_products.json || true
+          git diff --staged --quiet || \
+            git commit -m "chore: Amazon商品データ自動更新 $(date +'%Y-%m-%d')"
+          git push || true
+
   post-x:
     name: X (Twitter) 投稿
     runs-on: ubuntu-latest
