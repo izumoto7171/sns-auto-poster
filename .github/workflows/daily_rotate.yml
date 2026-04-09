@@ -113,7 +113,10 @@ jobs:
           cache: 'pip'
 
       - name: 依存関係インストール
-        run: pip install google-genai tweepy "twikit==1.7.4"
+        run: pip install google-genai tweepy "twikit==1.7.4" playwright
+
+      - name: Chromiumインストール（ブラウザフォールバック用）
+        run: playwright install chromium --with-deps
 
       - name: X 投稿実行
         env:
@@ -124,6 +127,8 @@ jobs:
           X_ACCESS_TOKEN:        ${{ secrets.X_ACCESS_TOKEN }}
           X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
           X_COOKIES:             ${{ secrets.X_COOKIES }}
+          X_BROWSER_COOKIES:     ${{ secrets.X_BROWSER_COOKIES }}
+          X_USERNAME:            ${{ secrets.X_USERNAME }}
         run: python3 scripts/x_poster.py
 
       - name: 投稿ログをコミット & プッシュ

@@ -283,7 +283,7 @@ def _load_twikit_cookies() -> str | None:
 def post_thread(thread: dict) -> bool:
     """
     スレッド（3ツイート返信チェーン）を投稿する。
-    tweepy（公式API）→ twikit（Cookie認証）の順でフォールバック。
+    tweepy → twikit → x_automation.x_poster（ブラウザ含む既存実装）の順でフォールバック。
     """
     tweet1 = thread.get("tweet1", "")
     tweet2 = thread.get("tweet2", "")
@@ -322,39 +322,46 @@ def post_thread(thread: dict) -> bool:
         print(f"  ⚠️ tweepy失敗: {e}")
         print("  → twikit にフォールバック...")
 
-    # ── twikit（Cookie認証・無料） ────────
+    # ── twikit（Cookie認証） ──────────────
     try:
         from twikit import Client
 
         cookies_path = _load_twikit_cookies()
         if not cookies_path:
             print("  ❌ x_cookies.json が見つかりません（X_COOKIES 未設定）")
-            return False
+        else:
+            c = Client("ja")
+            c.load_cookies(cookies_path)
 
-        c = Client("ja")
-        c.load_cookies(cookies_path)
+            t1       = c.create_tweet(text=tweet1)
+            reply_id = str(t1.id)
+            print(f"  ✅ Tweet1(twikit) (id: {t1.id})")
 
-        t1       = c.create_tweet(text=tweet1)
-        reply_id = str(t1.id)
-        print(f"  ✅ Tweet1(twikit) (id: {t1.id})")
+            try:
+                t2       = c.create_tweet(text=tweet2, reply_to=reply_id)
+                reply_id = str(t2.id)
+                print(f"  ✅ Tweet2(twikit) (id: {t2.id})")
+                t3 = c.create_tweet(text=tweet3, reply_to=reply_id)
+                print(f"  ✅ Tweet3(twikit) (id: {t3.id})")
+            except Exception as e2:
+                print(f"  ⚠️ Tweet2/3エラー（Tweet1は投稿済み）: {e2}")
 
-        try:
-            t2       = c.create_tweet(text=tweet2, reply_to=reply_id)
-            reply_id = str(t2.id)
-            print(f"  ✅ Tweet2(twikit) (id: {t2.id})")
+            return True
 
-            t3 = c.create_tweet(text=tweet3, reply_to=reply_id)
-            print(f"  ✅ Tweet3(twikit) (id: {t3.id})")
-        except Exception as e2:
-            print(f"  ⚠️ Tweet2/3エラー（Tweet1は投稿済み）: {e2}")
-
-        return True  # Tweet1が投稿できていれば成功
-
-    except ImportError:
-        print("  ❌ twikit 未インストール")
-        return False
     except Exception as e:
-        print(f"  ❌ twikit スレッド投稿エラー: {e}")
+        print(f"  ⚠️ twikit失敗: {e}")
+        print("  → x_automation.x_poster にフォールバック...")
+
+    # ── x_automation/x_poster.py（既存実装・ブラウザ含む） ──
+    try:
+        x_auto_dir = PROJECT_ROOT / "x_automation"
+        sys.path.insert(0, str(x_auto_dir))
+        from x_poster import post_amazon_thread  # type: ignore
+
+        return post_amazon_thread(thread)
+
+    except Exception as e:
+        print(f"  ❌ x_automation.x_poster も失敗: {e}")
         return False
 
 
