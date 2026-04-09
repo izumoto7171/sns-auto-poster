@@ -18,6 +18,8 @@ Amazon商品 X(Twitter) 投稿スクリプト（スレッド形式・シャド�
   python3 scripts/x_poster.py --dry-run   # プレビューのみ
 """
 
+from __future__ import annotations
+
 import os
 import sys
 import json
@@ -99,7 +101,14 @@ def pick_product(products: list[dict], posted_today: list[str]) -> dict | None:
 def generate_thread(product: dict) -> dict | None:
     """
     Gemini APIでXスレッド3ツイートを生成する。
-    tweet3には後でURLと開示文を付加する。
+
+    構成（2026年Xアルゴリズム最適化）:
+      Tweet1: 悩みへの共感 + 商品名を自然に盛り込む（リンクなし）
+              → 「知ってる人」感でエンゲージメントを引き出す
+      Tweet2: 「なぜこれを選んだか」の理由3点 + 価格（リンクなし）
+              → 比較・検討ユーザーの背中を押す
+      Tweet3: 誘導文 + アフィリエイトリンク + 開示（自動付加）
+              → リンクをツリー末尾に置きシャドウバンを回避
     """
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
@@ -127,7 +136,7 @@ def generate_thread(product: dict) -> dict | None:
 - 価格: {price} {disc_str}
 - 特徴:
 {feat_str}
-- フック: {hook}
+- フック候補: {hook}
 - バイラル理由: {why}
 - 解決する悩み: {problem}
 
@@ -140,23 +149,25 @@ def generate_thread(product: dict) -> dict | None:
 
 【各ツイートのルール】
 
-tweet1（本文 / 130〜200字）:
-- 個人の体験談・気づき・before/afterで始める（例: 「〇〇を変えただけで〜」「実は知らなかった〜」）
-- 数字や具体的な変化を必ず入れる
-- 商品名・価格・URLは絶対に含めない
-- ハッシュタグは1個以内
-- 改行を活用して読みやすく
+■ tweet1（共感 + 商品紹介 / 140〜200字）
+- ユーザーの「あるある悩み」への共感から始める
+  例: 「一人暮らし始めてすぐ気づいたこと〜」「仕事始めてからずっと悩んでた〜」
+- 後半で商品名を自然に登場させる
+  例: 「そこで使い始めたのが{brand}の〇〇で〜」「{title[:15]}に変えてから〜」
+- 具体的な数字・変化を1つ入れる（「3週間で〜」「毎日30分の〜が消えた」）
+- URLは絶対に含めない / ハッシュタグは0〜1個
+- 改行を活用してスマホで読みやすく
 
-tweet2（スペック / 100〜150字）:
-- 「▶ {title[:20]}」で始める
-- 価格を必ず入れる（「参考価格: {price}」など）
-- 主要スペックを「・」箇条書き3点
+■ tweet2（なぜこれなのか / 120〜160字）
+- 「これを選んだ理由は3つ：」で始める
+- 箇条書き3点（スペックより「体験的なメリット」を優先）
+  例: ✅ ケーブル不要で出かけられる / ✅ 純正の半額以下 / ✅ 職場でも使える小ささ
+- 参考価格: {price} を必ず含める
 - URLは含めない
 
-tweet3（誘導文 / 40字以内）:
-- 「Amazonで確認はこちら→」「詳細・最安値を確認→」など誘導のみ
-- URLは含めない（後で自動付加される）
-- シンプルかつクリックを誘う一文"""
+■ tweet3（誘導文 / 40字以内）
+- 「Amazonで確認→」「最安値はこちら→」など誘導のみ
+- URLは含めない（スクリプトが自動付加する）"""
 
     try:
         from google import genai
@@ -187,6 +198,30 @@ tweet3（誘導文 / 40字以内）:
     except Exception as e:
         print(f"❌ Gemini APIエラー: {e}")
         return None
+
+
+def build_fallback_thread(product: dict) -> dict:
+    """
+    Gemini不使用のフォールバックスレッドを商品データから直接組み立てる。
+    クォータ超過・APIエラー時に使用。
+    """
+    title    = product.get("title", "")
+    brand    = product.get("brand", "")
+    price    = product.get("price", {}).get("display", "")
+    disc     = product.get("discount_rate", 0)
+    features = product.get("features", [])
+    hook     = product.get("story_hook", "")
+    problem  = product.get("user_problem", "")
+    url      = product.get("amazon_url", "")
+
+    disc_str  = f"（通常より約{disc}%OFF想定）" if disc else ""
+    feat_lines = "\n".join(f"✅ {f}" for f in features[:3])
+
+    tweet1 = f"{hook}\n\n{problem}で悩んでいたとき、{brand}の製品を試してみたら状況が変わった。\n\n詳しくは↓に"
+    tweet2 = f"これを選んだ理由は3つ：\n{feat_lines}\n\n参考価格: {price} {disc_str}"
+    tweet3 = f"Amazonで詳細を確認→\n{url}\n{DISCLOSURE}"
+
+    return {"tweet1": tweet1, "tweet2": tweet2, "tweet3": tweet3}
 
 
 # ─────────────────────────────────────────
@@ -309,12 +344,12 @@ def main() -> None:
     print(f"   価格: {price}" + (f"  ({disc}%OFF想定)" if disc else ""))
     print(f"   URL: {product.get('amazon_url', '')}")
 
-    # スレッド生成
+    # スレッド生成（Gemini失敗時はフォールバックで継続）
     print(f"\n🤖 スレッド生成中（Gemini）...")
     thread = generate_thread(product)
     if not thread:
-        print("❌ スレッド生成失敗")
-        sys.exit(1)
+        print("⚠️  Gemini生成失敗 → フォールバックテンプレートで投稿")
+        thread = build_fallback_thread(product)
 
     # バリデーション
     warnings = validate_thread(thread)

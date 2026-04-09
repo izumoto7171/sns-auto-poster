@@ -17,6 +17,8 @@ Amazon商品データ自動ローテーター（PA-API不使用）
   python3 scripts/product_rotator.py --force     # 同日でも強制更新
 """
 
+from __future__ import annotations
+
 import os
 import sys
 import json
