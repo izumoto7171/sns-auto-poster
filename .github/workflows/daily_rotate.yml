@@ -1,0 +1,137 @@
+name: Amazon商品ローテーション & X投稿
+
+# ─────────────────────────────────────────────────
+# スケジュール一覧（JST = UTC+9）
+#
+#  UTC 20:00 = JST  5:00 → 商品データ更新（rotate ジョブ）
+#  UTC 22:00 = JST  7:00 → X投稿 1回目
+#  UTC  2:00 = JST 11:00 → X投稿 2回目
+#  UTC  6:00 = JST 15:00 → X投稿 3回目
+#  UTC 10:00 = JST 19:00 → X投稿 4回目
+#  UTC 14:00 = JST 23:00 → X投稿 5回目
+# ─────────────────────────────────────────────────
+on:
+  schedule:
+    - cron: '0 20 * * *'   # JST  5:00 → 商品データ更新
+    - cron: '0 22 * * *'   # JST  7:00 → X投稿
+    - cron: '0 2 * * *'    # JST 11:00 → X投稿
+    - cron: '0 6 * * *'    # JST 15:00 → X投稿
+    - cron: '0 10 * * *'   # JST 19:00 → X投稿
+    - cron: '0 14 * * *'   # JST 23:00 → X投稿
+  workflow_dispatch:
+    inputs:
+      job:
+        description: '実行するジョブ（rotate / post / both）'
+        required: false
+        default: 'both'
+
+# ─────────────────────────────────────────────────
+# ジョブ定義
+# ─────────────────────────────────────────────────
+jobs:
+
+  # ══════════════════════════════════════════
+  # 🔄 商品データ更新（JST 5:00 のみ実行）
+  # ══════════════════════════════════════════
+  rotate:
+    name: 🔄 商品データ更新
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write   # data/*.json のコミット & プッシュに必要
+
+    # JST 5:00 のcron か、手動で rotate/both を指定した場合のみ実行
+    if: |
+      github.event.schedule == '0 20 * * *' ||
+      (github.event_name == 'workflow_dispatch' &&
+       (github.event.inputs.job == 'rotate' ||
+        github.event.inputs.job == 'both'  ||
+        github.event.inputs.job == ''))
+
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Python セットアップ
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 依存関係インストール
+        run: pip install google-genai
+
+      - name: 商品ローテーション実行
+        env:
+          GEMINI_API_KEY:       ${{ secrets.GEMINI_API_KEY }}
+          AMAZON_ASSOCIATE_TAG: ${{ secrets.AMAZON_ASSOCIATE_TAG }}
+        run: python3 scripts/product_rotator.py
+
+      - name: 更新ファイルをコミット & プッシュ
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add \
+            data/amazon_deals.json \
+            data/product_history.json \
+            data/static_products.json \
+            || true
+          git diff --staged --quiet || \
+            git commit -m "chore: Amazon商品データ更新 $(TZ=Asia/Tokyo date +'%Y-%m-%d')"
+          git push || true
+
+  # ══════════════════════════════════════════
+  # 🐦 X 投稿（5回/日 × 指定時刻）
+  # ══════════════════════════════════════════
+  post-x:
+    name: 🐦 X 投稿
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write   # data/post_log.json のコミット & プッシュに必要
+
+    # JST 5:00 以外のcron か、手動で post/both を指定した場合のみ実行
+    if: |
+      (github.event_name == 'schedule' &&
+       github.event.schedule != '0 20 * * *') ||
+      (github.event_name == 'workflow_dispatch' &&
+       (github.event.inputs.job == 'post' ||
+        github.event.inputs.job == 'both'))
+
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Python セットアップ
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 依存関係インストール
+        run: pip install google-genai tweepy
+
+      - name: X 投稿実行
+        env:
+          GEMINI_API_KEY:        ${{ secrets.GEMINI_API_KEY }}
+          AMAZON_ASSOCIATE_TAG:  ${{ secrets.AMAZON_ASSOCIATE_TAG }}
+          X_API_KEY:             ${{ secrets.X_API_KEY }}
+          X_API_SECRET:          ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN:        ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+        run: python3 scripts/x_poster.py
+
+      - name: 投稿ログをコミット & プッシュ
+        if: always()
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull --rebase || true
+          git add data/post_log.json || true
+          git diff --staged --quiet || \
+            git commit -m "chore: X投稿ログ更新 $(TZ=Asia/Tokyo date +'%Y-%m-%d %H:%M')"
+          git push || true

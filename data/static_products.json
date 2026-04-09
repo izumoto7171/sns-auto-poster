@@ -1,0 +1,97 @@
+[
+  {
+    "search_keyword": "Anker MagSafe 対応 マグネット式 モバイルバッテリー 5000mAh",
+    "title": "Anker MagSafe対応 マグネットモバイルバッテリー 5000mAh",
+    "brand": "Anker",
+    "price":          { "amount": 3990, "currency": "JPY", "display": "¥3,990" },
+    "original_price": { "amount": 4990, "display": "¥4,990" },
+    "discount_rate": 20,
+    "category": "充電・バッテリー",
+    "features": [
+      "MagSafe対応・マグネット吸着でiPhoneにピタッと装着",
+      "5000mAh大容量・ケーブル不要でスマートに使える",
+      "コンパクト設計・ポケットに入る薄型ボディ"
+    ],
+    "why_viral":    "iPhoneユーザーなら即買いレベルのコスパ。充電ケーブル不要",
+    "story_hook":   "スマホの充電、どこでも気にならなくなった理由。",
+    "user_problem": "外出先でスマホのバッテリー切れが不安",
+    "amazon_url": "https://www.amazon.co.jp/s?k=Anker+MagSafe+%E3%83%A2%E3%83%90%E3%82%A4%E3%83%AB%E3%83%90%E3%83%83%E3%83%86%E3%83%AA%E3%83%BC+5000mAh&tag=smartearn22-22",
+    "source": "static"
+  },
+  {
+    "search_keyword": "Anker Soundcore Liberty 4 NC ワイヤレスイヤホン ノイキャン",
+    "title": "Anker Soundcore Liberty 4 NC ワイヤレスイヤホン",
+    "brand": "Anker Soundcore",
+    "price":          { "amount": 7990, "currency": "JPY", "display": "¥7,990" },
+    "original_price": { "amount": 9990, "display": "¥9,990" },
+    "discount_rate": 20,
+    "category": "オーディオ",
+    "features": [
+      "アクティブノイズキャンセリング搭載",
+      "最大10時間再生・外音取り込みモード対応",
+      "1万円以下で最強クラスのコスパ"
+    ],
+    "why_viral":    "1万円以下でノイキャン最強クラス。コスパ議論が盛り上がる",
+    "story_hook":   "カフェでの集中力が、これを使う前と後で全然違う。",
+    "user_problem": "騒音で集中できない・音楽に没頭したい",
+    "amazon_url": "https://www.amazon.co.jp/s?k=Anker+Soundcore+Liberty+4+NC+%E3%83%AF%E3%82%A4%E3%83%A4%E3%83%AC%E3%82%B9%E3%82%A4%E3%83%A4%E3%83%9B%E3%83%B3&tag=smartearn22-22",
+    "source": "static"
+  },
+  {
+    "search_keyword": "Baseus GaN 67W USB-C 急速充電器 窒化ガリウム コンパクト",
+    "title": "Baseus 67W GaN USB-C 急速充電器（窒化ガリウム採用）",
+    "brand": "Baseus",
+    "price":          { "amount": 2480, "currency": "JPY", "display": "¥2,480" },
+    "original_price": { "amount": 3280, "display": "¥3,280" },
+    "discount_rate": 24,
+    "category": "充電・バッテリー",
+    "features": [
+      "GaN採用で純正より小型・軽量",
+      "67W急速充電対応",
+      "USB-C + USB-A の2ポート同時充電"
+    ],
+    "why_viral":    "純正アダプタより小さくて速い。ガジェット民の定番",
+    "story_hook":   "充電器を変えただけで、朝の準備が10分早くなった。",
+    "user_problem": "純正充電器がかさばる・充電が遅い",
+    "amazon_url": "https://www.amazon.co.jp/s?k=Baseus+GaN+67W+USB-C+%E6%80%A5%E9%80%9F%E5%85%85%E9%9B%BB%E5%99%A8+%E7%AA%92%E5%8C%96%E3%82%AC%E3%83%AA%E3%82%A6%E3%83%A0&tag=smartearn22-22",
+    "source": "static"
+  },
+  {
+    "search_keyword": "Logicool MX MASTER 3S ワイヤレスマウス 高精度 静音",
+    "title": "Logicool MX MASTER 3S パフォーマンスワイヤレスマウス",
+    "brand": "Logicool",
+    "price":          { "amount": 14080, "currency": "JPY", "display": "¥14,080" },
+    "original_price": { "amount": 16500, "display": "¥16,500" },
+    "discount_rate": 15,
+    "category": "PC周辺機器",
+    "features": [
+      "8000DPI高精度センサー搭載",
+      "電磁気スクロールホイールで爆速スクロール",
+      "最大70日間バッテリー持続"
+    ],
+    "why_viral":    "一度使うと普通のマウスに戻れない。PC作業勢の聖域",
+    "story_hook":   "マウスって、仕事のスピードを変えるデバイスだと知らなかった。",
+    "user_problem": "マウス操作が遅くて仕事効率が上がらない",
+    "amazon_url": "https://www.amazon.co.jp/s?k=Logicool+MX+MASTER+3S+%E3%83%AF%E3%82%A4%E3%83%A4%E3%83%AC%E3%82%B9%E3%83%9E%E3%82%A6%E3%82%B9&tag=smartearn22-22",
+    "source": "static"
+  },
+  {
+    "search_keyword": "UGREEN USB-C ハブ 10in1 ドッキングステーション MacBook 4K HDMI",
+    "title": "UGREEN 10-in-1 USB-C ドッキングステーション",
+    "brand": "UGREEN",
+    "price":          { "amount": 8980, "currency": "JPY", "display": "¥8,980" },
+    "original_price": { "amount": 11980, "display": "¥11,980" },
+    "discount_rate": 25,
+    "category": "PC周辺機器",
+    "features": [
+      "USB-C × 4K HDMI出力対応",
+      "100W PD充電パススルー",
+      "10ポート同時使用可能"
+    ],
+    "why_viral":    "MacBookユーザーが必ず一度は検討する拡張ハブ",
+    "story_hook":   "デスクのごちゃごちゃを一発で解決したガジェット。",
+    "user_problem": "MacBookのポートが足りなくてケーブルだらけ",
+    "amazon_url": "https://www.amazon.co.jp/s?k=UGREEN+USB-C+%E3%83%8F%E3%83%96+10in1+%E3%83%89%E3%83%83%E3%82%AD%E3%83%B3%E3%82%B0%E3%82%B9%E3%83%86%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3+MacBook&tag=smartearn22-22",
+    "source": "static"
+  }
+]

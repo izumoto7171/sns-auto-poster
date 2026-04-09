@@ -1,0 +1,363 @@
+"""
+Amazon商品 X(Twitter) 投稿スクリプト（スレッド形式・シャドウバン回避設計）
+
+入力:  data/amazon_deals.json（product_rotator.py が毎日更新）
+出力:  data/post_log.json（投稿記録）
+
+スレッド構造（シャドウバン回避）:
+  Tweet 1: ストーリー・フックのみ（リンクなし・ハッシュタグ1個以内）
+  Tweet 2: 商品スペック・価格・割引率（リンクなし）
+  Tweet 3: Amazonアフィリエイトリンク + #PR + アソシエイト開示
+
+なぜスレッド形式か:
+  X のリーチ評価は「本文ツイート」が主。リンクは返信に分離することで
+  アルゴリズムのペナルティを回避しやすくなる。
+
+実行:
+  python3 scripts/x_poster.py             # 本番投稿
+  python3 scripts/x_poster.py --dry-run   # プレビューのみ
+"""
+
+import os
+import sys
+import json
+import re
+import argparse
+from datetime import datetime, date
+from pathlib import Path
+
+# ─────────────────────────────────────────
+# パス定義
+# ─────────────────────────────────────────
+SCRIPT_DIR   = Path(__file__).parent
+PROJECT_ROOT = SCRIPT_DIR.parent
+DATA_DIR     = PROJECT_ROOT / "data"
+ENV_PATH     = PROJECT_ROOT / ".env"
+
+DEALS_JSON   = DATA_DIR / "amazon_deals.json"
+POST_LOG     = DATA_DIR / "post_log.json"
+
+# ─────────────────────────────────────────
+# 環境変数読み込み
+# ─────────────────────────────────────────
+if ENV_PATH.exists():
+    for line in ENV_PATH.read_text().splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            k, _, v = line.partition("=")
+            os.environ.setdefault(k.strip(), v.strip())
+
+# 景表法対応（2023年10月施行ガイドライン準拠）
+DISCLOSURE = "#PR\n※Amazonアソシエイトに参加しています"
+
+
+# ─────────────────────────────────────────
+# 投稿ログ管理
+# ─────────────────────────────────────────
+def load_post_log() -> dict:
+    if not POST_LOG.exists():
+        return {"posts": []}
+    try:
+        return json.loads(POST_LOG.read_text(encoding="utf-8"))
+    except Exception:
+        return {"posts": []}
+
+
+def save_post_log(log: dict) -> None:
+    POST_LOG.write_text(json.dumps(log, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def get_today_posted_keywords(log: dict) -> list[str]:
+    """今日すでに投稿済みのキーワード一覧を返す"""
+    today = date.today().isoformat()
+    return [
+        p.get("search_keyword", "")
+        for p in log.get("posts", [])
+        if p.get("date") == today
+    ]
+
+
+# ─────────────────────────────────────────
+# 商品選択
+# ─────────────────────────────────────────
+def pick_product(products: list[dict], posted_today: list[str]) -> dict | None:
+    """
+    未投稿の商品を1件選ぶ。
+    すべて投稿済みの場合は最初の商品を返す（1日5投稿で商品を循環させる）。
+    """
+    for p in products:
+        kw = p.get("search_keyword", p.get("title", ""))
+        if kw not in posted_today:
+            return p
+    # 全件投稿済み → 最初の商品（日をまたいだ安全弁）
+    return products[0] if products else None
+
+
+# ─────────────────────────────────────────
+# Gemini によるスレッド生成
+# ─────────────────────────────────────────
+def generate_thread(product: dict) -> dict | None:
+    """
+    Gemini APIでXスレッド3ツイートを生成する。
+    tweet3には後でURLと開示文を付加する。
+    """
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        print("❌ GEMINI_API_KEY 未設定")
+        return None
+
+    title    = product.get("title", "")
+    brand    = product.get("brand", "")
+    price    = product.get("price", {}).get("display", "")
+    disc     = product.get("discount_rate", 0)
+    features = product.get("features", [])
+    hook     = product.get("story_hook", "")
+    why      = product.get("why_viral", "")
+    problem  = product.get("user_problem", "")
+    url      = product.get("amazon_url", "")
+
+    feat_str = "\n".join(f"  ・{f}" for f in features)
+    disc_str = f"（通常より約{disc}%OFF想定）" if disc else ""
+
+    prompt = f"""Amazonアフィリエイト投稿用のXスレッド（3ツイート）を日本語で生成してください。
+
+【商品情報】
+- 商品名: {title}
+- ブランド: {brand}
+- 価格: {price} {disc_str}
+- 特徴:
+{feat_str}
+- フック: {hook}
+- バイラル理由: {why}
+- 解決する悩み: {problem}
+
+【出力形式】以下のJSON形式のみ（コードブロック不要）:
+{{
+  "tweet1": "...",
+  "tweet2": "...",
+  "tweet3": "..."
+}}
+
+【各ツイートのルール】
+
+tweet1（本文 / 130〜200字）:
+- 個人の体験談・気づき・before/afterで始める（例: 「〇〇を変えただけで〜」「実は知らなかった〜」）
+- 数字や具体的な変化を必ず入れる
+- 商品名・価格・URLは絶対に含めない
+- ハッシュタグは1個以内
+- 改行を活用して読みやすく
+
+tweet2（スペック / 100〜150字）:
+- 「▶ {title[:20]}」で始める
+- 価格を必ず入れる（「参考価格: {price}」など）
+- 主要スペックを「・」箇条書き3点
+- URLは含めない
+
+tweet3（誘導文 / 40字以内）:
+- 「Amazonで確認はこちら→」「詳細・最安値を確認→」など誘導のみ
+- URLは含めない（後で自動付加される）
+- シンプルかつクリックを誘う一文"""
+
+    try:
+        from google import genai
+
+        client = genai.Client(api_key=api_key)
+        resp   = client.models.generate_content(
+            model="gemini-2.0-flash-lite",
+            contents=prompt,
+        )
+        raw = resp.text.strip()
+
+        if "```json" in raw:
+            raw = raw.split("```json")[1].split("```")[0].strip()
+        elif "```" in raw:
+            raw = raw.split("```")[1].split("```")[0].strip()
+
+        thread = json.loads(raw)
+
+        # tweet3にURL + 開示文を付加（固定順序）
+        body3 = thread.get("tweet3", "Amazonで確認はこちら→").strip()
+        thread["tweet3"] = f"{body3}\n{url}\n{DISCLOSURE}"
+
+        return thread
+
+    except json.JSONDecodeError as e:
+        print(f"❌ スレッドJSONパースエラー: {e}")
+        return None
+    except Exception as e:
+        print(f"❌ Gemini APIエラー: {e}")
+        return None
+
+
+# ─────────────────────────────────────────
+# バリデーション
+# ─────────────────────────────────────────
+def _x_units(text: str) -> int:
+    """X の文字単位数を計算（URL=23単位、CJK=2単位、その他=1単位）"""
+    normalized = re.sub(r'https?://\S+', '\x00' * 23, text)
+    count = 0
+    for ch in normalized:
+        cp = ord(ch)
+        # CJK統合漢字・ハングル・全角など
+        if (0x1100 <= cp <= 0x115F or 0x2E80 <= cp <= 0x9FFF or
+                0xAC00 <= cp <= 0xD7FF or 0xFF00 <= cp <= 0xFF60 or
+                0xFFE0 <= cp <= 0xFFE6):
+            count += 2
+        else:
+            count += 1
+    return count
+
+
+def validate_thread(thread: dict) -> list[str]:
+    """スレッドのコンプライアンスチェック。問題があればメッセージを返す。"""
+    warnings = []
+
+    t1 = thread.get("tweet1", "")
+    if "http" in t1 or "amzn" in t1:
+        warnings.append("❌ tweet1にリンクが含まれています（シャドウバンリスク）")
+
+    t3 = thread.get("tweet3", "")
+    if "http" not in t3:
+        warnings.append("❌ tweet3にリンクがありません（収益ゼロリスク）")
+    if "#PR" not in t3:
+        warnings.append("❌ tweet3に#PRがありません（景表法違反リスク）")
+
+    for key in ("tweet1", "tweet2", "tweet3"):
+        units = _x_units(thread.get(key, ""))
+        if units > 280:
+            warnings.append(f"❌ {key}が280単位超（{units}単位）")
+
+    return warnings
+
+
+# ─────────────────────────────────────────
+# X 投稿（tweepy OAuth 1.0a）
+# ─────────────────────────────────────────
+def post_thread(thread: dict) -> bool:
+    """tweepy v4 でスレッド（返信チェーン）を投稿する"""
+    api_key      = os.getenv("X_API_KEY")
+    api_secret   = os.getenv("X_API_SECRET")
+    token        = os.getenv("X_ACCESS_TOKEN")
+    token_secret = os.getenv("X_ACCESS_TOKEN_SECRET")
+
+    if not all([api_key, api_secret, token, token_secret]):
+        print("❌ X API認証情報が不足（X_API_KEY / X_API_SECRET / X_ACCESS_TOKEN / X_ACCESS_TOKEN_SECRET）")
+        return False
+
+    try:
+        import tweepy
+
+        client = tweepy.Client(
+            consumer_key        = api_key,
+            consumer_secret     = api_secret,
+            access_token        = token,
+            access_token_secret = token_secret,
+        )
+
+        # Tweet 1: 本文（リンクなし）
+        r1    = client.create_tweet(text=thread["tweet1"])
+        t1_id = r1.data["id"]
+        print(f"  ✅ Tweet1 投稿完了 (id: {t1_id})")
+
+        # Tweet 2: スペック（Tweet1への返信）
+        r2    = client.create_tweet(text=thread["tweet2"], in_reply_to_tweet_id=t1_id)
+        t2_id = r2.data["id"]
+        print(f"  ✅ Tweet2 投稿完了 (id: {t2_id})")
+
+        # Tweet 3: リンク + 開示（Tweet2への返信）
+        r3    = client.create_tweet(text=thread["tweet3"], in_reply_to_tweet_id=t2_id)
+        t3_id = r3.data["id"]
+        print(f"  ✅ Tweet3 投稿完了 (id: {t3_id})")
+
+        return True
+
+    except Exception as e:
+        print(f"❌ X投稿エラー: {e}")
+        return False
+
+
+# ─────────────────────────────────────────
+# メイン
+# ─────────────────────────────────────────
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Amazon商品 X投稿スクリプト")
+    parser.add_argument("--dry-run", action="store_true", help="プレビューのみ（投稿しない）")
+    args = parser.parse_args()
+
+    # 商品読み込み
+    if not DEALS_JSON.exists():
+        print("❌ data/amazon_deals.json が見つかりません。先に product_rotator.py を実行してください。")
+        sys.exit(1)
+
+    products = json.loads(DEALS_JSON.read_text(encoding="utf-8"))
+    if not products:
+        print("❌ amazon_deals.json が空です。")
+        sys.exit(1)
+
+    # 投稿済み商品を除いて選択
+    log          = load_post_log()
+    posted_today = get_today_posted_keywords(log)
+    product      = pick_product(products, posted_today)
+
+    if not product:
+        print("❌ 投稿できる商品がありません。")
+        sys.exit(1)
+
+    price = product.get("price", {}).get("display", "")
+    disc  = product.get("discount_rate", 0)
+    print(f"\n🛍️  選択商品: {product.get('title', '')}")
+    print(f"   価格: {price}" + (f"  ({disc}%OFF想定)" if disc else ""))
+    print(f"   URL: {product.get('amazon_url', '')}")
+
+    # スレッド生成
+    print(f"\n🤖 スレッド生成中（Gemini）...")
+    thread = generate_thread(product)
+    if not thread:
+        print("❌ スレッド生成失敗")
+        sys.exit(1)
+
+    # バリデーション
+    warnings = validate_thread(thread)
+    for w in warnings:
+        print(w)
+    if any(w.startswith("❌") for w in warnings):
+        print("❌ バリデーションエラーのため投稿を中止します")
+        sys.exit(1)
+
+    # プレビュー
+    print(f"\n{'─' * 60}")
+    print("📝 投稿内容プレビュー")
+    print(f"{'─' * 60}")
+    for key in ("tweet1", "tweet2", "tweet3"):
+        units = _x_units(thread[key])
+        print(f"\n── {key}（{units}文字単位）──")
+        print(thread[key])
+
+    if args.dry_run:
+        print(f"\n🔍 dry-run モード: 投稿をスキップ")
+        return
+
+    # X投稿
+    print(f"\n🚀 X にスレッド投稿中...")
+    success = post_thread(thread)
+
+    if success:
+        # 投稿ログに記録
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        log["posts"].append({
+            "date":           date.today().isoformat(),
+            "posted_at":      datetime.now().isoformat(),
+            "title":          product.get("title", ""),
+            "search_keyword": product.get("search_keyword", ""),
+            "amazon_url":     product.get("amazon_url", ""),
+            "tweet1_preview": thread["tweet1"][:80],
+        })
+        save_post_log(log)
+        print("✅ 投稿完了・ログ記録済み")
+    else:
+        print("❌ 投稿失敗")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
