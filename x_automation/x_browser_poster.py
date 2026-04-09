@@ -7,7 +7,15 @@ Playwrightでブラウザを操作してツイートを投稿（APIキー不要�
   2. プロフィールページから最新ツイートURLを取得
   3. そのURLに返信としてtweet2を投稿
   4. 同様にtweet3を投稿
+
+安定性設計:
+  - GitHub Actionsのヘッドレス環境ではネットワーク・描画が遅い
+    → HEADLESS_WAIT_MS ですべての操作後にタメを入れる
+  - Xはdata-testidを残しながら内部クラスを頻繁に変えてくる
+    → 各操作で複数のセレクタを順番に試すフォールバック構造
 """
+from __future__ import annotations
+
 import os
 import json
 import asyncio
@@ -30,6 +38,18 @@ Object.defineProperty(navigator, 'languages', { get: () => ['ja-JP', 'ja', 'en-U
 window.chrome = { runtime: {} };
 """
 
+# GitHub Actionsのヘッドレス環境向けに余裕を持たせた待機時間（ms）
+# ローカルでは速すぎても問題ないが、遅すぎると実害がないので統一する
+HEADLESS_WAIT_MS = 1200   # 各操作後の基本タメ
+PAGE_LOAD_MS     = 3500   # ページロード後の描画待ち
+PROFILE_LOAD_MS  = 4000   # プロフィールページ（タイムライン描画が重い）
+AFTER_POST_MS    = 4000   # 投稿後に反映されるまで待つ時間
+TYPE_DELAY_MS    = 30     # keyboard.typeの1文字あたりの遅延（ms）
+
+
+# ─────────────────────────────────────────────────────────
+# 内部ユーティリティ
+# ─────────────────────────────────────────────────────────
 
 def _load_env_cookies():
     """GitHub Actions: X_BROWSER_COOKIES環境変数からCookieファイルを復元"""
@@ -43,24 +63,10 @@ def _load_env_cookies():
             print(f"⚠️ Cookie書き出しエラー: {e}")
 
 
-def _make_browser_context(p):
-    """ブラウザ + コンテキストを返す（stealth設定済み）"""
-    browser = p.chromium.launch(
-        headless=True,
-        args=[
-            "--disable-blink-features=AutomationControlled",
-            "--no-sandbox",
-            "--disable-dev-shm-usage",
-            "--disable-gpu",
-        ],
-    )
-    return browser
-
-
-async def _new_context(p):
-    """ブラウザとstealthコンテキストを返す"""
+async def _new_context(p, headless: bool = True):
+    """ブラウザとstealthコンテキストを生成して返す"""
     browser = await p.chromium.launch(
-        headless=True,
+        headless=headless,
         args=[
             "--disable-blink-features=AutomationControlled",
             "--no-sandbox",
@@ -78,14 +84,14 @@ async def _new_context(p):
     return browser, context
 
 
-async def _load_cookies(context):
+async def _load_cookies(context) -> bool:
     """Cookieを環境変数またはファイルから読み込む。成功可否を返す"""
     _load_env_cookies()
     if COOKIES_FILE.exists():
         with open(COOKIES_FILE) as f:
             cookies = json.load(f)
         await context.add_cookies(cookies)
-        print("✅ Cookie読み込み成功")
+        print(f"✅ Cookie読み込み成功（{len(cookies)}件）")
         return True
     print("❌ Cookieファイルが見つかりません（X_BROWSER_COOKIES 未設定）")
     return False
@@ -93,141 +99,169 @@ async def _load_cookies(context):
 
 async def _type_tweet(page, text: str, testid_index: int = 0):
     """
-    ツイート入力欄（tweetTextarea_{index}）にテキストを入力する。
-    複数のセレクタでフォールバック。
+    ツイート入力欄にテキストを入力する。
+    data-testidベースの複数セレクタでフォールバック。
+    Xがクラス名を変えてもdata-testidが残っている限り動作する。
     """
     selectors = [
         f'[data-testid="tweetTextarea_{testid_index}"]',
         f'[data-testid="tweetTextarea_{testid_index}Root"] div[contenteditable="true"]',
-        'div[contenteditable="true"][data-testid]',
+        # data-testidが変わった場合の汎用フォールバック
+        'div[role="textbox"][contenteditable="true"]',
         'div[contenteditable="true"]',
     ]
     tweet_box = None
     for sel in selectors:
         try:
-            tweet_box = await page.wait_for_selector(sel, timeout=5000)
+            tweet_box = await page.wait_for_selector(sel, timeout=6000)
             if tweet_box:
+                print(f"  入力欄を発見: {sel}")
                 break
         except Exception:
             continue
 
     if not tweet_box:
-        raise RuntimeError("ツイート入力欄が見つかりません")
+        raise RuntimeError("ツイート入力欄が見つかりません（全セレクタ失敗）")
 
     await tweet_box.click()
-    await page.wait_for_timeout(400)
-    await page.keyboard.type(text, delay=25)
-    await page.wait_for_timeout(800)
+    await page.wait_for_timeout(HEADLESS_WAIT_MS)
+    await page.keyboard.type(text, delay=TYPE_DELAY_MS)
+    # 入力後: Reactのstate更新を待つ
+    await page.wait_for_timeout(HEADLESS_WAIT_MS)
     return tweet_box
 
 
 async def _click_post_button(page, testid: str = "tweetButtonInline"):
     """
     投稿/返信ボタンをクリックする。
-    testid: 'tweetButtonInline'（ホーム）または 'tweetButton'（返信ダイアログ）
+    まず指定testidを試し、失敗したら他のボタンセレクタにフォールバック。
     """
     selectors = [
         f'[data-testid="{testid}"]',
         '[data-testid="tweetButtonInline"]',
         '[data-testid="tweetButton"]',
+        # testidが消えた場合のフォールバック（ボタンのaria-labelで探す）
+        'button[aria-label="ポストする"]',
+        'button[aria-label="Post"]',
+        'button[aria-label="返信"]',
+        'button[aria-label="Reply"]',
     ]
     post_btn = None
     for sel in selectors:
         try:
-            post_btn = await page.wait_for_selector(sel, timeout=5000)
-            if post_btn:
+            btn = await page.wait_for_selector(sel, timeout=4000)
+            if btn:
+                # disabled な場合はスキップ
+                is_disabled = await btn.get_attribute("disabled")
+                if is_disabled is not None:
+                    continue
+                post_btn = btn
+                print(f"  投稿ボタンを発見: {sel}")
                 break
         except Exception:
             continue
 
     if not post_btn:
-        raise RuntimeError("投稿ボタンが見つかりません")
+        raise RuntimeError("投稿ボタンが見つかりません（全セレクタ失敗）")
 
-    # オーバーレイを閉じてからクリック
+    # オーバーレイ・ドロップダウンを閉じてからクリック
     await page.keyboard.press("Escape")
-    await page.wait_for_timeout(300)
+    await page.wait_for_timeout(400)
 
     try:
-        await post_btn.click(timeout=8000)
+        await post_btn.click(timeout=10000)
     except Exception:
         print("⚠️ ネイティブクリック失敗 → JSクリック")
         await page.evaluate("btn => btn.click()", await post_btn.element_handle())
 
-    await page.wait_for_timeout(3000)
+    # 投稿リクエストが飛んで画面が更新されるまで待つ
+    await page.wait_for_timeout(AFTER_POST_MS)
 
 
 async def _get_latest_tweet_url(page, username: str) -> str | None:
     """
-    プロフィールページから最新ツイートのURLを取得する。
-    失敗した場合は None を返す。
+    プロフィールページから自分の最新ツイートのURLを取得する。
+    article タグ内の /status/ リンクを最初に発見したものを返す。
     """
     profile_url = f"https://x.com/{username.lstrip('@')}"
-    print(f"  プロフィールページに移動: {profile_url}")
+    print(f"  プロフィールページへ移動: {profile_url}")
     await page.goto(profile_url)
     await page.wait_for_load_state("domcontentloaded")
-    await page.wait_for_timeout(3000)
+    # タイムラインはSPAの遅延描画があるため、networkidleではなく固定待機
+    await page.wait_for_timeout(PROFILE_LOAD_MS)
 
-    # タイムラインから最初のツイートリンクを取得
-    # article > a[href*="/status/"] を探す
-    try:
-        tweet_link = await page.wait_for_selector(
-            'article a[href*="/status/"]', timeout=8000
-        )
-        href = await tweet_link.get_attribute("href")
-        if href and "/status/" in href:
-            # 相対URLなら絶対URLに変換
-            if href.startswith("/"):
-                tweet_url = f"https://x.com{href}"
-            else:
-                tweet_url = href
-            # URLにクエリパラメータがあれば除去
-            tweet_url = tweet_url.split("?")[0]
-            print(f"  最新ツイートURL取得: {tweet_url}")
-            return tweet_url
-    except Exception as e:
-        print(f"  ⚠️ 最新ツイートURL取得エラー: {e}")
+    # セレクタ優先順:
+    #   1. article内のstatus URLリンク（最も確実）
+    #   2. time要素の親リンク（タイムスタンプリンクはstatus URLを持つ）
+    selectors = [
+        'article a[href*="/status/"]',
+        'time[datetime] ~ a[href*="/status/"]',
+        'a[href*="/status/"][role="link"]',
+    ]
+    for sel in selectors:
+        try:
+            tweet_link = await page.wait_for_selector(sel, timeout=8000)
+            href = await tweet_link.get_attribute("href")
+            if href and "/status/" in href:
+                tweet_url = (
+                    f"https://x.com{href}" if href.startswith("/") else href
+                ).split("?")[0]
+                print(f"  最新ツイートURL取得: {tweet_url}")
+                return tweet_url
+        except Exception:
+            continue
 
+    print("  ⚠️ 最新ツイートURLを取得できませんでした")
     return None
 
 
-async def _reply_to_tweet(page, tweet_url: str, reply_text: str) -> str | None:
+async def _reply_to_tweet(page, tweet_url: str, reply_text: str) -> None:
     """
     指定URLのツイートに返信を投稿する。
-    返信後、自分の返信ツイートのURLを返す（取得できない場合はNone）。
+    ツイート詳細ページでは返信テキストエリアが最初から表示されていることが多いが、
+    ない場合はReplyボタンをクリックして開く。
     """
     print(f"  返信先へ移動: {tweet_url}")
     await page.goto(tweet_url)
     await page.wait_for_load_state("domcontentloaded")
-    await page.wait_for_timeout(2500)
+    await page.wait_for_timeout(PAGE_LOAD_MS)
 
-    # 返信入力欄を探す（ツイート詳細ページの返信テキストエリア）
-    # data-testid="tweetTextarea_0" は返信欄にも使われる
+    # 返信入力欄を開く試行
     try:
         await _type_tweet(page, reply_text, testid_index=0)
     except Exception as e:
-        # 入力欄が見つからない場合はReplyボタンをクリックして開く
-        print(f"  入力欄が見つかりません、Replyボタンをクリック: {e}")
-        try:
-            reply_btn = await page.wait_for_selector(
-                '[data-testid="reply"]', timeout=5000
-            )
-            await reply_btn.click()
-            await page.wait_for_timeout(1500)
-            await _type_tweet(page, reply_text, testid_index=0)
-        except Exception as e2:
-            raise RuntimeError(f"返信入力欄を開けませんでした: {e2}")
+        # 入力欄が最初から出ていない → Replyボタンをクリックして展開
+        print(f"  入力欄なし → Replyボタンをクリック: {e}")
+        reply_btn_selectors = [
+            '[data-testid="reply"]',
+            'button[aria-label="返信"]',
+            'button[aria-label="Reply"]',
+        ]
+        opened = False
+        for sel in reply_btn_selectors:
+            try:
+                btn = await page.wait_for_selector(sel, timeout=5000)
+                await btn.click()
+                await page.wait_for_timeout(HEADLESS_WAIT_MS)
+                opened = True
+                break
+            except Exception:
+                continue
 
-    # 返信投稿ボタンのtestidは 'tweetButton' または 'tweetButtonInline'
+        if not opened:
+            raise RuntimeError("Replyボタンが見つかりませんでした")
+
+        # ダイアログが開いてから再度入力欄を探す
+        await _type_tweet(page, reply_text, testid_index=0)
+
+    # 返信投稿ボタン（ダイアログ内は "tweetButton"、インラインは "tweetButtonInline"）
     await _click_post_button(page, testid="tweetButton")
-
     print("  ✅ 返信投稿完了")
 
-    # 返信後のURLを取得（プロフィールから最新ツイートを拾う方法は
-    # 少し待ってからもう一度プロフィールを見るか、現在のURLを確認する）
-    # ここでは tweet_url の会話ページで最新の自分の返信URLを特定するのが
-    # 複雑なため、Noneを返してもスレッドは成立している
-    return None
 
+# ─────────────────────────────────────────────────────────
+# スレッド投稿（メイン）
+# ─────────────────────────────────────────────────────────
 
 async def post_thread_async(tweets: list, headless: bool = True) -> bool:
     """
@@ -237,15 +271,20 @@ async def post_thread_async(tweets: list, headless: bool = True) -> bool:
       1. tweet1 をホームページから投稿
       2. X_USERNAME プロフィールから最新ツイートURLを取得
       3. そのURLに tweet2 を返信として投稿
-      4. プロフィールから最新ツイートURLを再取得して tweet3 を返信投稿
+      4. 同様に tweet3 を投稿
+
+    X_USERNAME が未設定の場合は tweet1 のみ投稿して True を返す。
     """
+    if not tweets:
+        print("❌ tweetsが空です")
+        return False
+
     username = os.environ.get("X_USERNAME", "")
     if not username:
-        print("⚠️ X_USERNAME が設定されていません。tweet1のみ投稿します")
-        return await post_tweet(tweets[0] if tweets else "", headless=headless) is not None
+        print("⚠️ X_USERNAME 未設定 → tweet1のみ投稿します")
 
     async with async_playwright() as p:
-        browser, context = await _new_context(p)
+        browser, context = await _new_context(p, headless=headless)
 
         try:
             if not await _load_cookies(context):
@@ -258,23 +297,25 @@ async def post_thread_async(tweets: list, headless: bool = True) -> bool:
             print("📝 Tweet1 を投稿中...")
             await page.goto("https://x.com/home")
             await page.wait_for_load_state("domcontentloaded")
-            await page.wait_for_timeout(2000)
+            await page.wait_for_timeout(PAGE_LOAD_MS)
 
             await _type_tweet(page, tweets[0], testid_index=0)
             await _click_post_button(page, testid="tweetButtonInline")
             print("✅ Tweet1 投稿完了")
 
-            if len(tweets) < 2:
+            if len(tweets) < 2 or not username:
                 await browser.close()
                 return True
 
-            # ── Tweet 1 のURL取得 ───────────────────────
-            await page.wait_for_timeout(2000)  # 投稿が反映されるまで待機
+            # 投稿が X サーバーに反映されるまで少し待つ
+            await page.wait_for_timeout(AFTER_POST_MS)
+
+            # ── Tweet 1 の URL 取得 ─────────────────────
             tweet1_url = await _get_latest_tweet_url(page, username)
             if not tweet1_url:
-                print("⚠️ Tweet1のURLが取得できませんでした。Tweet2/3をスキップ")
+                print("⚠️ Tweet1 URLが取得できず、Tweet2/3をスキップ")
                 await browser.close()
-                return True  # tweet1は投稿できた
+                return True  # tweet1は成功
 
             # ── Tweet 2 （reply to tweet1） ─────────────
             print("📝 Tweet2 を返信投稿中...")
@@ -284,13 +325,13 @@ async def post_thread_async(tweets: list, headless: bool = True) -> bool:
                 await browser.close()
                 return True
 
-            # ── Tweet 2 のURL取得（tweet1の会話ページから） ──
-            await page.wait_for_timeout(2000)
+            # 返信が反映されるまで待ってからプロフィールを再取得
+            await page.wait_for_timeout(AFTER_POST_MS)
             tweet2_url = await _get_latest_tweet_url(page, username)
             if not tweet2_url:
-                print("⚠️ Tweet2のURLが取得できませんでした。Tweet3をスキップ")
+                print("⚠️ Tweet2 URLが取得できず、Tweet3をスキップ")
                 await browser.close()
-                return True  # tweet1/2は投稿できた
+                return True  # tweet1/2は成功
 
             # ── Tweet 3 （reply to tweet2） ─────────────
             print("📝 Tweet3 を返信投稿中...")
@@ -324,10 +365,11 @@ def post_thread_sync(tweets: list, headless: bool = True) -> bool:
 # ─────────────────────────────────────────────────────────
 # 後方互換: 単体ツイート投稿
 # ─────────────────────────────────────────────────────────
-async def post_tweet(text: str, headless=True) -> str | None:
-    """保存済みCookieを使って単体ツイートを投稿する"""
+
+async def post_tweet(text: str, headless: bool = True) -> str | None:
+    """保存済みCookieを使って単体ツイートを投稿する（後方互換）"""
     async with async_playwright() as p:
-        browser, context = await _new_context(p)
+        browser, context = await _new_context(p, headless=headless)
 
         if not await _load_cookies(context):
             await browser.close()
@@ -337,7 +379,7 @@ async def post_tweet(text: str, headless=True) -> str | None:
             page = await context.new_page()
             await page.goto("https://x.com/home")
             await page.wait_for_load_state("domcontentloaded")
-            await page.wait_for_timeout(2000)
+            await page.wait_for_timeout(PAGE_LOAD_MS)
 
             print("✏️  ツイート入力中...")
             await _type_tweet(page, text, testid_index=0)
@@ -358,7 +400,7 @@ async def post_tweet(text: str, headless=True) -> str | None:
             return None
 
 
-def post(text: str, headless=True) -> bool:
+def post(text: str, headless: bool = True) -> bool:
     """同期版の単体ツイート投稿関数（後方互換）"""
     try:
         result = asyncio.run(post_tweet(text, headless=headless))
@@ -371,8 +413,9 @@ def post(text: str, headless=True) -> bool:
 # ─────────────────────────────────────────────────────────
 # 初回ログイン
 # ─────────────────────────────────────────────────────────
-async def login_and_save(username, email, password, headless=False):
-    """ブラウザでXにログインしてCookieを保存"""
+
+async def login_and_save(username: str, email: str, password: str, headless: bool = False):
+    """ブラウザでXにログインしてCookieを保存する"""
     async with async_playwright() as p:
         browser = await p.chromium.launch(
             headless=headless,
@@ -392,7 +435,7 @@ async def login_and_save(username, email, password, headless=False):
         print("🌐 X.comを開いています...")
         await page.goto("https://x.com/login")
         await page.wait_for_load_state("domcontentloaded")
-        await page.wait_for_timeout(1500)
+        await page.wait_for_timeout(PAGE_LOAD_MS)
 
         # ユーザー名入力
         print("📝 ユーザー名を入力中...")
@@ -409,7 +452,7 @@ async def login_and_save(username, email, password, headless=False):
             await next_btn.click()
         except Exception:
             await page.keyboard.press("Enter")
-        await page.wait_for_timeout(2500)
+        await page.wait_for_timeout(HEADLESS_WAIT_MS * 2)
 
         print(f"  現在のURL: {page.url}")
 
@@ -427,7 +470,7 @@ async def login_and_save(username, email, password, headless=False):
                 await next_btn2.click()
             except Exception:
                 await page.keyboard.press("Enter")
-            await page.wait_for_timeout(2000)
+            await page.wait_for_timeout(HEADLESS_WAIT_MS * 2)
         except Exception:
             pass
 
@@ -437,7 +480,7 @@ async def login_and_save(username, email, password, headless=False):
         pw_el = await page.wait_for_selector('input[name="password"]', timeout=15000)
         await pw_el.fill(password)
         await page.keyboard.press("Enter")
-        await page.wait_for_timeout(4000)
+        await page.wait_for_timeout(HEADLESS_WAIT_MS * 4)
 
         current_url = page.url
         if "/login" in current_url or "/i/flow" in current_url:
@@ -454,8 +497,8 @@ async def login_and_save(username, email, password, headless=False):
         await browser.close()
 
 
-def first_login(headless=False):
-    """初回ログイン（ブラウザを表示して実行）"""
+def first_login(headless: bool = False):
+    """初回ログイン（.envから認証情報を読んでブラウザを起動）"""
     env_path = Path(__file__).parent.parent / ".env"
     env = {}
     if env_path.exists():
@@ -466,16 +509,18 @@ def first_login(headless=False):
                     k, v = line.split("=", 1)
                     env[k.strip()] = v.strip()
 
-    username = env.get("X_USERNAME", "")
-    email    = env.get("X_EMAIL", "")
-    password = env.get("X_PASSWORD", "")
-
-    asyncio.run(login_and_save(username, email, password, headless=headless))
+    asyncio.run(login_and_save(
+        username=env.get("X_USERNAME", ""),
+        email=env.get("X_EMAIL", ""),
+        password=env.get("X_PASSWORD", ""),
+        headless=headless,
+    ))
 
 
 # ─────────────────────────────────────────────────────────
 # CLI
 # ─────────────────────────────────────────────────────────
+
 if __name__ == "__main__":
     import sys
     cmd = sys.argv[1] if len(sys.argv) > 1 else "login"
@@ -493,10 +538,12 @@ if __name__ == "__main__":
 
     elif cmd == "test-thread":
         print("🧪 テストスレッド投稿（3ツイート返信チェーン）")
-        tweets = [
-            "一人暮らし始めてから、充電器の数が増えすぎた。\n\nスマホ・PC・イヤホン…気づいたら3個持ち歩いてた。\n\nGaN充電器1台に統合したら荷物が劇的に減った話。",
-            "これを選んだ理由は3つ：\n✅ 純正より30%以上コンパクト\n✅ 67Wでノート・スマホを同時充電\n✅ 出張・カフェでも恥ずかしくないデザイン\n\n参考価格: ¥2,480（通常比24%OFF想定）",
-            "Amazonで最安値を確認→",
-        ]
-        result = post_thread_sync(tweets, headless=False)
+        result = post_thread_sync(
+            tweets=[
+                "一人暮らし始めてから、充電器の数が増えすぎた。\n\nスマホ・PC・イヤホン…気づいたら3個持ち歩いてた。\n\nGaN充電器1台に統合したら荷物が劇的に減った話。",
+                "これを選んだ理由は3つ：\n✅ 純正より30%以上コンパクト\n✅ 67Wでノート・スマホを同時充電\n✅ 出張・カフェでも恥ずかしくないデザイン\n\n参考価格: ¥2,480（通常比24%OFF想定）",
+                "Amazonで最安値を確認→",
+            ],
+            headless=False,
+        )
         print(f"結果: {'成功' if result else '失敗'}")
