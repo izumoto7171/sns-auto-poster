@@ -249,9 +249,15 @@ def post_amazon_thread(thread: dict) -> bool:
     except Exception as e:
         print(f"❌ twikit スレッド投稿エラー（tweet1未投稿）: {e}")
 
-    # ブラウザフォールバック（tweet1のみ・スレッド不可）
-    print("⚠️ ブラウザフォールバック（tweet1のみ投稿）...")
-    return post_with_browser(tweet1)
+    # ブラウザフォールバック（Playwright・3ツイートスレッド対応）
+    print("⚠️ ブラウザフォールバック（Playwright スレッド投稿）...")
+    try:
+        from x_browser_poster import post_thread_sync
+        tweets = [t for t in [tweet1, tweet2, tweet3] if t]
+        return post_thread_sync(tweets)
+    except Exception as e:
+        print(f"⚠️ スレッド投稿失敗 → tweet1のみフォールバック: {e}")
+        return post_with_browser(tweet1)
 
 
 # ─────────────────────────────────────────
@@ -311,7 +317,37 @@ def post_now(force_type: str = None, test_mode: bool = False) -> bool:
             })
             return success
         else:
-            print("⚠️ Amazon商品取得失敗、通常投稿にフォールバック")
+            # 静的データで再試行（Gemini/PA-APIが使えない場合）
+            print("⚠️ Amazon商品取得失敗、静的データで再試行")
+            amazon_post = generate_amazon_product_post(force_refresh=True)
+            if amazon_post and amazon_post.get("thread"):
+                thread = amazon_post["thread"]
+                product_title = amazon_post.get("product", {}).get("title", "")
+                print(f"Amazon商品（静的）: {product_title}")
+                if test_mode:
+                    print("\n[DRY RUN] Amazonスレッド投稿プレビュー（静的）:")
+                    print("── Tweet1 ──")
+                    print(thread.get("tweet1", ""))
+                    print("── Tweet2 ──")
+                    print(thread.get("tweet2", ""))
+                    print("── Tweet3 ──")
+                    print(thread.get("tweet3", ""))
+                    success = True
+                else:
+                    success = post_amazon_thread(thread)
+                save_log({
+                    "datetime": datetime.now().isoformat(),
+                    "type":     "amazon_thread",
+                    "label":    "Amazon商品紹介（静的）",
+                    "chars":    len(thread.get("tweet1", "")),
+                    "text":     thread.get("tweet1", ""),
+                    "success":  success,
+                    "mode":     "dry_run" if test_mode else "live",
+                    "has_image": False,
+                })
+                return success
+            print("❌ Amazon商品取得完全失敗、投稿スキップ")
+            return False
 
     text = post["text"]
 
@@ -358,7 +394,7 @@ def post_now(force_type: str = None, test_mode: bool = False) -> bool:
 def run_today_schedule(test_mode: bool = False):
     """今日の4投稿スケジュールを実行"""
     schedule = get_today_schedule()
-    types_cycle = ["useful", "empathy", "useful", "trivia"]
+    types_cycle = ["product", "product", "product", "product"]
 
     print("=" * 50)
     print("今日のX投稿スケジュール")
