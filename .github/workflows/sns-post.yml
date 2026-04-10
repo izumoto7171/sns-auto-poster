@@ -4,12 +4,18 @@ on:
   schedule:
     # Amazon商品データ更新（JST 5:00 = UTC 20:00）※投稿より先に実行
     - cron: '0 20 * * *'   # JST 5:00 → 商品ローテーション
-    # 毎日 7/11/15/19/23時（JST = UTC+9）× 5投稿/日
+    # X/Bluesky/はてな/note 投稿（JST 7/11/15/19/23時）
     - cron: '0 22 * * *'   # JST 7:00
     - cron: '0 2 * * *'    # JST 11:00
     - cron: '0 6 * * *'    # JST 15:00
     - cron: '0 10 * * *'   # JST 19:00
     - cron: '0 14 * * *'   # JST 23:00
+    # ショート動画コンテンツ投稿（JST 7:45/11:45/15:45/19:45/23:45 = +45分ずらして衝突回避）
+    - cron: '45 22 * * *'  # JST 7:45
+    - cron: '45 2 * * *'   # JST 11:45
+    - cron: '45 6 * * *'   # JST 15:45
+    - cron: '45 10 * * *'  # JST 19:45
+    - cron: '45 14 * * *'  # JST 23:45
   workflow_dispatch:        # 手動実行ボタン
 
 jobs:
@@ -58,6 +64,16 @@ jobs:
     name: X (Twitter) 投稿
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # JST 5:00（商品データ更新）とtiktok専用cronでは実行しない
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'schedule' &&
+       github.event.schedule != '0 20 * * *' &&
+       github.event.schedule != '45 22 * * *' &&
+       github.event.schedule != '45 2 * * *' &&
+       github.event.schedule != '45 6 * * *' &&
+       github.event.schedule != '45 10 * * *' &&
+       github.event.schedule != '45 14 * * *')
     steps:
       - uses: actions/checkout@v5
 
@@ -98,6 +114,15 @@ jobs:
     name: Bluesky 投稿
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'schedule' &&
+       github.event.schedule != '0 20 * * *' &&
+       github.event.schedule != '45 22 * * *' &&
+       github.event.schedule != '45 2 * * *' &&
+       github.event.schedule != '45 6 * * *' &&
+       github.event.schedule != '45 10 * * *' &&
+       github.event.schedule != '45 14 * * *')
     steps:
       - uses: actions/checkout@v5
 
@@ -123,6 +148,15 @@ jobs:
     name: はてなブログ 投稿
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'schedule' &&
+       github.event.schedule != '0 20 * * *' &&
+       github.event.schedule != '45 22 * * *' &&
+       github.event.schedule != '45 2 * * *' &&
+       github.event.schedule != '45 6 * * *' &&
+       github.event.schedule != '45 10 * * *' &&
+       github.event.schedule != '45 14 * * *')
     steps:
       - uses: actions/checkout@v5
 
@@ -159,6 +193,15 @@ jobs:
     name: note 投稿
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'schedule' &&
+       github.event.schedule != '0 20 * * *' &&
+       github.event.schedule != '45 22 * * *' &&
+       github.event.schedule != '45 2 * * *' &&
+       github.event.schedule != '45 6 * * *' &&
+       github.event.schedule != '45 10 * * *' &&
+       github.event.schedule != '45 14 * * *')
     steps:
       - uses: actions/checkout@v5
 
@@ -260,6 +303,14 @@ jobs:
     name: 🎬 ショート動画コンテンツ
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # JST 7:45/11:45/15:45/19:45/23:45 専用（post-xと45分ずらして衝突回避）
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      github.event.schedule == '45 22 * * *' ||
+      github.event.schedule == '45 2 * * *' ||
+      github.event.schedule == '45 6 * * *' ||
+      github.event.schedule == '45 10 * * *' ||
+      github.event.schedule == '45 14 * * *'
     steps:
       - uses: actions/checkout@v5
 
