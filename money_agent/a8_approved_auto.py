@@ -376,12 +376,18 @@ def run(dry_run: bool = False):
     for program in new_programs[:MAX_PER_RUN]:
         print(f"\n--- {program['name']} (EPC:{program['epc']}, 報酬:{program['reward']}) ---")
 
-        # ベストリンク取得
+        # ベストリンク取得 + はてなブログ向け計測パラメータ付与（a8sid=htn_YYYYMMDD）
         affiliate_url = fetch_best_link(session, program["ins_id"])
         if not affiliate_url:
             print("  アフィリエイトリンク取得失敗。スキップ。")
             continue
+        try:
+            from tracking import add_a8_sid
+            affiliate_url = add_a8_sid(affiliate_url, "hatena")
+        except Exception as e:
+            print(f"  [tracking] パラメータ付与スキップ: {e}")
         program["affiliate_url"] = affiliate_url
+        print(f"  計測URL: {affiliate_url[:80]}...")
 
         time.sleep(2)  # A8へのリクエスト間隔
 

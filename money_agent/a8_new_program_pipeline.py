@@ -258,11 +258,62 @@ def generate_program_article(program: dict):
 
 
 import sys as _sys
+import re as _re
 _sys.path.insert(0, str(Path(__file__).parent))
 from hatena_atomapi import post as _hatena_post
 
 def post_to_hatena(article: dict, draft: bool = False):
     return _hatena_post(article, draft=draft)
+
+
+# ============================================================
+# 案件スコアリング（高単価・高成約ジャンルを優先処理）
+# ============================================================
+# ジャンル別の期待単価スコア
+_HIGH_VALUE_GENRES = ["証券", "FX", "プログラミング", "転職", "保険"]
+_MID_VALUE_GENRES  = ["英会話", "会計", "電力", "クラウド", "クレジット"]
+
+def _parse_reward(reward_str: str) -> int:
+    """報酬文字列から数値を抽出（例: '3,000円' → 3000）"""
+    if not reward_str:
+        return 0
+    nums = _re.findall(r'\d+', reward_str.replace(",", ""))
+    if not nums:
+        return 0
+    # 複数の数字がある場合は最大値（例: '500円〜3,000円' → 3000）
+    return max(int(n) for n in nums)
+
+def score_program(program: dict) -> int:
+    """
+    案件をスコアリングして優先順位を返す（高いほど優先）
+
+    スコア構成:
+      - 報酬単価: 最大50点
+      - ジャンル: 最大30点
+    """
+    score = 0
+    reward_num = _parse_reward(program.get("reward", ""))
+    genre = program.get("genre", "")
+
+    # 報酬スコア
+    if reward_num >= 10000:
+        score += 50
+    elif reward_num >= 5000:
+        score += 35
+    elif reward_num >= 3000:
+        score += 25
+    elif reward_num >= 1000:
+        score += 15
+    elif reward_num > 0:
+        score += 5
+
+    # ジャンルスコア
+    if any(g in genre for g in _HIGH_VALUE_GENRES):
+        score += 30
+    elif any(g in genre for g in _MID_VALUE_GENRES):
+        score += 15
+
+    return score
 
 
 # ============================================================
@@ -297,6 +348,14 @@ def run_pipeline(dry_run: bool = False):
     if not new_programs:
         print("新着案件なし。終了。")
         return
+
+    # スコアリングで高単価・高成約ジャンルを優先
+    for p in new_programs:
+        p["_score"] = score_program(p)
+    new_programs.sort(key=lambda p: p["_score"], reverse=True)
+    print("案件優先順位（スコア降順）:")
+    for p in new_programs[:MAX_POSTS_PER_RUN]:
+        print(f"  [{p['_score']:3d}点] {p['name'][:30]} ({p['genre']}) 報酬:{p.get('reward','不明')}")
 
     # 最大MAX_POSTS_PER_RUN件処理
     processed = 0

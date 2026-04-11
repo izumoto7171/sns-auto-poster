@@ -82,18 +82,85 @@ def enforce_disclosure(tweet3: str, amazon_url: str = "") -> str:
     """
     tweet3（リンクツイート）に #PR・Associate開示・アフィリエイトURLが
     含まれているか確認し、なければ強制付加する。投稿前に必ず通す。
+
+    出力形式（固定順序）:
+      [誘導文]
+      [AmazonURL]（必ずURLのみの行、前後に余分なテキストを挟まない）
+      #PR
+      ※Amazonアソシエイトに参加しています
     """
-    # URLが存在し、かつ tweet3 にリンクが含まれていない場合は強制挿入
-    if amazon_url and "http" not in tweet3:
-        tweet3 = f"詳細はこちら→ {_normalize_url(amazon_url)}\n" + tweet3.lstrip()
+    import re
 
-    if DISCLOSURE_REQUIRED not in tweet3:
-        tweet3 = tweet3.rstrip() + f"\n{DISCLOSURE_REQUIRED}"
+    # URLを正規化（スペース・改行混入を除去）
+    safe_url = _normalize_url(amazon_url) if amazon_url else ""
 
-    if ASSOCIATE_DISCLOSURE not in tweet3:
-        tweet3 = tweet3.rstrip() + f"\n{ASSOCIATE_DISCLOSURE}"
+    # tweet3 からURLを一旦除去して本文部分だけ取り出す
+    body = re.sub(r'https?://\S+', '', tweet3).strip()
+    # #PR / 開示文も除去（後で付け直す）
+    body = body.replace(DISCLOSURE_REQUIRED, "").replace(ASSOCIATE_DISCLOSURE, "").strip()
 
-    return tweet3
+    # 組み立て直す（URL→#PR→開示 の固定順序）
+    parts = []
+    if body:
+        parts.append(body)
+    if safe_url:
+        parts.append(safe_url)
+    parts.append(DISCLOSURE_REQUIRED)
+    parts.append(ASSOCIATE_DISCLOSURE)
+
+    result = "\n".join(parts)
+
+    # 280単位超の場合は本文を削ってURLを守る
+    if _x_units(result) > 280:
+        max_body_units = 280 - _x_units(
+            f"{safe_url}\n{DISCLOSURE_REQUIRED}\n{ASSOCIATE_DISCLOSURE}"
+        ) - 1  # \n 分
+        if max_body_units > 0 and body:
+            trimmed = body[:max_body_units - 1] + "…"
+            parts[0] = trimmed
+            result = "\n".join(parts)
+        else:
+            # 本文なしでURL+開示だけ
+            parts = [safe_url, DISCLOSURE_REQUIRED, ASSOCIATE_DISCLOSURE]
+            result = "\n".join(p for p in parts if p)
+
+    return result
+
+
+def _x_units(text: str) -> int:
+    """
+    X（Twitter）の文字単位数を計算する。
+    - CJK・全角 = 2単位
+    - URL（http/https）= 23単位（t.co短縮後の固定値）
+    - その他 ASCII = 1単位
+    """
+    import re
+    # URLを23単位のプレースホルダーに置換してからカウント
+    url_placeholder = "\x00" * 23  # 23個のnull文字（各1単位）
+    normalized = re.sub(r'https?://\S+', url_placeholder, text)
+
+    count = 0
+    for ch in normalized:
+        cp = ord(ch)
+        if (0x1100 <= cp <= 0x115F or
+            0x2E80 <= cp <= 0x9FFF or
+            0xA000 <= cp <= 0xA4CF or
+            0xA960 <= cp <= 0xA97F or
+            0xAC00 <= cp <= 0xD7FF or
+            0xF900 <= cp <= 0xFAFF or
+            0xFE10 <= cp <= 0xFE1F or
+            0xFE30 <= cp <= 0xFE6F or
+            0xFF00 <= cp <= 0xFF60 or
+            0xFFE0 <= cp <= 0xFFE6 or
+            0x20000 <= cp <= 0x2A6DF or
+            0x2A700 <= cp <= 0x2CEAF or
+            0x2CEB0 <= cp <= 0x2EBEF or
+            0x2F800 <= cp <= 0x2FA1F or
+            0x30000 <= cp <= 0x3134F):
+            count += 2
+        else:
+            count += 1
+    return count
 
 
 def validate_thread(thread: dict) -> list:
@@ -115,10 +182,11 @@ def validate_thread(thread: dict) -> list:
     if DISCLOSURE_REQUIRED not in t3:
         warnings.append(f"❌ tweet3に{DISCLOSURE_REQUIRED}がありません（景表法違反リスク）")
 
-    # 文字数チェック
+    # 文字数チェック（X単位: URL=23、CJK=2、ASCII=1）
     for key in ("tweet1", "tweet2", "tweet3"):
-        if len(thread.get(key, "")) > 280:
-            warnings.append(f"❌ {key}が280文字を超えています")
+        units = _x_units(thread.get(key, ""))
+        if units > 280:
+            warnings.append(f"❌ {key}が280単位を超えています（{units}単位）")
 
     return warnings
 
@@ -207,6 +275,16 @@ def generate_thread(product: dict, optimized_instruction: str = None) -> dict:
         optimized_instruction = generate_optimized_instruction()
 
     amazon_url = product.get("amazon_url", "")
+    # X投稿向け計測パラメータ付与（sub1=x_YYYYMMDD）
+    try:
+        import sys as _sys_gt
+        import os as _os_gt
+        _sys_gt.path.insert(0, _os_gt.path.join(_os_gt.path.dirname(__file__), "..", "money_agent"))
+        from tracking import add_amazon_sub
+        amazon_url = add_amazon_sub(amazon_url, "x")
+    except Exception:
+        pass  # 計測パラメータ付与に失敗しても投稿は継続
+
     api_key = os.getenv("GEMINI_API_KEY")
     if api_key:
         thread = _generate_with_gemini(product, api_key, optimized_instruction)
@@ -338,11 +416,11 @@ def _generate_from_template(product: dict) -> dict:
     tweet2 = f"■ {title[:40]}\n{feature_lines}\n\n価格: {price}{discount_text}\n今がチャンスかも。"
     tweet3 = f"詳細はこちら→ {_normalize_url(url)}\n#PR"
 
-    # 文字数チェック・トリム
-    if len(tweet1) > 140:
-        tweet1 = tweet1[:137] + "..."
-    if len(tweet2) > 140:
-        tweet2 = tweet2[:137] + "..."
+    # 文字数チェック・トリム（X単位: CJK=2、URL=23、ASCII=1）
+    if _x_units(tweet1) > 280:
+        tweet1 = tweet1[:130] + "..."
+    if _x_units(tweet2) > 280:
+        tweet2 = tweet2[:130] + "..."
 
     return {"tweet1": tweet1, "tweet2": tweet2, "tweet3": tweet3}
 

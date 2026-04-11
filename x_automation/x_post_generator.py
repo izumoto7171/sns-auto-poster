@@ -14,10 +14,11 @@ from datetime import datetime, timedelta
 # 投稿タイプの定義と重み
 # ─────────────────────────────────────────
 POST_TYPES = [
-    {"type": "useful",   "label": "役立つ情報",   "weight": 25},
-    {"type": "empathy",  "label": "共感・体験",   "weight": 10},
-    {"type": "trivia",   "label": "雑学・ネタ",   "weight": 10},
-    {"type": "product",  "label": "Amazon商品紹介", "weight": 55},
+    {"type": "useful",    "label": "役立つ情報",     "weight": 20},
+    {"type": "empathy",   "label": "共感・体験",     "weight": 10},
+    {"type": "trivia",    "label": "雑学・ネタ",     "weight": 10},
+    {"type": "product",   "label": "Amazon商品紹介", "weight": 50},
+    {"type": "progress",  "label": "収益進捗ログ",   "weight": 10},
 ]
 
 # ─────────────────────────────────────────
@@ -35,10 +36,11 @@ TIME_SLOTS = [
 # 検索流入とインプレッションを増やす
 # ─────────────────────────────────────────
 HASHTAGS_BY_TYPE = {
-    "useful":  ["#副業", "#AI活用", "#ライフハック"],
-    "empathy": ["#副業", "#フリーランス", "#副業初心者"],
-    "trivia":  ["#AI", "#雑学", "#テクノロジー"],
-    "product": ["#副業", "#アフィリエイト", "#AI副業"],
+    "useful":    ["#副業", "#AI活用", "#ライフハック"],
+    "empathy":   ["#副業", "#フリーランス", "#副業初心者"],
+    "trivia":    ["#AI", "#雑学", "#テクノロジー"],
+    "product":   ["#副業", "#アフィリエイト", "#AI副業"],
+    "progress":  ["#副業", "#BuildInPublic", "#AI副業"],
 }
 
 # エンゲージメントCTA（ランダムで末尾に追加）
@@ -192,6 +194,20 @@ TEMPLATES = {
             "summary": "情報格差を埋めるだけで変わります",
         },
     ],
+    "progress": [
+        {
+            "hook":    "【収益ログ】AI自動投稿を動かして今月の記録。",
+            "empathy": "正直、最初は全然成果が出なかった。",
+            "solution": "記事数：積み上げ中\nSNS投稿：毎日自動稼働中\n\n数字はまだ小さいけど、仕組みは確実に育ってる。",
+            "summary": "引き続きここで公開します",
+        },
+        {
+            "hook":    "AIで副業を自動化して◯日目。正直な途中経過を報告します。",
+            "empathy": "「稼げてる？」ってよく聞かれるので答える。",
+            "solution": "Gemini APIで記事自動生成 → はてなブログに投稿\nSNS自動投稿 × 5プラットフォーム\n\nまだ収益は育成中。でも仕組みは動いてる。",
+            "summary": "次の報告もここで",
+        },
+    ],
 }
 
 
@@ -229,6 +245,26 @@ def generate_with_template(post_type: str) -> str:
     return append_hashtags(text, post_type)
 
 
+def _load_progress_stats() -> dict:
+    """
+    money_agent/agent_state.json から実際の稼働データを読み込む。
+    ファイルが存在しない場合は空のデフォルト値を返す。
+    """
+    try:
+        state_path = os.path.join(
+            os.path.dirname(__file__), "..", "money_agent", "agent_state.json"
+        )
+        with open(state_path, encoding="utf-8") as f:
+            state = json.load(f)
+        return {
+            "total_articles": state.get("total_articles", 0),
+            "today_articles": state.get("today_articles", 0),
+            "last_run": state.get("last_run", "")[:10],
+        }
+    except Exception:
+        return {"total_articles": 0, "today_articles": 0, "last_run": ""}
+
+
 def generate_with_gemini(post_type: str, label: str, api_key: str) -> str:
     """Gemini APIで投稿文を生成（バイラルフック強化版）"""
     try:
@@ -237,17 +273,30 @@ def generate_with_gemini(post_type: str, label: str, api_key: str) -> str:
         hook_pattern = random.choice(VIRAL_HOOK_PATTERNS)
         cta = random.choice(ENGAGEMENT_CTAS)
 
+        # progress タイプは実数を注入してリアリティを出す
+        progress_context = ""
+        if post_type == "progress":
+            stats = _load_progress_stats()
+            progress_context = f"""
+【実際の稼働データ（これをそのまま使って投稿文を作る）】
+・累計記事数: {stats['total_articles']}記事
+・今日の記事数: {stats['today_articles']}記事
+・最終実行日: {stats['last_run']}
+・SNS自動投稿: X/Bluesky/はてな/note で毎日稼働中
+"""
+
         type_instructions = {
-            "useful":  "AI副業・時短・節約・生産性向上などに関する役立つ情報投稿",
-            "empathy": "副業や生活改善での失敗談・体験談・共感を呼ぶ投稿",
-            "trivia":  "AI・テクノロジー・お金に関する意外な雑学・ネタ投稿",
-            "product": "AIツールや副業サービスを体験談・比較として自然に紹介する投稿（直接的な広告表現は禁止）",
+            "useful":    "AI副業・時短・節約・生産性向上などに関する役立つ情報投稿",
+            "empathy":   "副業や生活改善での失敗談・体験談・共感を呼ぶ投稿",
+            "trivia":    "AI・テクノロジー・お金に関する意外な雑学・ネタ投稿",
+            "product":   "AIツールや副業サービスを体験談・比較として自然に紹介する投稿（直接的な広告表現は禁止）",
+            "progress":  "AI副業の『現在進行形の検証ログ』。上記の実際の数字を使って、試行錯誤の過程をリアルに書く。成功だけでなく課題も正直に書く。",
         }
 
         client = genai.Client(api_key=api_key)
         prompt = f"""
 あなたはX（Twitter）で副業・AI・ライフハック情報を発信するインフルエンサーです。
-
+{progress_context}
 【投稿タイプ】{label}（{type_instructions[post_type]}）
 
 【バイラルフックの参考パターン（そのまま使わずアレンジする）】
