@@ -1,0 +1,88 @@
+name: 商品監視パイプライン（Amazon × A8）
+
+on:
+  schedule:
+    # JST 9:00（UTC 0:00）と JST 21:00（UTC 12:00）の1日2回実行
+    - cron: '0 0 * * *'
+    - cron: '0 12 * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: '実行モード'
+        required: false
+        default: 'auto'
+        type: choice
+        options:
+          - auto       # Amazon + A8 両方
+          - amazon     # Amazon のみ
+          - a8         # A8 のみ
+          - dry_run    # 投稿なし（下書き保存）
+
+permissions:
+  contents: write
+
+jobs:
+  product-watcher:
+    name: 商品監視 記事生成 → はてなブログ投稿
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Python セットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 依存関係インストール
+        run: pip install anthropic requests beautifulsoup4
+
+      - name: 実行モード判定
+        id: mode
+        run: |
+          MODE="${{ github.event.inputs.mode }}"
+          if [ -z "$MODE" ] || [ "$MODE" = "auto" ]; then
+            echo "args=" >> $GITHUB_OUTPUT
+          elif [ "$MODE" = "dry_run" ]; then
+            echo "args=dry-run" >> $GITHUB_OUTPUT
+          else
+            echo "args=$MODE" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 商品監視 + 記事生成 + はてな投稿
+        env:
+          ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
+          AMAZON_ASSOCIATE_TAG: ${{ secrets.AMAZON_ASSOCIATE_TAG }}
+          # Amazon PA-API（オプション：取得していれば設定）
+          AMAZON_ACCESS_KEY:   ${{ secrets.AMAZON_ACCESS_KEY }}
+          AMAZON_SECRET_KEY:   ${{ secrets.AMAZON_SECRET_KEY }}
+          # A8.net
+          A8_MEDIA_ID:         ${{ secrets.A8_MEDIA_ID }}
+          A8_PASSWORD:         ${{ secrets.A8_PASSWORD }}
+          # はてなブログ
+          HATENA_ID:           ${{ secrets.HATENA_ID }}
+          HATENA_BLOG_ID:      ${{ secrets.HATENA_BLOG_ID }}
+          HATENA_API_KEY:      ${{ secrets.HATENA_API_KEY }}
+        run: |
+          ARGS="${{ steps.mode.outputs.args }}"
+          if [ -n "$ARGS" ]; then
+            python3 money_agent/product_watcher.py $ARGS
+          else
+            python3 money_agent/product_watcher.py
+          fi
+
+      - name: 処理済みリスト & 下書きをコミット
+        if: always()
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add \
+            money_agent/seen_amazon.json \
+            money_agent/seen_a8_approved.json \
+            money_agent/pending/ \
+            || true
+          git diff --staged --quiet \
+            || git commit -m "chore: 商品監視パイプライン $(date +'%Y-%m-%d %H:%M')"
+          git pull --rebase origin main && git push || true
