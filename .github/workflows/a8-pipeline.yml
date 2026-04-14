@@ -51,7 +51,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: money_agent/gemini_cache.json
-          key: ${{ runner.os }}-gemini-cache-${{ hashFiles('**/gemini_cache.json') }}
+          key: ${{ runner.os }}-gemini-cache-${{ github.run_id }}
           restore-keys: |
             ${{ runner.os }}-gemini-cache-
 
@@ -109,7 +109,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: money_agent/gemini_cache.json
-          key: ${{ runner.os }}-gemini-cache-${{ hashFiles('**/gemini_cache.json') }}
+          key: ${{ runner.os }}-gemini-cache-${{ github.run_id }}
           restore-keys: |
             ${{ runner.os }}-gemini-cache-
 
