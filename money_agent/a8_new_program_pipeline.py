@@ -53,17 +53,43 @@ HEADERS = {
 
 # ============================================================
 # 見込み高単価ジャンル（優先的に取得・記事化）
+# Search Console の実績から「DX・クラウド会計・バックオフィス」を上位に昇格
 # ============================================================
 TARGET_GENRES = [
-    {"genre": "クレジットカード", "min_reward": 3000, "kw": "クレジットカード おすすめ"},
-    {"genre": "証券・FX", "min_reward": 5000, "kw": "証券口座 開設 おすすめ"},
-    {"genre": "プログラミングスクール", "min_reward": 8000, "kw": "プログラミングスクール 比較"},
-    {"genre": "英会話", "min_reward": 3000, "kw": "英会話オンライン おすすめ"},
-    {"genre": "転職", "min_reward": 5000, "kw": "転職エージェント おすすめ"},
-    {"genre": "動画配信", "min_reward": 1000, "kw": "VOD 動画配信 比較"},
-    {"genre": "クラウド会計", "min_reward": 3000, "kw": "クラウド会計 比較"},
-    {"genre": "電力", "min_reward": 2000, "kw": "電力会社 乗り換え"},
+    # ── 優先1: Search Console で伸びているジャンル（実績あり）──────────
+    {"genre": "クラウド会計",       "min_reward": 3000, "kw": "クラウド会計 比較 中小企業",   "priority": 10},
+    {"genre": "DX・業務効率化",     "min_reward": 5000, "kw": "DX ツール おすすめ 中小企業", "priority": 10},
+    {"genre": "バックオフィスSaaS", "min_reward": 5000, "kw": "バックオフィス 効率化 ツール", "priority": 10},
+    # ── 優先2: 高単価ジャンル ─────────────────────────────────────────
+    {"genre": "証券・FX",           "min_reward": 5000, "kw": "証券口座 開設 おすすめ",       "priority": 8},
+    {"genre": "プログラミングスクール", "min_reward": 8000, "kw": "プログラミングスクール 比較", "priority": 8},
+    {"genre": "転職",               "min_reward": 5000, "kw": "転職エージェント おすすめ",     "priority": 7},
+    # ── 優先3: 安定ジャンル ───────────────────────────────────────────
+    {"genre": "クレジットカード",   "min_reward": 3000, "kw": "クレジットカード おすすめ",     "priority": 5},
+    {"genre": "英会話",             "min_reward": 3000, "kw": "英会話オンライン おすすめ",     "priority": 5},
+    {"genre": "動画配信",           "min_reward": 1000, "kw": "VOD 動画配信 比較",             "priority": 3},
+    {"genre": "電力",               "min_reward": 2000, "kw": "電力会社 乗り換え",             "priority": 3},
 ]
+
+# ============================================================
+# Search Console の好調クエリ（記事生成プロンプトに動的注入）
+# ============================================================
+def _load_sc_top_keywords(max_kw: int = 5) -> list[str]:
+    """
+    search_console_analysis.json からクリック数上位のクエリを取得。
+    記事生成時のプロンプトに差し込んで、検索需要のある表現を使わせる。
+    """
+    sc_path = Path(__file__).parent / "search_console_analysis.json"
+    if not sc_path.exists():
+        return []
+    try:
+        data = json.loads(sc_path.read_text(encoding="utf-8"))
+        queries = data.get("top_queries", [])
+        # クリック数降順で上位 max_kw 件
+        sorted_q = sorted(queries, key=lambda x: x.get("clicks", 0), reverse=True)
+        return [q["query"] for q in sorted_q[:max_kw]]
+    except Exception:
+        return []
 
 
 # ============================================================
@@ -190,23 +216,35 @@ def fetch_programs_via_ddg(limit: int = 15):
 # Gemini API で紹介記事を生成
 # ============================================================
 def generate_program_article(program: dict):
-    """A8.net案件情報をもとにGeminiで紹介記事を生成"""
-    api_key = os.environ.get("GEMINI_API_KEY", "")
-    if not api_key:
-        print("[Gemini] GEMINI_API_KEY未設定")
-        return None
-
+    """A8.net案件情報をもとにGeminiで紹介記事を生成（SC キーワード動的注入）"""
     try:
-        from google import genai
-        client = genai.Client(api_key=api_key)
+        from money_agent.gemini_client import generate as gemini_generate, strip_code_block
+    except ImportError:
+        # パスが通っていない環境用フォールバック
+        _sys.path.insert(0, str(Path(__file__).parent))
+        try:
+            from gemini_client import generate as gemini_generate, strip_code_block
+        except ImportError:
+            print("[Gemini] gemini_client未インポート")
+            return None
 
-        genre = program.get("genre", "")
-        name = program.get("name", "")
-        reward = program.get("reward", "")
-        desc = program.get("description", "")
-        year = datetime.now().year
+    genre  = program.get("genre", "")
+    name   = program.get("name", "")
+    reward = program.get("reward", "")
+    desc   = program.get("description", "")
+    year   = datetime.now().year
 
-        prompt = f"""あなたはアフィリエイトブログの専門ライターです。
+    # Search Console 上位クエリを動的に注入（SEO 親和性を高める）
+    sc_keywords = _load_sc_top_keywords(max_kw=5)
+    sc_kw_section = ""
+    if sc_keywords:
+        kw_list = "\n".join(f"  - {kw}" for kw in sc_keywords)
+        sc_kw_section = f"""
+【Search Console で検索需要が実証されているキーワード（記事中に自然な形で使用すること）】
+{kw_list}
+"""
+
+    prompt = f"""あなたはアフィリエイトブログの専門ライターです。
 以下のA8.net新着プログラムを紹介するSEO最適化記事を書いてください。
 
 【案件情報】
@@ -214,7 +252,7 @@ def generate_program_article(program: dict):
 - ジャンル: {genre}
 - 報酬: {reward}
 - 概要: {desc}
-
+{sc_kw_section}
 【記事要件】
 - 文字数: 2000〜3000文字
 - 対象読者: 副業・節約に興味があるサラリーマン・主婦
@@ -234,26 +272,21 @@ def generate_program_article(program: dict):
   "body": "本文（Markdown）"
 }}"""
 
-        resp = client.models.generate_content(
-            model="gemini-2.0-flash-lite",
-            contents=prompt,
-        )
-        text = resp.text.strip()
-        # コードブロック除去
-        if text.startswith("```"):
-            text = text.split("```", 2)[1]
-            if text.startswith("json"):
-                text = text[4:]
-            text = text.rsplit("```", 1)[0]
+    # 記事は毎回新鮮な内容（キャッシュなし）、バックオフ込み
+    raw = gemini_generate(prompt, use_cache=False)
+    if not raw:
+        print(f"[Gemini] 記事生成失敗 ({name})")
+        return None
 
-        article = json.loads(text.strip())
-        article["program_id"] = program["id"]
+    try:
+        text = strip_code_block(raw)
+        article = json.loads(text)
+        article["program_id"]   = program["id"]
         article["program_name"] = name
         article["generated_at"] = datetime.now().isoformat()
         return article
-
     except Exception as e:
-        print(f"[Gemini] 記事生成エラー ({program.get('name', '')}): {e}")
+        print(f"[Gemini] JSONパースエラー ({name}): {e}")
         return None
 
 
@@ -267,10 +300,13 @@ def post_to_hatena(article: dict, draft: bool = False):
 
 
 # ============================================================
-# 案件スコアリング（高単価・高成約ジャンルを優先処理）
+# 案件スコアリング（高単価・高成約 + Search Console実績ジャンルを優先）
 # ============================================================
-# ジャンル別の期待単価スコア
+# Search Console で伸びているジャンル（最優先）
+_SC_WINNING_GENRES = ["クラウド会計", "DX", "バックオフィス", "SaaS", "業務効率", "freee", "マネーフォワード", "Chatwork"]
+# 高単価ジャンル
 _HIGH_VALUE_GENRES = ["証券", "FX", "プログラミング", "転職", "保険"]
+# 中単価ジャンル
 _MID_VALUE_GENRES  = ["英会話", "会計", "電力", "クラウド", "クレジット"]
 
 def _parse_reward(reward_str: str) -> int:
@@ -280,7 +316,6 @@ def _parse_reward(reward_str: str) -> int:
     nums = _re.findall(r'\d+', reward_str.replace(",", ""))
     if not nums:
         return 0
-    # 複数の数字がある場合は最大値（例: '500円〜3,000円' → 3000）
     return max(int(n) for n in nums)
 
 def score_program(program: dict) -> int:
@@ -288,12 +323,17 @@ def score_program(program: dict) -> int:
     案件をスコアリングして優先順位を返す（高いほど優先）
 
     スコア構成:
-      - 報酬単価: 最大50点
-      - ジャンル: 最大30点
+      - 報酬単価:             最大50点
+      - SC実績ジャンル:       +40点（freee/マネーフォワード/DX系 = 検索需要が実証済み）
+      - 高単価ジャンル:       +30点
+      - 中単価ジャンル:       +15点
+      - ジャンル優先度:       最大+10点（TARGET_GENRES の priority 値）
     """
     score = 0
     reward_num = _parse_reward(program.get("reward", ""))
-    genre = program.get("genre", "")
+    genre      = program.get("genre", "")
+    name       = program.get("name", "")
+    combined   = genre + name  # ジャンル名と案件名の両方で判定
 
     # 報酬スコア
     if reward_num >= 10000:
@@ -307,11 +347,19 @@ def score_program(program: dict) -> int:
     elif reward_num > 0:
         score += 5
 
-    # ジャンルスコア
-    if any(g in genre for g in _HIGH_VALUE_GENRES):
+    # ジャンルスコア（Search Console 実績優先）
+    if any(g in combined for g in _SC_WINNING_GENRES):
+        score += 40  # SC で伸びているジャンルを最優先
+    elif any(g in combined for g in _HIGH_VALUE_GENRES):
         score += 30
-    elif any(g in genre for g in _MID_VALUE_GENRES):
+    elif any(g in combined for g in _MID_VALUE_GENRES):
         score += 15
+
+    # TARGET_GENRES の priority 値を加算
+    for tg in TARGET_GENRES:
+        if tg["genre"] in combined:
+            score += tg.get("priority", 0)
+            break
 
     return score
 
@@ -330,8 +378,9 @@ def run_pipeline(dry_run: bool = False):
     # 案件取得
     all_programs = []
 
-    # ① A8.net スクレイピング（各ジャンルから取得）
-    for genre_info in TARGET_GENRES[:4]:  # 1実行4ジャンルまで
+    # ① A8.net スクレイピング（priority 降順で上位4ジャンルを処理）
+    sorted_genres = sorted(TARGET_GENRES, key=lambda x: x.get("priority", 0), reverse=True)
+    for genre_info in sorted_genres[:4]:  # 1実行4ジャンルまで
         programs = fetch_a8_new_programs(genre_info["genre"], limit=5)
         all_programs.extend(programs)
         time.sleep(2)  # リクエスト間隔
