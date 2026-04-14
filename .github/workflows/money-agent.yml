@@ -66,6 +66,15 @@ jobs:
         run: |
           python3 money_agent/ceo_agent.py run-auto
 
+      - name: 比較クエリ記事へ比較表・選定ガイドを挿入
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          HATENA_ID: ${{ secrets.HATENA_ID }}
+          HATENA_BLOG_ID: ${{ secrets.HATENA_BLOG_ID }}
+          HATENA_API_KEY: ${{ secrets.HATENA_API_KEY }}
+        run: |
+          python3 money_agent/hatena_editor.py
+
       - name: ステート変更をコミット
         if: always()
         run: |
