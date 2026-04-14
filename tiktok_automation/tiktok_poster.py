@@ -45,7 +45,6 @@ def post_to_bluesky(text: str) -> bool:
 
 def post_to_x(text: str) -> bool:
     try:
-        import asyncio
         from twikit import Client
 
         cookies_path = Path(__file__).parent.parent / "x_automation" / "x_cookies.json"
@@ -61,18 +60,15 @@ def post_to_x(text: str) -> bool:
             print("⚠️ X Cookieなし、スキップ")
             return False
 
-        # 140文字制限（URL含む）
+        # 270文字制限
         if len(text) > 270:
             text = text[:267] + "..."
 
-        async def _post():
-            client = Client("ja")
-            client.load_cookies(str(cookies_path))
-            tweet = await client.create_tweet(text=text)
-            return tweet.id
-
-        tweet_id = asyncio.run(_post())
-        print(f"✅ X投稿成功 (ID: {tweet_id})")
+        # twikit 1.x は同期API（awaitは不要）
+        client = Client("ja")
+        client.load_cookies(str(cookies_path))
+        tweet = client.create_tweet(text=text)
+        print(f"✅ X投稿成功 (ID: {tweet.id})")
         return True
     except Exception as e:
         print(f"❌ X投稿エラー: {e}")

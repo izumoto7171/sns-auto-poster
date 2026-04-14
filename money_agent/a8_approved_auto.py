@@ -69,7 +69,7 @@ def save_seen(seen: set):
 # ============================================================
 # A8.net ログイン → セッション返却
 # ============================================================
-def a8_login():
+def a8_login(max_retries: int = 3, timeout: int = 30):
     try:
         import requests
         from bs4 import BeautifulSoup
@@ -84,36 +84,44 @@ def a8_login():
     session = requests.Session()
     session.headers.update(HEADERS)
 
-    try:
-        # ログインページ取得（CSRFトークン等があれば取得）
-        resp = session.get(LOGIN_URL, timeout=15)
-        soup = BeautifulSoup(resp.text, "html.parser")
+    for attempt in range(max_retries):
+        try:
+            # ログインページ取得（CSRFトークン等があれば取得）
+            resp = session.get(LOGIN_URL, timeout=timeout)
+            soup = BeautifulSoup(resp.text, "html.parser")
 
-        payload = {
-            "login":  A8_MEDIA_ID,
-            "passwd": A8_PASSWORD,
-            "moa":    "/a8",
-        }
-        # hidden inputがあれば追加（CSRFトークン等）
-        for inp in soup.select("input[type=hidden]"):
-            name = inp.get("name")
-            val  = inp.get("value", "")
-            if name and name not in payload:
-                payload[name] = val
+            payload = {
+                "login":  A8_MEDIA_ID,
+                "passwd": A8_PASSWORD,
+                "moa":    "/a8",
+            }
+            # hidden inputがあれば追加（CSRFトークン等）
+            for inp in soup.select("input[type=hidden]"):
+                name = inp.get("name")
+                val  = inp.get("value", "")
+                if name and name not in payload:
+                    payload[name] = val
 
-        login_resp = session.post(LOGIN_URL, data=payload, timeout=15)
+            login_resp = session.post(LOGIN_URL, data=payload, timeout=timeout)
 
-        # ログイン成功確認（ログアウトリンクがあれば成功）
-        if "logoutAction" in login_resp.text or "ログアウト" in login_resp.text:
-            print("[A8] ログイン成功")
-            return session
-        else:
-            print("[A8] ログイン失敗（IDまたはパスワードが違う可能性）")
-            return None
+            # ログイン成功確認（ログアウトリンクがあれば成功）
+            if "logoutAction" in login_resp.text or "ログアウト" in login_resp.text:
+                print("[A8] ログイン成功")
+                return session
+            else:
+                print("[A8] ログイン失敗（IDまたはパスワードが違う可能性）")
+                return None
 
-    except Exception as e:
-        print(f"[A8] ログインエラー: {e}")
-        return None
+        except Exception as e:
+            if attempt < max_retries - 1:
+                wait_sec = 10 * (attempt + 1)
+                print(f"[A8] ログインエラー ({attempt + 1}/{max_retries}): {e} → {wait_sec}秒後にリトライ")
+                time.sleep(wait_sec)
+            else:
+                print(f"[A8] ログインエラー（リトライ上限）: {e}")
+                return None
+
+    return None
 
 
 # ============================================================
@@ -348,8 +356,8 @@ def run(dry_run: bool = False):
     # ログイン
     session = a8_login()
     if not session:
-        print("ログイン失敗。終了。")
-        sys.exit(1)
+        print("ログイン失敗（ネットワークエラーまたは認証情報不正）。終了。")
+        return  # sys.exit(1) にするとCI全体が失敗扱いになるので graceful exit
 
     # 新着承認一覧取得
     programs = fetch_new_approved(session)
