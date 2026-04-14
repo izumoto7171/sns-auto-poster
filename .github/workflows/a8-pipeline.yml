@@ -47,6 +47,14 @@ jobs:
       - name: 依存関係インストール
         run: pip install google-genai requests beautifulsoup4 duckduckgo_search
 
+      - name: Gemini JSONキャッシュ復元
+        uses: actions/cache@v5
+        with:
+          path: money_agent/gemini_cache.json
+          key: ${{ runner.os }}-gemini-cache-${{ hashFiles('**/gemini_cache.json') }}
+          restore-keys: |
+            ${{ runner.os }}-gemini-cache-
+
       - name: A8新着案件パイプライン実行
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -96,6 +104,14 @@ jobs:
 
       - name: 依存関係インストール
         run: pip install google-genai requests beautifulsoup4
+
+      - name: Gemini JSONキャッシュ復元
+        uses: actions/cache@v5
+        with:
+          path: money_agent/gemini_cache.json
+          key: ${{ runner.os }}-gemini-cache-${{ hashFiles('**/gemini_cache.json') }}
+          restore-keys: |
+            ${{ runner.os }}-gemini-cache-
 
       - name: 承認済みプログラム記事生成・投稿
         env:
