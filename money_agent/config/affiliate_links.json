@@ -1,6 +1,7 @@
 {
-  "_version": 1,
-  "_note": "A8.net提携承認後、URLをここだけ書き換えれば全記事に自動反映される",
+  "_version": 2,
+  "_note": "A8.net提携承認後 / 楽天アフィリエイト登録後、URLをここだけ書き換えれば全記事に自動反映される",
+  "_rakuten_note": "楽天アフィリエイトはAPI経由で商品ごとに自動生成（affiliateUrl）。ここでは固定リンクのみ管理",
   "_update_tool": "python3 money_agent/config/update_affiliate.py <program_id> <new_url>",
   "freee_accounting": {
     "url": "https://px.a8.net/svt/ejp?a8mat=3Z1234+FREEE1+0000+0000A",
@@ -66,5 +67,20 @@
     "url": "https://www.lancers.jp/",
     "status": "rejected",
     "note": "A8.net申請→見送り（2026-04-01）。直リンクのまま維持"
+  },
+  "rakuten_ichiba": {
+    "url": "https://www.rakuten.co.jp/",
+    "status": "pending",
+    "note": "楽天アフィリエイト登録後、RAKUTEN_AFFILIATE_IDをGitHub Secretsに設定。商品リンクはAPIが自動生成（affiliateUrl）"
+  },
+  "rakuten_travel": {
+    "url": "https://travel.rakuten.co.jp/",
+    "status": "pending",
+    "note": "楽天アフィリエイト（旅行）。登録後にURLを更新"
+  },
+  "rakuten_books": {
+    "url": "https://books.rakuten.co.jp/",
+    "status": "pending",
+    "note": "楽天ブックス。登録後にURLを更新"
   }
 }

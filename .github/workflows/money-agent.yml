@@ -117,3 +117,43 @@ jobs:
           git add money_agent/dynamic_keywords.json || true
           git diff --staged --quiet || git commit -m "chore: トレンドキーワード自動更新 $(date +'%Y-%m-%d')"
           git pull --rebase origin main && git push || true
+
+  # ============================================================
+  # 🛒 楽天アフィリエイト記事生成（週3回 月水金 JST 4:00）
+  # ============================================================
+  rakuten-affiliate:
+    name: 🛒 楽天アフィリエイト記事
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # RAKUTEN_APP_IDが設定されていない場合はスキップ（空secretはCI環境でも渡ってくるため実行時チェック）
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Python セットアップ
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 依存関係インストール
+        run: pip install google-genai python-dotenv requests
+
+      - name: 楽天アフィリエイト記事生成
+        env:
+          GEMINI_API_KEY:       ${{ secrets.GEMINI_API_KEY }}
+          RAKUTEN_APP_ID:       ${{ secrets.RAKUTEN_APP_ID }}
+          RAKUTEN_AFFILIATE_ID: ${{ secrets.RAKUTEN_AFFILIATE_ID }}
+          HATENA_ID:            ${{ secrets.HATENA_ID }}
+          HATENA_BLOG_ID:       ${{ secrets.HATENA_BLOG_ID }}
+          HATENA_API_KEY:       ${{ secrets.HATENA_API_KEY }}
+        run: |
+          python3 money_agent/rakuten_product_article.py --count 2
+
+      - name: ログをコミット
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add money_agent/rakuten_article_log.json money_agent/hatena_drafts/ || true
+          git diff --staged --quiet || git commit -m "chore: 楽天アフィリエイト記事更新 $(date +'%Y-%m-%d')"
+          git pull --rebase origin main && git push || true
