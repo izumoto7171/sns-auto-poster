@@ -539,6 +539,19 @@ def generate_rakuten_article(theme: dict, api_key: str) -> dict:
 - Markdownのみ出力（前置き不要）"""
 
         body = gemini_generate(prompt, temperature=0.75) or ""
+
+        # Gemini失敗時はモック記事にフォールバック
+        if not body.strip():
+            year = datetime.now().year
+            lines = [f"# {topic}\n"]
+            lines.append(f"楽天市場で{category['name']}の人気商品を調べてみました。\n")
+            for i, p in enumerate(products[:5], 1):
+                lines.append(f"## {i}位: {p['name'][:40]}")
+                lines.append(f"**価格**: {p['price']}円 / **レビュー**: {p['review_count']}件({p['review_avg']}点)\n")
+                lines.append(f"[楽天市場で見る](PRODUCT_URL_PLACEHOLDER_{i-1})\n")
+            lines.append("## まとめ\n楽天市場で高評価の商品をご紹介しました。ポイントも貯まるのでぜひチェックしてみてください。")
+            body = "\n".join(lines)
+
         body = inject_product_urls(body, products)
 
         title = topic
