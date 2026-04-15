@@ -142,6 +142,7 @@ jobs:
         env:
           GEMINI_API_KEY:       ${{ secrets.GEMINI_API_KEY }}
           RAKUTEN_APP_ID:       ${{ secrets.RAKUTEN_APP_ID }}
+          RAKUTEN_ACCESS_KEY:   ${{ secrets.RAKUTEN_ACCESS_KEY }}
           RAKUTEN_AFFILIATE_ID: ${{ secrets.RAKUTEN_AFFILIATE_ID }}
           HATENA_ID:            ${{ secrets.HATENA_ID }}
           HATENA_BLOG_ID:       ${{ secrets.HATENA_BLOG_ID }}

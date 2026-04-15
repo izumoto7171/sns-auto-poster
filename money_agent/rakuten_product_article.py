@@ -28,8 +28,9 @@ from money_agent.hatena_atomapi import post as hatena_post
 # ============================================================
 # 環境変数
 # ============================================================
-RAKUTEN_APP_ID       = os.environ.get("RAKUTEN_APP_ID", "")
-RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID", "")
+RAKUTEN_APP_ID       = os.environ.get("RAKUTEN_APP_ID", "")        # アプリケーションID (UUID)
+RAKUTEN_ACCESS_KEY   = os.environ.get("RAKUTEN_ACCESS_KEY", "")    # アクセスキー (pk_...)
+RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID", "")  # アフィリエイトID
 GEMINI_API_KEY       = os.environ.get("GEMINI_API_KEY", "")
 
 RAKUTEN_SEARCH_URL = "https://app.rakuten.co.jp/services/api/IchibaItem/Search/20170706"
@@ -103,6 +104,8 @@ def fetch_rakuten_products(genre_id: str, hits: int = 10) -> list[dict]:
         "imageFlag":     1,
         "format":        "json",
     }
+    if RAKUTEN_ACCESS_KEY:
+        params["accessKey"] = RAKUTEN_ACCESS_KEY
     if RAKUTEN_AFFILIATE_ID:
         params["affiliateId"] = RAKUTEN_AFFILIATE_ID
 

@@ -8,8 +8,9 @@ import random
 import requests
 from datetime import datetime
 
-RAKUTEN_APP_ID  = os.environ.get("RAKUTEN_APP_ID", "")        # 楽天アプリID（数値文字列）
-RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID", "")  # 楽天アフィリエイトID
+RAKUTEN_APP_ID       = os.environ.get("RAKUTEN_APP_ID", "")        # アプリケーションID (UUID)
+RAKUTEN_ACCESS_KEY   = os.environ.get("RAKUTEN_ACCESS_KEY", "")    # アクセスキー (pk_...)
+RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID", "")  # アフィリエイトID
 
 # 女性ウケカテゴリ（楽天ジャンルID）
 FEMALE_CATEGORIES = [
@@ -40,18 +41,18 @@ def fetch_products(count: int = 5) -> list[dict]:
     category = random.choice(FEMALE_CATEGORIES)
     params = {
         "applicationId": RAKUTEN_APP_ID,
-        "affiliateId":   RAKUTEN_AFFILIATE_ID,
         "genreId":       category["genre_id"],
         "minPrice":      PRICE_MIN,
         "maxPrice":      PRICE_MAX,
-        "sort":          "-reviewCount",   # レビュー数順（人気商品）
+        "sort":          "-reviewCount",
         "hits":          30,
-        "imageFlag":     1,                # 画像ありのみ
+        "imageFlag":     1,
         "format":        "json",
     }
-    # affiliateIdが未設定なら除外（パラメータがあると楽天側でエラーになる場合あり）
-    if not RAKUTEN_AFFILIATE_ID:
-        del params["affiliateId"]
+    if RAKUTEN_ACCESS_KEY:
+        params["accessKey"] = RAKUTEN_ACCESS_KEY
+    if RAKUTEN_AFFILIATE_ID:
+        params["affiliateId"] = RAKUTEN_AFFILIATE_ID
 
     try:
         res = requests.get(
