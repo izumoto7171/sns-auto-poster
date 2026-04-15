@@ -104,7 +104,7 @@ LOG_PATH   = Path(__file__).parent / "rakuten_article_log.json"
 # ============================================================
 # 楽天APIで商品取得
 # ============================================================
-def fetch_rakuten_products(genre_id: str, hits: int = 10) -> list[dict]:
+def fetch_rakuten_products(genre_id: str, hits: int = 10) -> list:
     """楽天市場APIで人気商品を取得する。失敗時は空リストを返す。"""
     if not RAKUTEN_APP_ID:
         print("[rakuten] RAKUTEN_APP_ID 未設定")
@@ -158,7 +158,7 @@ def fetch_rakuten_products(genre_id: str, hits: int = 10) -> list[dict]:
 # ============================================================
 # Geminiで記事生成
 # ============================================================
-def generate_ranking_article(category: dict, products: list[dict]) -> str:
+def generate_ranking_article(category: dict, products: list) -> str:
     """商品リストからSEOランキング記事を生成する。"""
     if not GEMINI_API_KEY:
         print("[gemini] GEMINI_API_KEY 未設定 → モック記事を返す")
@@ -219,7 +219,7 @@ def generate_ranking_article(category: dict, products: list[dict]) -> str:
         return _mock_article(category, products)
 
 
-def _mock_article(category: dict, products: list[dict]) -> str:
+def _mock_article(category: dict, products: list) -> str:
     lines = [f"## {category['name']}おすすめランキングTOP{len(products)}", ""]
     for i, p in enumerate(products[:5], 1):
         lines += [f"### {i}位: {p['name']}", f"価格: {p['price']}円 / レビュー: {p['review_count']}件", ""]
@@ -230,7 +230,7 @@ def _mock_article(category: dict, products: list[dict]) -> str:
 # ============================================================
 # 商品URLをプレースホルダーから実URLに置換
 # ============================================================
-def inject_product_urls(article: str, products: list[dict]) -> str:
+def inject_product_urls(article: str, products: list) -> str:
     """Geminiが出力したプレースホルダーを実際のURLに置換する。"""
     for i, p in enumerate(products[:10]):
         placeholder = f"PRODUCT_URL_PLACEHOLDER_{i}"

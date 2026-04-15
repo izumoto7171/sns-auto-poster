@@ -74,7 +74,8 @@ def generate(
     use_cache: bool = True,
     max_retries: int = 4,
     initial_wait: int = 35,
-) -> str | None:
+    temperature: float = 0.7,
+) -> "str | None":
     """
     Gemini API を呼び出してテキストを返す。
 
@@ -86,6 +87,7 @@ def generate(
     use_cache    : True = キャッシュを使用。SNS 投稿など毎回違う内容には False を渡す
     max_retries  : 429/503 時の最大リトライ数
     initial_wait : 最初の待機秒数（以降 2 倍ずつ最大 120 秒）
+    temperature  : 生成の多様性 (0.0〜1.0)。停滞検知時は 0.9〜1.0 を渡す
 
     Returns
     -------
@@ -110,16 +112,18 @@ def generate(
     # API 呼び出し
     try:
         from google import genai
+        from google.genai import types as genai_types
     except ImportError:
         print("  [Gemini] google-genai 未インストール")
         return None
 
     client = genai.Client(api_key=api_key)
     wait   = initial_wait
+    config = genai_types.GenerateContentConfig(temperature=temperature)
 
     for attempt in range(max_retries):
         try:
-            resp = client.models.generate_content(model=model, contents=prompt)
+            resp = client.models.generate_content(model=model, contents=prompt, config=config)
             text = resp.text.strip()
 
             # キャッシュ保存

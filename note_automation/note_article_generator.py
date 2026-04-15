@@ -5,8 +5,48 @@ note記事 自動生成
 文字数：2000〜3500文字
 """
 import os
+import sys
+import json
 import random
 from datetime import datetime
+from pathlib import Path
+
+# money_agent をインポートできるようにパスを追加
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+_INSIGHTS_FILE = Path(__file__).parent.parent / "money_agent" / "feedback_insights.json"
+
+
+def _load_feedback_insights() -> dict:
+    try:
+        if _INSIGHTS_FILE.exists():
+            return json.loads(_INSIGHTS_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    return {}
+
+
+def _build_feedback_context(insights: dict) -> str:
+    """note記事生成プロンプト用のフィードバックブロック"""
+    lines = []
+    # noteはプラットフォームキーがないのでx/blueskyの共通知見を使う
+    for platform in ("x", "bluesky"):
+        data = insights.get(platform, {})
+        if data.get("winning_patterns"):
+            lines.append(f"【SNS勝ちパターン（{platform}）→ 記事の切り口に活かす】")
+            for p in data["winning_patterns"][:2]:
+                lines.append(f"・{p}")
+            break  # 1プラットフォームで十分
+
+    if insights.get("keyword_strategy", {}).get("hot_topics"):
+        lines.append("【直近のホットトピック（SNS分析）】")
+        for t in insights["keyword_strategy"]["hot_topics"][:3]:
+            lines.append(f"・{t}")
+
+    if insights.get("exploration_mode"):
+        lines.append("【探索モード: 今回は定番テーマを外し、全く新しい切り口で記事を構成すること】")
+
+    return "\n".join(lines)
 
 # ─────────────────────────────────────────
 # 記事テーマ（カテゴリ×ブルーオーシャントピック）
@@ -85,6 +125,20 @@ ARTICLE_THEMES = {
             "地方の美容師×AI：指名ゼロだった私がSNS集客で予約を埋めた方法",
             "シングルマザー×AI副業：子供が寝た後の1時間で収入源を作った話",
             "50代の再雇用組×AI：デジタル苦手でも月1万円を稼げた理由",
+        ],
+    },
+    # ─── 楽天アフィリエイト商品ランキング ───
+    "rakuten_ranking": {
+        "label": "楽天市場おすすめランキング",
+        "category": "rakuten",
+        "topics": [
+            "楽天市場で本当に買ってよかったスキンケア商品ランキングTOP5【レビュー4点以上限定】",
+            "一人暮らしに必要なキッチン用品を楽天で揃えた話【コスパ最強5選】",
+            "楽天スーパーSALEで毎回買うリピート確定アイテム5選",
+            "プレゼントに迷ったら楽天これ買っとけランキング【予算別】",
+            "楽天ポイントで損しない買い方と実際に買ってよかった健康食品TOP5",
+            "在宅ワーカーが楽天で揃えたデスク環境アイテムTOP5",
+            "ペットを飼い始めて楽天で買って正解だったグッズランキング",
         ],
     },
     # ─── 新規追加：AI×節約×投資の三位一体 ───
@@ -446,16 +500,82 @@ def search_web(query: str, num_results: int = 6) -> str:
         return ""
 
 
+def generate_rakuten_article(theme: dict, api_key: str) -> dict:
+    """楽天市場商品ランキング記事をnote向けに生成する"""
+    try:
+        import sys, os
+        sys.path.insert(0, str(Path(__file__).parent.parent))
+        from money_agent.rakuten_product_article import fetch_rakuten_products, ARTICLE_CATEGORIES, inject_product_urls
+        from money_agent.gemini_client import generate as gemini_generate
+        import random as _random
+
+        topic    = _random.choice(theme["topics"])
+        category = _random.choice(ARTICLE_CATEGORIES)
+        products = fetch_rakuten_products(category["genre_id"], hits=10)
+
+        if len(products) < 3:
+            return {}
+
+        products_text = "\n".join(
+            f"{i+1}. {p['name'][:50]} / {p['price']}円 / レビュー{p['review_count']}件({p['review_avg']}点)"
+            for i, p in enumerate(products[:5])
+        )
+
+        year = datetime.now().year
+        prompt = f"""noteで「{topic}」という記事を書いてください。
+
+【楽天市場 人気商品リスト（{category['name']}）】
+{products_text}
+
+【ルール】
+- 文字数: 1500〜2500字
+- noteらしい一人称の体験談風（「〜してみた」「〜だった」）
+- 商品リストを自然な形でランキング記事に組み込む
+- 各商品に「[商品名を見る](PRODUCT_URL_PLACEHOLDER_0)」〜「(PRODUCT_URL_PLACEHOLDER_4)」形式でリンクを入れる
+- 楽天ポイント・コスパ・使ってみた感想を盛り込む
+- 最後に「楽天市場で探す」CTAを入れる
+- Markdown形式、## ###を使う
+- {year}年の情報として書く
+- Markdownのみ出力（前置き不要）"""
+
+        body = gemini_generate(prompt, temperature=0.75) or ""
+        body = inject_product_urls(body, products)
+
+        title = topic
+        return {
+            "title":   title,
+            "body":    body,
+            "label":   theme["label"],
+            "chars":   len(body),
+            "source":  "rakuten_api",
+            "tags":    ["楽天市場", "おすすめ", category["name"], "アフィリエイト"],
+        }
+    except Exception as e:
+        print(f"[note/rakuten] 生成エラー: {e}")
+        return {}
+
+
 def generate_with_gemini(theme: dict, api_key: str) -> dict:
     """Gemini APIで記事を生成（PASONA法則 × ブルーオーシャン × 魂の注入）
     情報収集フロー: Google検索（最新トレンド取得）→ Gemini Step1（市場分析）→ Gemini Step2（PASONA記事生成）
     """
+    # 楽天ランキングテーマは専用関数で処理
+    if theme.get("key") == "rakuten_ranking" or theme.get("category") == "rakuten":
+        result = generate_rakuten_article(theme, api_key)
+        if result:
+            return result
+        # 失敗時は通常フローにフォールバック
+
     try:
-        from google import genai
-        import json, re
+        from money_agent.gemini_client import generate as gemini_generate
+        import re
+
+        # フィードバックinsights読み込み
+        insights         = _load_feedback_insights()
+        feedback_context = _build_feedback_context(insights)
+        temperature      = insights.get("last_temperature", 0.7)
 
         topic = random.choice(theme["topics"])
-        client = genai.Client(api_key=api_key)
 
         # ─────────────────────────────────────────
         # STEP0: Web検索で最新トレンド情報を収集（DuckDuckGo → Google）
@@ -496,11 +616,8 @@ def generate_with_gemini(theme: dict, api_key: str) -> dict:
 JSON形式のみ出力：
 {{"red_ocean": [], "blue_ocean": [], "power_words": [], "real_pain": "", "danger_stats": []}}
 """
-        research_resp = client.models.generate_content(
-            model="gemini-2.0-flash-lite",
-            contents=research_prompt,
-        )
-        research_text = research_resp.text.strip()
+        research_text = gemini_generate(research_prompt, use_cache=True, temperature=0.5) or ""
+        research_text = research_text.strip()
 
         # JSONパース試行（失敗してもデフォルト値で続行）
         research = {
@@ -523,10 +640,42 @@ JSON形式のみ出力：
         danger_stats = "\n".join(f"・{s}" for s in research.get("danger_stats", [])[:2])
 
         # ─────────────────────────────────────────
+        # ポートフォリオから案件を2件選択（1記事2案件で分散）
+        # ─────────────────────────────────────────
+        _note_theme = theme.get("category", "side_hustle")
+        try:
+            from money_agent.portfolio_selector import select_programs_for_theme, mark_program_used as _mark_used
+            selected_programs = select_programs_for_theme(theme=_note_theme, count=2)
+        except Exception:
+            selected_programs = []
+            _mark_used = None
+
+        # 案件が取得できた場合、プロンプト用にフォーマット
+        if len(selected_programs) >= 2:
+            prog1, prog2 = selected_programs[0], selected_programs[1]
+            prog1_name = prog1["name"]
+            prog1_url  = prog1["affiliate_url"]
+            prog1_desc = prog1.get("description", "")
+            prog2_name = prog2["name"]
+            prog2_url  = prog2["affiliate_url"]
+            prog2_desc = prog2.get("description", "")
+        elif len(selected_programs) == 1:
+            prog1 = selected_programs[0]
+            prog1_name, prog1_url, prog1_desc = prog1["name"], prog1["affiliate_url"], prog1.get("description", "")
+            prog2_name, prog2_url, prog2_desc = "楽天カード", "https://card.rakuten.co.jp/", "ポイント還元率業界最高水準"
+        else:
+            # フォールバック: 固定案件
+            prog1_name, prog1_url, prog1_desc = "楽天カード", "https://rpx.a8.net/svt/ejp?a8mat=4AZMKI+BFEJSI+2HOM+BW8O1&rakuten=y&a8ejpredirect=http%3A%2F%2Fhb.afl.rakuten.co.jp%2Fhgc%2F0ea62065.34400275.0ea62066.204f04c0%2Fa26032392970_4AZMKI_BFEJSI_2HOM_BW8O1%3Fpc%3Dhttps%253A%252F%252Fcard.rakuten.co.jp%252F%26m%3Dhttps%253A%252F%252Fcard.rakuten.co.jp%252F", "ポイント還元率業界最高水準"
+            prog2_name, prog2_url, prog2_desc = "楽天証券", "https://www.rakuten-sec.co.jp/", "楽天ポイントで投資できる証券口座"
+            _mark_used = None
+
+        # ─────────────────────────────────────────
         # STEP2: PASONA構成 × 魂の注入プロンプト
         # ─────────────────────────────────────────
         pasona_prompt = f"""
 あなたはnoteで副業・AI・お金の自由を発信しているクリエイターです。
+{feedback_context}
+
 「AI副業で月3万稼ぎ、浮いた時間で節約を最適化し、利益を新NISAに回す」という
 一気通貫のライフスタイルを提案しながら、読者の人生の意思決定を支援してください。
 
@@ -586,36 +735,34 @@ JSON形式のみ出力：
 楽天カードとSBI証券は「決済手段」「投資口座」として紹介しない。
 「AI副業を加速させるためのプロツール」として再定義して差し込むこと。
 
-■ 楽天カードの再定義：
-  「AI副業の経費（APIキー代・ツール代・参考書代）を一元集約し、
-  ポイント還元によって副業コストを実質削減する経費自動管理インフラ」
+■ 案件1「{prog1_name}」の再定義：
+  {prog1_desc}
+  読者の「副業を加速させるプロツール」として自然に差し込む。
 
-■ SBI証券（新NISA）の再定義：
-  「副業で稼いだキャッシュを腐らせない出口戦略ツール。
-  業界最安水準の手数料で副業収益を複利運用に変換する複利変換装置」
+■ 案件2「{prog2_name}」の再定義：
+  {prog2_desc}
+  読者の「お金を守る・増やす仕組み」として自然に差し込む。
 
 ■ 差し込みタイミング（以下の文脈の直後に1〜2文で差し込む）：
-  【楽天カードを差し込む文脈】
-  ・「副業の経費管理が面倒」「ツール代がかさむ」という失敗ログや悩みの直後
-  ・「経費の自動管理」「ポイントによるコスト削減」を説明した段落の直後
-  ・「どのカード/ツールを使えばお得か？」という読者の疑問が生まれる瞬間
+  【{prog1_name}を差し込む文脈】
+  ・副業の経費管理・ツール代・コスト削減に触れた段落の直後
+  ・「どのサービスを選べばお得か？」という読者の疑問が生まれる瞬間
 
-  【SBI証券を差し込む文脈】
-  ・収益シミュレーション（「月〇万円稼ぐと1年で〇〇万円になる」）の直後
-  ・「副業の出口戦略」「稼いだお金の使い道」に触れた段落の直後
+  【{prog2_name}を差し込む文脈】
+  ・収益シミュレーション・副業の出口戦略・お金の使い道に触れた段落の直後
   ・「稼ぐだけでは意味がない、増やす仕組みも必要」という文脈
 
 ■ CTAの書き方（リンク文言）：
-  NG：「楽天カードの詳細を確認する」「SBI証券に申し込む」
-  OK：以下のようなベネフィット主語の能動表現にする
-  ・「副業経費を楽天カードで自動管理してコストを削減する」
-  ・「副業収益をSBI証券の新NISAで複利運用に変換する」
-  ・「AI副業の経費を楽天ポイントに変えて実質コストゼロを目指す」
-  ・「稼いだ副業収益を新NISAで増やし続ける仕組みを今日つくる」
+  NG：「{prog1_name}の詳細を確認する」「{prog2_name}に申し込む」
+  OK：ベネフィット主語の能動表現（例：「副業コストを{prog1_name}でゼロに近づける」）
+
+■ アフィリエイトリンクの書き方：
+  <a href="{prog1_url}" rel="nofollow">▶ {prog1_name}を使って副業コストを削減する</a>
+  <a href="{prog2_url}" rel="nofollow">▶ {prog2_name}で副業収益を増やし続ける仕組みをつくる</a>
 
 ■ 配置・言及ルール：
-  ・1記事につき楽天カード1回・SBI証券1回が上限（しつこくしない）
-  ・体験談形式で：「実際に設定してから〇〇が変わった」「〇ヶ月で〇〇円のコスト削減になった」
+  ・1記事につき各案件1回が上限（しつこくしない）
+  ・体験談形式で：「実際に使ってから〇〇が変わった」
   ・締めは必ず「詳しい設定手順とリンクはプロフィールのリンクページにまとめています」
 
 【技術ルール】
@@ -625,11 +772,10 @@ JSON形式のみ出力：
 
 記事本文のみ出力してください。前置きや説明は不要です。
 """
-        resp = client.models.generate_content(
-            model="gemini-2.0-flash-lite",
-            contents=pasona_prompt,
-        )
-        full_text = resp.text.strip()
+        full_text = gemini_generate(
+            pasona_prompt, use_cache=False, temperature=temperature
+        ) or ""
+        full_text = full_text.strip()
 
         # タイトルと本文を分離
         lines = full_text.split("\n")
@@ -640,13 +786,22 @@ JSON形式のみ出力：
         print(f"  パワーワード: {power_words}")
         print(f"  危機感データ: {danger_stats[:80]}...")
 
+        # 使用した案件をポートフォリオのクールダウン開始
+        if _mark_used and selected_programs:
+            for sp in selected_programs:
+                try:
+                    _mark_used(sp["id"])
+                except Exception:
+                    pass
+
         return {
-            "theme":  theme["key"],
-            "label":  theme["label"],
-            "title":  title,
-            "body":   body,
-            "chars":  len(full_text),
-            "source": "gemini_pasona",
+            "theme":     theme["key"],
+            "label":     theme["label"],
+            "title":     title,
+            "body":      body,
+            "chars":     len(full_text),
+            "source":    "gemini_pasona",
+            "programs":  [p["id"] for p in selected_programs],
         }
 
     except Exception as e:

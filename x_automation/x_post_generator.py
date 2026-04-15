@@ -15,14 +15,55 @@ from pathlib import Path
 # gemini_client を共通クライアントとして使用
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+# feedback_insights.json のパス（money_agent/ 配下）
+_INSIGHTS_FILE = Path(__file__).parent.parent / "money_agent" / "feedback_insights.json"
+
+
+def _load_feedback_insights() -> dict:
+    """
+    analytics_feedback.py が生成した insights を読み込む。
+    ファイルがない・読めない場合は空dictを返す（フォールバック動作）。
+    """
+    try:
+        if _INSIGHTS_FILE.exists():
+            return json.loads(_INSIGHTS_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    return {}
+
+
+def _build_feedback_context(insights: dict, platform: str = "x") -> str:
+    """
+    insights から X 投稿プロンプト用のフィードバックブロックを生成する。
+    停滞フラグ・勝ちパターン・避けるべきパターンを含む。
+    """
+    lines = []
+    platform_data = insights.get(platform, {})
+
+    if platform_data.get("winning_patterns"):
+        lines.append("【過去の勝ちパターン（必ず参考にする）】")
+        for p in platform_data["winning_patterns"][:3]:
+            lines.append(f"・{p}")
+
+    if platform_data.get("avoid_patterns"):
+        lines.append("【避けるべきパターン（絶対に使わない）】")
+        for p in platform_data["avoid_patterns"][:2]:
+            lines.append(f"・{p}")
+
+    if insights.get("exploration_mode"):
+        lines.append("【探索モード: 今回は全く新しい切り口で書く（過去パターンを踏襲しない）】")
+
+    return "\n".join(lines)
+
 # ─────────────────────────────────────────
 # 投稿タイプの定義と重み
 # ─────────────────────────────────────────
 POST_TYPES = [
-    {"type": "useful",    "label": "役立つ情報",     "weight": 20},
-    {"type": "empathy",   "label": "共感・体験",     "weight": 10},
-    {"type": "trivia",    "label": "雑学・ネタ",     "weight": 10},
-    {"type": "product",   "label": "Amazon商品紹介", "weight": 50},
+    {"type": "useful",    "label": "役立つ情報",      "weight": 20},
+    {"type": "empathy",   "label": "共感・体験",      "weight": 10},
+    {"type": "trivia",    "label": "雑学・ネタ",      "weight": 10},
+    {"type": "product",   "label": "Amazon商品紹介",  "weight": 40},
+    {"type": "rakuten",   "label": "楽天商品紹介",    "weight": 10},
     {"type": "progress",  "label": "収益進捗ログ",   "weight": 10},
 ]
 
@@ -792,6 +833,11 @@ def generate_with_gemini(post_type: str, label: str) -> str:
     except ImportError:
         return generate_with_template(post_type)
 
+    # フィードバックinsights読み込み
+    insights         = _load_feedback_insights()
+    feedback_context = _build_feedback_context(insights, platform="x")
+    temperature      = insights.get("last_temperature", 0.7)
+
     hook_pattern = random.choice(VIRAL_HOOK_PATTERNS)
     cta = random.choice(ENGAGEMENT_CTAS)
 
@@ -834,6 +880,8 @@ def generate_with_gemini(post_type: str, label: str) -> str:
 【コンテンツ視点（必ず取り入れる）】
 {angle}
 
+{feedback_context}
+
 【必須ルール】
 ・全体80〜110文字（日本語）。ハッシュタグ未含
 ・120文字を絶対に超えないこと
@@ -854,8 +902,8 @@ def generate_with_gemini(post_type: str, label: str) -> str:
 
 投稿文のみ出力してください。説明・タイトルは不要。"""
 
-    # SNS投稿は毎回新鮮な内容にするためキャッシュなし
-    text = gemini_generate(prompt, use_cache=False)
+    # SNS投稿は毎回新鮮な内容にするためキャッシュなし・temperature動的適用
+    text = gemini_generate(prompt, use_cache=False, temperature=temperature)
     if text:
         return append_hashtags(text, post_type)
 
@@ -870,6 +918,15 @@ def generate_post(force_type: str = None) -> dict:
 
     post_type = post_type_info["type"]
     label     = post_type_info["label"]
+
+    # 楽天商品紹介は専用関数で処理
+    if post_type == "rakuten":
+        result = generate_rakuten_product_post()
+        if result:
+            return result
+        # 失敗時はusefulにフォールバック
+        post_type = "useful"
+        label = "役立つ情報"
 
     api_key = os.getenv("GEMINI_API_KEY")
     if api_key:
@@ -989,6 +1046,73 @@ def generate_amazon_product_post(force_refresh: bool = False) -> dict:
         }
     except Exception as e:
         print(f"⚠️  Amazon商品投稿生成エラー: {e}")
+        return {}
+
+
+def generate_rakuten_product_post() -> dict:
+    """
+    楽天市場の人気商品をX投稿用テキストに変換して返す。
+    スレッド形式: tweet1（商品紹介）/ tweet2（アフィリエイトリンク）
+    """
+    try:
+        import sys, os
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from money_agent.rakuten_product_article import fetch_rakuten_products, ARTICLE_CATEGORIES
+        import random as _random
+
+        category = _random.choice(ARTICLE_CATEGORIES)
+        products = fetch_rakuten_products(category["genre_id"], hits=10)
+        if not products:
+            return {}
+
+        product = _random.choice(products[:5])  # 上位5件からランダム選択
+        name    = product["name"][:30]
+        price   = product["price"]
+        reviews = product["review_count"]
+        avg     = product["review_avg"]
+        url     = product["url"]
+
+        # Geminiで紹介文生成（なければテンプレ）
+        api_key = os.getenv("GEMINI_API_KEY")
+        if api_key:
+            try:
+                from money_agent.gemini_client import generate as gemini_generate
+                prompt = f"""楽天市場の商品をXで紹介する投稿を作成してください。
+
+商品名: {product['name'][:50]}
+価格: {price}円
+カテゴリ: {category['name']}
+レビュー数: {reviews}件 / 評価: {avg}点
+
+【ルール】
+- 1ツイート目: 100文字以内。商品の魅力を体験談風に（「〜してみた」「〜だった」形式）
+- アフィリエイト感を出さず、リアルな一言レビューとして書く
+- 絵文字1〜2個まで
+- ハッシュタグなし（別で付ける）
+- JSON形式のみ: {{"tweet1": "..."}}"""
+                result = gemini_generate(prompt, temperature=0.8)
+                import json as _json, re as _re
+                m = _re.search(r'\{.*\}', result or '', _re.DOTALL)
+                tweet1 = _json.loads(m.group()).get("tweet1", "") if m else ""
+            except Exception:
+                tweet1 = ""
+        else:
+            tweet1 = ""
+
+        if not tweet1:
+            tweet1 = f"{category['name']}で{reviews}件レビューの人気商品🛒 {price}円でこのクオリティはコスパ◎"
+
+        tweet2 = f"▶ {name}\n{url}\n\n#楽天市場 #{category['name'].replace('・', '')} #楽天アフィリエイト"
+
+        return {
+            "type":   "rakuten",
+            "label":  "楽天商品紹介",
+            "text":   tweet1,
+            "thread": {"tweet1": tweet1, "tweet2": tweet2},
+            "chars":  len(tweet1),
+        }
+    except Exception as e:
+        print(f"⚠️  楽天商品投稿生成エラー: {e}")
         return {}
 
 
