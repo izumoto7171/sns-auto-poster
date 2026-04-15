@@ -8,9 +8,10 @@ import random
 import requests
 from datetime import datetime
 
-RAKUTEN_APP_ID       = os.environ.get("RAKUTEN_APP_ID", "")        # アプリケーションID (UUID)
-RAKUTEN_ACCESS_KEY   = os.environ.get("RAKUTEN_ACCESS_KEY", "")    # アクセスキー (pk_...)
-RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID", "")  # アフィリエイトID
+RAKUTEN_APP_ID       = os.environ.get("RAKUTEN_APP_ID", "")
+RAKUTEN_ACCESS_KEY   = os.environ.get("RAKUTEN_ACCESS_KEY", "")
+RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID", "")
+RAKUTEN_ORIGIN       = os.environ.get("RAKUTEN_ORIGIN", "https://smart-earn-life.hateblo.jp")
 
 # 女性ウケカテゴリ（楽天ジャンルID）
 FEMALE_CATEGORIES = [
@@ -56,8 +57,9 @@ def fetch_products(count: int = 5) -> list[dict]:
 
     try:
         res = requests.get(
-            "https://app.rakuten.co.jp/services/api/IchibaItem/Search/20170706",
+            "https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20220601",
             params=params,
+            headers={"Origin": RAKUTEN_ORIGIN},
             timeout=10,
         )
         res.raise_for_status()

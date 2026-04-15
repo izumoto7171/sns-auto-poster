@@ -23,6 +23,19 @@ from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+def _load_env():
+    env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
+    if os.path.exists(env_path):
+        with open(env_path) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    os.environ.setdefault(k, v)
+
+_load_env()
+
 from money_agent.hatena_atomapi import post as hatena_post
 
 # ============================================================
@@ -33,7 +46,8 @@ RAKUTEN_ACCESS_KEY   = os.environ.get("RAKUTEN_ACCESS_KEY", "")    # アクセ�
 RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID", "")  # アフィリエイトID
 GEMINI_API_KEY       = os.environ.get("GEMINI_API_KEY", "")
 
-RAKUTEN_SEARCH_URL = "https://app.rakuten.co.jp/services/api/IchibaItem/Search/20170706"
+RAKUTEN_SEARCH_URL = "https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20220601"
+RAKUTEN_ORIGIN     = os.environ.get("RAKUTEN_ORIGIN", "https://smart-earn-life.hateblo.jp")
 
 # ============================================================
 # 記事化するカテゴリ（楽天ジャンルID + SEOキーワード）
@@ -98,19 +112,23 @@ def fetch_rakuten_products(genre_id: str, hits: int = 10) -> list[dict]:
 
     params = {
         "applicationId": RAKUTEN_APP_ID,
+        "accessKey":     RAKUTEN_ACCESS_KEY,
         "genreId":       genre_id,
         "sort":          "-reviewCount",
         "hits":          hits,
         "imageFlag":     1,
         "format":        "json",
     }
-    if RAKUTEN_ACCESS_KEY:
-        params["accessKey"] = RAKUTEN_ACCESS_KEY
     if RAKUTEN_AFFILIATE_ID:
         params["affiliateId"] = RAKUTEN_AFFILIATE_ID
 
     try:
-        res = requests.get(RAKUTEN_SEARCH_URL, params=params, timeout=15)
+        res = requests.get(
+            RAKUTEN_SEARCH_URL,
+            params=params,
+            headers={"Origin": RAKUTEN_ORIGIN},
+            timeout=15,
+        )
         res.raise_for_status()
         items_raw = res.json().get("Items", [])
     except Exception as e:
@@ -171,7 +189,7 @@ def generate_ranking_article(category: dict, products: list[dict]) -> str:
   1. リード文（検索意図に応える導入 200字程度）
   2. 選び方のポイント（3〜4点、各100字程度）
   3. おすすめランキングTOP10（各商品に100〜150字の説明）
-     - 各商品に「[商品名](PRODUCT_URL_PLACEHOLDER_{i})」形式でリンクプレースホルダーを入れる
+     - 各商品に「[商品名](PRODUCT_URL_PLACEHOLDER_0)」〜「[商品名](PRODUCT_URL_PLACEHOLDER_9)」形式でリンクプレースホルダーを順番に入れる（0始まり）
      - 価格・レビュー数・特徴を必ず含める
   4. まとめ（150字程度）
 - SEO: タイトルキーワードを自然に入れる
