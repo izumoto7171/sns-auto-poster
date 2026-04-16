@@ -520,6 +520,8 @@ def generate_rakuten_article(theme: dict, api_key: str) -> dict:
             f"{i+1}. {p['name'][:50]} / {p['price']}円 / レビュー{p['review_count']}件({p['review_avg']}点)"
             for i, p in enumerate(products[:5])
         )
+        # アイキャッチ用に1枚目の画像URLを取得
+        cover_image = next((p["image_url"] for p in products[:5] if p.get("image_url")), "")
 
         year = datetime.now().year
         prompt = f"""noteで「{topic}」という記事を書いてください。
@@ -527,15 +529,18 @@ def generate_rakuten_article(theme: dict, api_key: str) -> dict:
 【楽天市場 人気商品リスト（{category['name']}）】
 {products_text}
 
-【ルール】
+【文体・トーン（重要）】
+- 丁寧語だけど少しフランクな口調（「〜です」「〜ました」ベース、たまに「〜なんですよね」「正直に言うと〜」）
+- 「〜だ・〜である」調は禁止
+- 失敗談・後悔談を1つ入れる（例：「最初に安いやつ買って失敗した」「レビュー数少ないのを選んで後悔した」など）
+- AI感をなくす：断定的な「〜です！」「〜です。」の羅列を避け、迷いや個人差も正直に書く
+
+【構成ルール】
 - 文字数: 1500〜2500字
-- noteらしい一人称の体験談風（「〜してみた」「〜だった」）
-- 商品リストを自然な形でランキング記事に組み込む
-- 各商品に「[商品名を見る](PRODUCT_URL_PLACEHOLDER_0)」〜「(PRODUCT_URL_PLACEHOLDER_4)」形式でリンクを入れる
-- 楽天ポイント・コスパ・使ってみた感想を盛り込む
+- 各商品に「[商品名](PRODUCT_URL_PLACEHOLDER_0)」〜「(PRODUCT_URL_PLACEHOLDER_4)」形式でリンクを入れる（0始まり）
+- 楽天ポイント・コスパ・実際の使用感を盛り込む
 - 最後に「楽天市場で探す」CTAを入れる
-- Markdown形式、## ###を使う
-- {year}年の情報として書く
+- Markdown形式（## ###使用）、{year}年の情報
 - Markdownのみ出力（前置き不要）"""
 
         body = gemini_generate(prompt, temperature=0.75) or ""
@@ -556,12 +561,13 @@ def generate_rakuten_article(theme: dict, api_key: str) -> dict:
 
         title = topic
         return {
-            "title":   title,
-            "body":    body,
-            "label":   theme["label"],
-            "chars":   len(body),
-            "source":  "rakuten_api",
-            "tags":    ["楽天市場", "おすすめ", category["name"], "アフィリエイト"],
+            "title":       title,
+            "body":        body,
+            "label":       theme["label"],
+            "chars":       len(body),
+            "source":      "rakuten_api",
+            "tags":        ["楽天市場", "おすすめ", category["name"], "アフィリエイト"],
+            "cover_image": cover_image,  # note投稿時のアイキャッチ候補
         }
     except Exception as e:
         print(f"[note/rakuten] 生成エラー: {e}")

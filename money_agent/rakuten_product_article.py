@@ -97,18 +97,47 @@ ARTICLE_CATEGORIES = [
     },
 ]
 
-DRAFTS_DIR = Path(__file__).parent / "hatena_drafts"
-LOG_PATH   = Path(__file__).parent / "rakuten_article_log.json"
+DRAFTS_DIR  = Path(__file__).parent / "hatena_drafts"
+LOG_PATH    = Path(__file__).parent / "rakuten_article_log.json"
+CACHE_PATH  = Path(__file__).parent / "rakuten_product_cache.json"
+CACHE_TTL   = 60 * 60 * 24  # 24時間（秒）
+
+
+# ============================================================
+# 楽天APIキャッシュ
+# ============================================================
+def _load_cache() -> dict:
+    if CACHE_PATH.exists():
+        try:
+            return json.loads(CACHE_PATH.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    return {}
+
+
+def _save_cache(cache: dict):
+    CACHE_PATH.write_text(json.dumps(cache, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 # ============================================================
 # 楽天APIで商品取得
 # ============================================================
 def fetch_rakuten_products(genre_id: str, hits: int = 10) -> list:
-    """楽天市場APIで人気商品を取得する。失敗時は空リストを返す。"""
+    """楽天市場APIで人気商品を取得する。24時間キャッシュ付き。"""
+    import time
+    cache_key = f"{genre_id}_{hits}"
+    cache = _load_cache()
+
+    # キャッシュヒット判定
+    if cache_key in cache:
+        entry = cache[cache_key]
+        if time.time() - entry.get("ts", 0) < CACHE_TTL:
+            print(f"[rakuten] キャッシュヒット (genre_id={genre_id})")
+            return entry["products"]
+
     if not RAKUTEN_APP_ID:
         print("[rakuten] RAKUTEN_APP_ID 未設定")
-        return []
+        return cache.get(cache_key, {}).get("products", [])  # 期限切れキャッシュを返す
 
     params = {
         "applicationId": RAKUTEN_APP_ID,
@@ -133,7 +162,8 @@ def fetch_rakuten_products(genre_id: str, hits: int = 10) -> list:
         items_raw = res.json().get("Items", [])
     except Exception as e:
         print(f"[rakuten] 商品取得エラー: {e}")
-        return []
+        # エラー時は期限切れキャッシュで代替
+        return cache.get(cache_key, {}).get("products", [])
 
     products = []
     for item_wrap in items_raw:
@@ -152,6 +182,14 @@ def fetch_rakuten_products(genre_id: str, hits: int = 10) -> list:
         })
 
     print(f"[rakuten] {len(products)}件取得 (genre_id={genre_id})")
+
+    # キャッシュ保存
+    cache[cache_key] = {"ts": time.time(), "products": products}
+    try:
+        _save_cache(cache)
+    except Exception:
+        pass
+
     return products
 
 
