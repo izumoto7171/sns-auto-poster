@@ -3,7 +3,7 @@ A8.net 新着案件 → 記事自動生成 → はてなブログ投稿パイプ
 
 【フロー】
 1. A8.net 公開ページから新着案件を取得（スクレイピング）
-2. 未処理の案件をフィルタリング（seen_programs.json で重複排除）
+2. 未処理の案件をフィルタリング（Supabase で重複排除）
 3. Gemini API で紹介記事を自動生成（2000〜3000文字）
 4. はてなブログ AtomPub API で投稿（Playwright不要）
 5. 処理済み案件を記録
@@ -18,6 +18,7 @@ import os
 import sys
 import json
 import time
+import re as _re
 import requests
 from datetime import datetime
 from pathlib import Path
@@ -35,14 +36,15 @@ def load_env():
 
 load_env()
 
+# Supabase クライアント
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from db_client import db
+
 # ============================================================
 # 定数
 # ============================================================
-SEEN_FILE = Path(__file__).parent / "seen_a8_programs.json"
 MAX_POSTS_PER_RUN = 3  # 1実行あたりの最大投稿数
-HATENA_ID = os.environ.get("HATENA_ID", "pi-natu-butter")
-HATENA_BLOG_ID = os.environ.get("HATENA_BLOG_ID", "smart-earn-life.hateblo.jp")
-HATENA_API_KEY = os.environ.get("HATENA_API_KEY", "")
+# はてな認証情報は hatena_atomapi.py が os.environ から直接読み込む
 
 A8_SEARCH_URL = "https://www.a8.net/a8a/search_program.do"
 
@@ -53,7 +55,6 @@ HEADERS = {
 
 # ============================================================
 # 見込み高単価ジャンル（優先的に取得・記事化）
-# Search Console の実績から「DX・クラウド会計・バックオフィス」を上位に昇格
 # ============================================================
 TARGET_GENRES = [
     # ── 優先1: Search Console で伸びているジャンル（実績あり）──────────
@@ -72,6 +73,38 @@ TARGET_GENRES = [
 ]
 
 # ============================================================
+# 共通ヘルパー
+# ============================================================
+def _safe_text(element, default: str = "") -> str:
+    """
+    BeautifulSoup 要素から安全にテキストを取得する。
+    要素が None / AttributeError / その他例外でも default を返す。
+    """
+    if element is None:
+        return default
+    try:
+        return element.get_text(strip=True)
+    except Exception:
+        return default
+
+
+def _log_scrape_error(item_id: str, genre: str, error: str) -> None:
+    """スクレイピング失敗をDBに記録する"""
+    try:
+        db.insert_post(
+            platform="a8_scrape",
+            post_type="new_program",
+            label=f"{genre}:{item_id}"[:200],
+            chars=0,
+            text=f"スクレイピング失敗: {item_id}",
+            success=False,
+            error_message=f"[A8スクレイピングエラー] genre={genre} id={item_id}: {error}",
+        )
+    except Exception as e:
+        print(f"[A8] DBエラーログ記録失敗: {e}")
+
+
+# ============================================================
 # Search Console の好調クエリ（記事生成プロンプトに動的注入）
 # ============================================================
 def _load_sc_top_keywords(max_kw: int = 5) -> list[str]:
@@ -85,7 +118,6 @@ def _load_sc_top_keywords(max_kw: int = 5) -> list[str]:
     try:
         data = json.loads(sc_path.read_text(encoding="utf-8"))
         queries = data.get("top_queries", [])
-        # クリック数降順で上位 max_kw 件
         sorted_q = sorted(queries, key=lambda x: x.get("clicks", 0), reverse=True)
         return [q["query"] for q in sorted_q[:max_kw]]
     except Exception:
@@ -93,24 +125,34 @@ def _load_sc_top_keywords(max_kw: int = 5) -> list[str]:
 
 
 # ============================================================
-# 既読管理
+# 既読管理（DB版）
 # ============================================================
 def load_seen() -> set:
-    if SEEN_FILE.exists():
-        return set(json.loads(SEEN_FILE.read_text(encoding="utf-8")))
-    return set()
+    """処理済みプログラム ID の set を DB から返す"""
+    try:
+        return db.get_a8_processed_ids("new")
+    except Exception as e:
+        print(f"[A8] 処理済みDB読み込み失敗: {e}")
+        return set()
 
-def save_seen(seen: set):
-    SEEN_FILE.write_text(json.dumps(sorted(seen), ensure_ascii=False, indent=2), encoding="utf-8")
+def mark_single(program_id: str) -> None:
+    """1件を処理済みとして DB にマークする（並列安全）"""
+    try:
+        db.mark_a8_processed(program_id, "new")
+    except Exception as e:
+        print(f"[A8] 処理済みDB書き込み失敗 ({program_id}): {e}")
 
 
 # ============================================================
 # A8.net 公開プログラム検索（スクレイピング）
 # ============================================================
-def fetch_a8_new_programs(genre: str, limit: int = 10):
+def fetch_a8_new_programs(genre: str, limit: int = 10) -> list:
     """
     A8.net のプログラム検索ページから案件を取得する。
     公開情報のみ（ログイン不要）。
+
+    - 各アイテムの解析は個別 try/except でガード
+    - 失敗アイテムはスキップしてDBに記録
     """
     try:
         from bs4 import BeautifulSoup
@@ -120,51 +162,68 @@ def fetch_a8_new_programs(genre: str, limit: int = 10):
 
     programs = []
     try:
-        params = {
-            "genre": genre,
-            "sort": "new",
-            "p": 1,
-        }
+        params = {"genre": genre, "sort": "new", "p": 1}
         resp = requests.get(A8_SEARCH_URL, params=params, headers=HEADERS, timeout=15)
         if resp.status_code != 200:
             print(f"[A8] HTTPエラー {resp.status_code} ジャンル={genre}")
+            _log_scrape_error("page", genre, f"HTTP {resp.status_code}")
             return []
 
         soup = BeautifulSoup(resp.text, "html.parser")
-        # A8.netのプログラム一覧セレクタ（構造変更時は更新）
         items = soup.select(".program-list-item, .prg-item, li.item")
 
+        if not items:
+            print(f"[A8] セレクタでアイテムが見つかりません (genre={genre})")
+
         for item in items[:limit]:
-            name_el = item.select_one(".program-name, .prg-name, h3, h4")
-            reward_el = item.select_one(".reward, .commission, .fee")
-            desc_el = item.select_one(".description, .desc, p")
-            link_el = item.select_one("a[href]")
+            # アイテム単位で例外を隔離してスキップ
+            try:
+                name_el   = item.select_one(".program-name, .prg-name, h3, h4")
+                reward_el = item.select_one(".reward, .commission, .fee")
+                desc_el   = item.select_one(".description, .desc, p")
+                link_el   = item.select_one("a[href]")
 
-            if not name_el:
-                continue
+                name = _safe_text(name_el)
+                if not name:
+                    # アイテム自体のテキストからフォールバック
+                    name = _safe_text(item)[:40]
+                if not name:
+                    continue  # 名前が取れないアイテムは無視
 
-            name = name_el.get_text(strip=True)
-            reward = reward_el.get_text(strip=True) if reward_el else ""
-            desc = desc_el.get_text(strip=True)[:200] if desc_el else ""
-            link = link_el.get("href", "") if link_el else ""
+                reward = _safe_text(reward_el)
+                desc   = _safe_text(desc_el)[:200]
+                link   = ""
+                if link_el is not None:
+                    try:
+                        link = link_el.get("href", "") or ""
+                    except Exception:
+                        link = ""
 
-            prog_id = f"a8_{genre}_{name[:20]}"
-            programs.append({
-                "id": prog_id,
-                "name": name,
-                "genre": genre,
-                "reward": reward,
-                "description": desc,
-                "link": link,
-            })
+                prog_id = f"a8_{genre}_{name[:20]}"
+                programs.append({
+                    "id":          prog_id,
+                    "name":        name,
+                    "genre":       genre,
+                    "reward":      reward,
+                    "description": desc,
+                    "link":        link,
+                })
+
+            except Exception as e:
+                err_msg = str(e)
+                print(f"[A8] アイテム解析スキップ (genre={genre}): {err_msg}")
+                _log_scrape_error(f"item_{genre}", genre, err_msg)
+                continue  # 次のアイテムへ
 
     except Exception as e:
-        print(f"[A8] スクレイピングエラー ({genre}): {e}")
+        err_msg = str(e)
+        print(f"[A8] スクレイピングエラー ({genre}): {err_msg}")
+        _log_scrape_error("page_parse", genre, err_msg)
 
     return programs
 
 
-def fetch_programs_via_ddg(limit: int = 15):
+def fetch_programs_via_ddg(limit: int = 15) -> list:
     """
     DuckDuckGoで新着A8案件を検索（スクレイピングが取れない場合のフォールバック）
     """
@@ -186,27 +245,30 @@ def fetch_programs_via_ddg(limit: int = 15):
         try:
             results = list(ddgs.text(query, region="jp-jp", max_results=8))
             for r in results:
-                link = r.get("href", r.get("url", ""))
-                title = r.get("title", "")
-                body = r.get("body", r.get("snippet", ""))[:300]
-                prog_id = f"ddg_{link[:80]}"
-                if prog_id in seen or not title:
+                try:
+                    link    = r.get("href", r.get("url", ""))
+                    title   = r.get("title", "")
+                    body    = r.get("body", r.get("snippet", ""))[:300]
+                    prog_id = f"ddg_{link[:80]}"
+                    if prog_id in seen or not title:
+                        continue
+                    if not any(kw in (title + body).lower() for kw in ["a8", "アフィリエイト", "報酬"]):
+                        continue
+                    programs.append({
+                        "id":          prog_id,
+                        "name":        title,
+                        "genre":       "未分類",
+                        "reward":      "",
+                        "description": body,
+                        "link":        link,
+                    })
+                    if len(programs) >= limit:
+                        break
+                except Exception as e:
+                    print(f"[DDG] 結果アイテムスキップ: {e}")
                     continue
-                # A8関連フィルタ
-                if not any(kw in (title + body).lower() for kw in ["a8", "アフィリエイト", "報酬"]):
-                    continue
-                programs.append({
-                    "id": prog_id,
-                    "name": title,
-                    "genre": "未分類",
-                    "reward": "",
-                    "description": body,
-                    "link": link,
-                })
-                if len(programs) >= limit:
-                    break
         except Exception as e:
-            print(f"[DDG] エラー: {e}")
+            print(f"[DDG] クエリエラー: {e}")
         time.sleep(1)
 
     return programs
@@ -218,15 +280,11 @@ def fetch_programs_via_ddg(limit: int = 15):
 def generate_program_article(program: dict):
     """A8.net案件情報をもとにGeminiで紹介記事を生成（SC キーワード動的注入）"""
     try:
-        from money_agent.gemini_client import generate as gemini_generate, strip_code_block
+        sys.path.insert(0, str(Path(__file__).parent))
+        from gemini_client import generate as gemini_generate, strip_code_block
     except ImportError:
-        # パスが通っていない環境用フォールバック
-        _sys.path.insert(0, str(Path(__file__).parent))
-        try:
-            from gemini_client import generate as gemini_generate, strip_code_block
-        except ImportError:
-            print("[Gemini] gemini_client未インポート")
-            return None
+        print("[Gemini] gemini_client 未インポート")
+        return None
 
     genre  = program.get("genre", "")
     name   = program.get("name", "")
@@ -234,7 +292,6 @@ def generate_program_article(program: dict):
     desc   = program.get("description", "")
     year   = datetime.now().year
 
-    # Search Console 上位クエリを動的に注入（SEO 親和性を高める）
     sc_keywords = _load_sc_top_keywords(max_kw=5)
     sc_kw_section = ""
     if sc_keywords:
@@ -272,10 +329,10 @@ def generate_program_article(program: dict):
   "body": "本文（Markdown）"
 }}"""
 
-    # 記事は毎回新鮮な内容（キャッシュなし）、バックオフ込み
     raw = gemini_generate(prompt, use_cache=False)
     if not raw:
-        print(f"[Gemini] 記事生成失敗 ({name})")
+        print(f"[Gemini] 記事生成失敗（全リトライ消耗）: {name}")
+        _log_scrape_error(program.get("id", name), genre, "Gemini全リトライ失敗")
         return None
 
     try:
@@ -286,13 +343,13 @@ def generate_program_article(program: dict):
         article["generated_at"] = datetime.now().isoformat()
         return article
     except Exception as e:
-        print(f"[Gemini] JSONパースエラー ({name}): {e}")
+        err_msg = str(e)
+        print(f"[Gemini] JSONパースエラー ({name}): {err_msg}")
+        _log_scrape_error(program.get("id", name), genre, f"JSONパースエラー: {err_msg}")
         return None
 
 
-import sys as _sys
-import re as _re
-_sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent))
 from hatena_atomapi import post as _hatena_post
 
 def post_to_hatena(article: dict, draft: bool = False):
@@ -300,13 +357,10 @@ def post_to_hatena(article: dict, draft: bool = False):
 
 
 # ============================================================
-# 案件スコアリング（高単価・高成約 + Search Console実績ジャンルを優先）
+# 案件スコアリング
 # ============================================================
-# Search Console で伸びているジャンル（最優先）
 _SC_WINNING_GENRES = ["クラウド会計", "DX", "バックオフィス", "SaaS", "業務効率", "freee", "マネーフォワード", "Chatwork"]
-# 高単価ジャンル
 _HIGH_VALUE_GENRES = ["証券", "FX", "プログラミング", "転職", "保険"]
-# 中単価ジャンル
 _MID_VALUE_GENRES  = ["英会話", "会計", "電力", "クラウド", "クレジット"]
 
 def _parse_reward(reward_str: str) -> int:
@@ -319,23 +373,10 @@ def _parse_reward(reward_str: str) -> int:
     return max(int(n) for n in nums)
 
 def score_program(program: dict) -> int:
-    """
-    案件をスコアリングして優先順位を返す（高いほど優先）
-
-    スコア構成:
-      - 報酬単価:             最大50点
-      - SC実績ジャンル:       +40点（freee/マネーフォワード/DX系 = 検索需要が実証済み）
-      - 高単価ジャンル:       +30点
-      - 中単価ジャンル:       +15点
-      - ジャンル優先度:       最大+10点（TARGET_GENRES の priority 値）
-    """
-    score = 0
+    score     = 0
     reward_num = _parse_reward(program.get("reward", ""))
-    genre      = program.get("genre", "")
-    name       = program.get("name", "")
-    combined   = genre + name  # ジャンル名と案件名の両方で判定
+    combined  = program.get("genre", "") + program.get("name", "")
 
-    # 報酬スコア
     if reward_num >= 10000:
         score += 50
     elif reward_num >= 5000:
@@ -347,15 +388,13 @@ def score_program(program: dict) -> int:
     elif reward_num > 0:
         score += 5
 
-    # ジャンルスコア（Search Console 実績優先）
     if any(g in combined for g in _SC_WINNING_GENRES):
-        score += 40  # SC で伸びているジャンルを最優先
+        score += 40
     elif any(g in combined for g in _HIGH_VALUE_GENRES):
         score += 30
     elif any(g in combined for g in _MID_VALUE_GENRES):
         score += 15
 
-    # TARGET_GENRES の priority 値を加算
     for tg in TARGET_GENRES:
         if tg["genre"] in combined:
             score += tg.get("priority", 0)
@@ -376,21 +415,26 @@ def run_pipeline(dry_run: bool = False):
     print(f"処理済み案件数: {len(seen)}")
 
     # 案件取得
-    all_programs = []
+    all_programs: list[dict] = []
 
     # ① A8.net スクレイピング（priority 降順で上位4ジャンルを処理）
     sorted_genres = sorted(TARGET_GENRES, key=lambda x: x.get("priority", 0), reverse=True)
-    for genre_info in sorted_genres[:4]:  # 1実行4ジャンルまで
-        programs = fetch_a8_new_programs(genre_info["genre"], limit=5)
-        all_programs.extend(programs)
-        time.sleep(2)  # リクエスト間隔
+    for genre_info in sorted_genres[:4]:
+        try:
+            programs = fetch_a8_new_programs(genre_info["genre"], limit=5)
+            all_programs.extend(programs)
+        except Exception as e:
+            print(f"[Pipeline] ジャンル取得例外 ({genre_info['genre']}): {e}")
+        time.sleep(2)
 
     # ② スクレイピングで取れなかった場合はDDG検索
     if not all_programs:
         print("[Pipeline] スクレイピング失敗 → DuckDuckGo検索にフォールバック")
-        all_programs = fetch_programs_via_ddg()
+        try:
+            all_programs = fetch_programs_via_ddg()
+        except Exception as e:
+            print(f"[Pipeline] DDGフォールバックも失敗: {e}")
 
-    # 未処理のみフィルタ
     new_programs = [p for p in all_programs if p["id"] not in seen]
     print(f"新着案件数: {len(new_programs)} (全{len(all_programs)}件中)")
 
@@ -398,7 +442,6 @@ def run_pipeline(dry_run: bool = False):
         print("新着案件なし。終了。")
         return
 
-    # スコアリングで高単価・高成約ジャンルを優先
     for p in new_programs:
         p["_score"] = score_program(p)
     new_programs.sort(key=lambda p: p["_score"], reverse=True)
@@ -406,34 +449,59 @@ def run_pipeline(dry_run: bool = False):
     for p in new_programs[:MAX_POSTS_PER_RUN]:
         print(f"  [{p['_score']:3d}点] {p['name'][:30]} ({p['genre']}) 報酬:{p.get('reward','不明')}")
 
-    # 最大MAX_POSTS_PER_RUN件処理
     processed = 0
     for program in new_programs[:MAX_POSTS_PER_RUN]:
-        print(f"\n--- 案件処理: {program['name']} ({program['genre']}) ---")
+        prog_name = program.get("name", program.get("id", "unknown"))
+        print(f"\n--- 案件処理: {prog_name} ({program.get('genre','')}) ---")
 
-        # 記事生成
-        article = generate_program_article(program)
-        if not article:
-            seen.add(program["id"])
+        try:
+            article = generate_program_article(program)
+            if not article:
+                # 記事生成失敗はDBへ記録済み（generate_program_article内）
+                mark_single(program["id"])  # 再試行しないようマーク
+                continue
+
+            print(f"  タイトル: {article['title'][:60]}")
+            print(f"  キーワード: {article.get('keyword', '')}")
+            print(f"  文字数: {len(article.get('body', ''))}文字")
+
+            if not dry_run:
+                url = post_to_hatena(article)
+                if url:
+                    processed += 1
+                    mark_single(program["id"])
+                    print(f"  投稿完了: {url}")
+                else:
+                    print("  投稿失敗。次回リトライ対象のまま。")
+                    db.insert_post(
+                        platform="hatena",
+                        post_type="a8_new",
+                        label=article.get("keyword", prog_name)[:200],
+                        chars=len(article.get("body", "")),
+                        text=article.get("title", "")[:500],
+                        success=False,
+                        error_message=f"[A8新着] はてな投稿失敗: {prog_name}",
+                    )
+                time.sleep(3)
+            else:
+                print(f"  本文冒頭: {article.get('body', '')[:200]}...")
+                mark_single(program["id"])
+                processed += 1
+
+        except Exception as e:
+            err_msg = str(e)
+            print(f"  [Pipeline] 予期しないエラー ({prog_name})、スキップ: {err_msg}")
+            db.insert_post(
+                platform="a8_scrape",
+                post_type="new_program",
+                label=prog_name[:200],
+                chars=0,
+                text=f"パイプラインエラー: {prog_name}",
+                success=False,
+                error_message=f"[A8新着パイプライン] {prog_name}: {err_msg}",
+            )
             continue
 
-        print(f"  タイトル: {article['title'][:60]}")
-        print(f"  キーワード: {article.get('keyword', '')}")
-        print(f"  文字数: {len(article.get('body', ''))}文字")
-
-        if not dry_run:
-            url = post_to_hatena(article)
-            if url:
-                processed += 1
-                seen.add(program["id"])
-            time.sleep(3)  # 投稿間隔
-        else:
-            # dry-run: 本文の冒頭を表示
-            print(f"  本文冒頭: {article.get('body', '')[:200]}...")
-            seen.add(program["id"])
-            processed += 1
-
-    save_seen(seen)
     print(f"\n=== パイプライン完了: {processed}件投稿 ===")
 
 

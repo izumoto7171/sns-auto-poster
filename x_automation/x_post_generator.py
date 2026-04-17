@@ -12,24 +12,27 @@ import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
-# gemini_client を共通クライアントとして使用
+# gemini_client / db_client をプロジェクトルートから使用
 sys.path.insert(0, str(Path(__file__).parent.parent))
+from db_client import db
 
-# feedback_insights.json のパス（money_agent/ 配下）
-_INSIGHTS_FILE = Path(__file__).parent.parent / "money_agent" / "feedback_insights.json"
+# A8キャッシュ操作は crawlers パッケージに委譲
+from crawlers.crawler_a8 import (
+    load_programs   as _a8_load_programs,
+    weighted_choice as _a8_weighted_choice_fn,
+    increment_posted as _a8_increment_posted_fn,
+)
 
 
 def _load_feedback_insights() -> dict:
     """
-    analytics_feedback.py が生成した insights を読み込む。
-    ファイルがない・読めない場合は空dictを返す（フォールバック動作）。
+    analytics_feedback.py が保存した insights を DB から読み込む。
+    DB 未設定・読み込みエラーは空 dict を返す（フォールバック動作）。
     """
     try:
-        if _INSIGHTS_FILE.exists():
-            return json.loads(_INSIGHTS_FILE.read_text(encoding="utf-8"))
+        return db.get_insights()
     except Exception:
-        pass
-    return {}
+        return {}
 
 
 def _build_feedback_context(insights: dict, platform: str = "x") -> str:
@@ -59,12 +62,13 @@ def _build_feedback_context(insights: dict, platform: str = "x") -> str:
 # 投稿タイプの定義と重み
 # ─────────────────────────────────────────
 POST_TYPES = [
-    {"type": "useful",    "label": "役立つ情報",      "weight": 20},
-    {"type": "empathy",   "label": "共感・体験",      "weight": 10},
-    {"type": "trivia",    "label": "雑学・ネタ",      "weight": 10},
-    {"type": "product",   "label": "Amazon商品紹介",  "weight": 40},
-    {"type": "rakuten",   "label": "楽天商品紹介",    "weight": 10},
-    {"type": "progress",  "label": "収益進捗ログ",   "weight": 10},
+    {"type": "useful",    "label": "役立つ情報",        "weight": 20},
+    {"type": "empathy",   "label": "共感・体験",        "weight": 10},
+    {"type": "trivia",    "label": "雑学・ネタ",        "weight": 10},
+    {"type": "product",   "label": "Amazon商品紹介",    "weight": 30},
+    {"type": "rakuten",   "label": "楽天商品紹介",      "weight": 10},
+    {"type": "a8",        "label": "A8アフィリエイト",  "weight": 15},
+    {"type": "progress",  "label": "収益進捗ログ",      "weight": 5},
 ]
 
 # ─────────────────────────────────────────
@@ -85,6 +89,8 @@ HASHTAGS_BY_TYPE = {
     "empathy":   ["#副業", "#フリーランス", "#副業初心者"],
     "trivia":    ["#AI", "#雑学", "#テクノロジー"],
     "product":   ["#副業", "#アフィリエイト", "#AI副業"],
+    "rakuten":   ["#楽天市場", "#楽天アフィリエイト"],
+    "a8":        ["#PR", "#副業"],
     "progress":  ["#副業", "#BuildInPublic", "#AI副業"],
 }
 
@@ -99,6 +105,47 @@ ENGAGEMENT_CTAS = [
     "あとで見返せるように保存推奨",
     "共感したらシェアしてもらえると嬉しい",
 ]
+
+# ─────────────────────────────────────────
+# 投稿スタイル5種（ランダム選択で脱ボット化）
+# ─────────────────────────────────────────
+CTR_STYLES = {
+    "共感・悩み解決": (
+        "「〇〇で困っていませんか？」と問いかけるフックから始める。"
+        "読者が抱える具体的な悩みを1行で言語化し、解決策として記事・情報を提示する。"
+        "最後は「同じ悩みの人に届いてほしい」「参考になれば」など共感で締める。"
+    ),
+    "ベネフィット追求": (
+        "ツールや手法を使うと「何時間節約できるか」「いくら得するか」を数字で見せる。"
+        "抽象的な便利さではなく、具体的な数字・時間・金額に落とし込む。"
+        "「使う前と後の差分」を短くまとめるのが効果的。"
+    ),
+    "逆説・意外性": (
+        "「実は〇〇は間違いだった」「99%の人が知らない」「やってはいけない〇〇」など"
+        "常識を覆す一言か意外な事実から始める。"
+        "後半で正解・実態を明かし、読者に「知れてよかった」と思わせる。"
+    ),
+    "箇条書き・要約": (
+        "3つのポイントでメリット・事実・手順を整理し、視認性を高める。"
+        "各行を短く（10〜20字）まとめ、縦スクロールで読める構造にする。"
+        "最後に一行でまとめの言葉を入れる。"
+    ),
+    "トレンド・速報": (
+        "「今話題の」「2026年最新」「たった今わかった」などリアルタイム感のある言葉を使う。"
+        "AIトレンド・市場の変化・新機能など鮮度の高い情報に乗せる。"
+        "フォロワーが「今すぐ確認したい」と思う緊迫感を出す。"
+    ),
+}
+
+# スタイル別キーワード候補（Geminiに渡すコンテキスト）
+_STYLE_KEYWORDS_BY_TYPE = {
+    "useful":   ["業務効率化", "AI副業", "副業の始め方", "時短ツール", "生産性向上"],
+    "empathy":  ["副業 失敗", "続けられない", "最初の1万円", "稼げない理由"],
+    "trivia":   ["AIの意外な事実", "お金の知識", "検索より速い方法", "副業の税金"],
+    "product":  ["業務効率化ツール", "クラウド会計", "DXツール", "バックオフィス効率化"],
+    "progress": ["AI副業 進捗", "自動化システム", "副業ログ"],
+    "rakuten":  ["楽天 人気商品", "コスパ最強", "プチプラ美容"],
+}
 
 # バイラルフックパターン（Geminiプロンプトに渡すリファレンス）
 VIRAL_HOOK_PATTERNS = [
@@ -810,14 +857,13 @@ def generate_with_template(post_type: str) -> str:
 
 
 def _load_progress_stats() -> dict:
+    """money_agent の進捗状態を DB から読み込む"""
     try:
-        state_path = Path(__file__).parent.parent / "money_agent" / "agent_state.json"
-        with open(state_path, encoding="utf-8") as f:
-            state = json.load(f)
+        state = db.get_agent_state()
         return {
             "total_articles": state.get("total_articles", 0),
             "today_articles": state.get("today_articles", 0),
-            "last_run": state.get("last_run", "")[:10],
+            "last_run":       str(state.get("last_run", ""))[:10],
         }
     except Exception:
         return {"total_articles": 0, "today_articles": 0, "last_run": ""}
@@ -838,10 +884,16 @@ def generate_with_gemini(post_type: str, label: str) -> str:
     feedback_context = _build_feedback_context(insights, platform="x")
     temperature      = insights.get("last_temperature", 0.7)
 
-    hook_pattern = random.choice(VIRAL_HOOK_PATTERNS)
     cta = random.choice(ENGAGEMENT_CTAS)
 
-    # progress タイプは実数を注入
+    # ── スタイルをランダム選択 ────────────────────────────────
+    style_name, style_guide = random.choice(list(CTR_STYLES.items()))
+
+    # ── キーワードをタイプ別に選択 ───────────────────────────
+    kw_candidates = _STYLE_KEYWORDS_BY_TYPE.get(post_type, _STYLE_KEYWORDS_BY_TYPE["useful"])
+    target_keyword = random.choice(kw_candidates)
+
+    # ── progress タイプは実稼働データを注入 ─────────────────
     progress_context = ""
     if post_type == "progress":
         stats = _load_progress_stats()
@@ -861,46 +913,39 @@ def generate_with_gemini(post_type: str, label: str) -> str:
         "progress": "AI副業の『現在進行形の検証ログ』。上記の実際の数字を使って、試行錯誤の過程をリアルに書く。",
     }
 
-    # 「悩み深掘り」アングルをランダムに注入して脱ボット化
-    empathy_angles = [
-        "読者がこの投稿を見る前に抱えていた「悩み」から始め、その解消につなげる構成にする",
-        "「自分もそれで悩んでた」と思わせる共感ポイントを1行目に入れる",
-        "失敗談や試行錯誤のリアルさを出して、体験談として書く",
-        "「知らなかった自分へのアドバイス」という視点で書く",
-    ]
-    angle = random.choice(empathy_angles)
+    prompt = f"""# 役割
+あなたはSNSマーケティングとコピーライティングの専門家です。
+X（Twitter）でクリック率（CTR）が高く、かつ「人間味」のある投稿文を1つ作成してください。
 
-    prompt = f"""あなたはX（Twitter）で副業・AI・ライフハック情報を発信するインフルエンサーです。
+# 入力情報
+- キーワード: {target_keyword}
+- 投稿スタイル: {style_name}
+- 投稿タイプ: {label}（{type_instructions.get(post_type, '')}）
 {progress_context}
-【投稿タイプ】{label}（{type_instructions[post_type]}）
-
-【バイラルフックの参考パターン（そのまま使わずアレンジする）】
-{hook_pattern}
-
-【コンテンツ視点（必ず取り入れる）】
-{angle}
+# 選択されたスタイルのガイドライン（必ず適用）
+【{style_name}スタイル】
+{style_guide}
 
 {feedback_context}
 
-【必須ルール】
-・全体80〜110文字（日本語）。ハッシュタグ未含
-・120文字を絶対に超えないこと
-・改行を多めに使い読みやすくする
-・1行目に強烈なフック（数字・逆説・体験談のどれか）を必ず入れる
-・最後は「{cta}」で締める
-・ハッシュタグは不要（後から追加する）
-・広告・宣伝っぽい表現は使わない
+# 制約条件（厳守）
+- 文字数は100文字〜140文字以内（ハッシュタグ除く）
+- 改行を活用して縦読みしやすくする
+- 「いかがでしたか？」などの定型文は一切禁止
+- 語尾・言い回しを毎回崩して自然な口調にする
+- 広告・宣伝っぽい表現は使わない
+- URLは不要（別で追加する）
+- ハッシュタグは不要（別で追加する）
+- 最後は「{cta}」で締める
 
-【構造】
-1行目：強烈なフック（結論・数字・驚き）
+# 構造
+1行目：強烈なフック（{style_name}スタイルの書き出し）
 ↓（空行）
-2〜3行：共感または問題提起（悩みへの共感）
-↓（空行）
-3〜5行：解決方法や情報（箇条書きOK）
+中間：共感・情報・体験談（箇条書きOK）
 ↓（空行）
 最終行：{cta}
 
-投稿文のみ出力してください。説明・タイトルは不要。"""
+投稿文のみ出力してください。前置き・説明・タイトルは不要。"""
 
     # SNS投稿は毎回新鮮な内容にするためキャッシュなし・temperature動的適用
     text = gemini_generate(prompt, use_cache=False, temperature=temperature)
@@ -924,9 +969,17 @@ def generate_post(force_type: str = None) -> dict:
         result = generate_rakuten_product_post()
         if result:
             return result
-        # 失敗時はusefulにフォールバック
         post_type = "useful"
         label = "役立つ情報"
+
+    # A8アフィリエイトは専用関数で処理
+    if post_type == "a8":
+        result = generate_a8_program_post()
+        if result:
+            return result
+        # キャッシュなし → product にフォールバック
+        post_type = "product"
+        label = "Amazon商品紹介"
 
     api_key = os.getenv("GEMINI_API_KEY")
     if api_key:
@@ -958,43 +1011,35 @@ def generate_value_thread(post_type: str = "useful") -> dict:
         post = generate_post(force_type=post_type)
         return {"tweet1": post["text"], "tweet2": ""}
 
-    hook_pattern = random.choice(VIRAL_HOOK_PATTERNS)
     cta = random.choice(ENGAGEMENT_CTAS)
 
-    type_topics = {
-        "useful":  "AI副業・生産性向上・副業の始め方",
-        "empathy": "副業の失敗談・継続の難しさ・乗り越え方",
-        "trivia":  "AI・お金・テクノロジーの意外な雑学",
-        "product": "業務効率化ツール・副業に使えるサービスの体験談",
-    }
-    topic = type_topics.get(post_type, type_topics["useful"])
+    # スタイルとキーワードをランダム選択
+    style_name, style_guide = random.choice(list(CTR_STYLES.items()))
+    kw_candidates = _STYLE_KEYWORDS_BY_TYPE.get(post_type, _STYLE_KEYWORDS_BY_TYPE["useful"])
+    target_keyword = random.choice(kw_candidates)
 
-    empathy_angles = [
-        "読者が抱えている「悩み」から始め解消につなげる",
-        "「失敗した → 解決できた」という体験談形式",
-        "「知らないと損する情報」として提示する",
-        "「実際にやってみた結果」というリアル体験として書く",
-    ]
-    angle = random.choice(empathy_angles)
+    prompt = f"""# 役割
+あなたはSNSマーケティングとコピーライティングの専門家です。
+X（Twitter）スレッドの1ツイート目（リンクなし・バズ狙い）を作成してください。
 
-    prompt = f"""あなたはX（Twitter）で副業・AI・ライフハック情報を発信するインフルエンサーです。
+# 入力情報
+- キーワード: {target_keyword}
+- 投稿スタイル: {style_name}
 
-以下の条件でスレッドの1ツイート目を書いてください。
+# 選択されたスタイルのガイドライン（必ず適用）
+【{style_name}スタイル】
+{style_guide}
 
-【テーマ】{topic}
-【コンテンツ視点】{angle}
-【バイラルフック参考パターン】{hook_pattern}
+# 制約条件（厳守）
+- リンクは一切入れない（リプライで誘導する）
+- 文字数は100文字〜140文字以内（ハッシュタグ除く）
+- 「いかがでしたか？」などの定型文は一切禁止
+- 語尾・言い回しを毎回崩して自然な口調にする
+- 広告・宣伝表現は禁止
+- ハッシュタグは不要
+- 最後は「{cta}」または「続きはリプライで」で締める
 
-【1ツイート目のルール】
-・リンクは一切入れない（リプライに回す）
-・80〜110文字（日本語）
-・1行目：強烈なフック（数字・逆説・体験談）
-・改行を多めに使い読みやすく
-・最後は「{cta}」または「続きはリプライで」で締める
-・ハッシュタグは不要
-・広告・宣伝表現は禁止
-
-投稿文のみ出力してください。"""
+投稿文のみ出力してください。前置き・説明は不要。"""
 
     tweet1_text = gemini_generate(prompt, use_cache=False)
     if not tweet1_text:
@@ -1114,6 +1159,132 @@ def generate_rakuten_product_post() -> dict:
     except Exception as e:
         print(f"⚠️  楽天商品投稿生成エラー: {e}")
         return {}
+
+
+def _a8_weighted_choice(programs: list) -> dict:
+    """crawlers.crawler_a8.weighted_choice に委譲"""
+    return _a8_weighted_choice_fn(programs)
+
+
+def _a8_increment_posted(ins_id: str) -> None:
+    """crawlers.crawler_a8.increment_posted に委譲"""
+    _a8_increment_posted_fn(ins_id)
+
+
+def generate_a8_program_post() -> dict:
+    """
+    A8.net 承認済みプログラムの X投稿を生成する。
+
+    ・重み付き選択: posted_count が少ないプログラムを優先
+    ・ハッシュタグ: キャッシュに保存された hashtags フィールドを使用
+      （保存時に Gemini がジャンルに合わせて抽出済み）
+    ・リンク: hatena_url 優先、なければ affiliate_url
+    ・景品表示法対応: 必ず #PR を付与
+
+    Returns: generate_post() と同じ形式 dict、失敗時は空 dict
+    """
+    programs = _a8_load_programs()
+    if not programs:
+        print("[A8Post] キャッシュなし → スキップ")
+        return {}
+
+    # 直近 20 件を対象に重み付き選択
+    candidates = programs[-20:]
+    program = _a8_weighted_choice(candidates)
+
+    name          = program.get("name", "")
+    reward        = program.get("reward", "")
+    affiliate_url = program.get("affiliate_url", "")
+    hatena_url    = program.get("hatena_url", "")
+    # ジャンルハッシュタグ（Gemini 抽出済み）+ #PR
+    genre_tags    = program.get("hashtags", ["#副業"])
+    hashtag_str   = "#PR " + " ".join(genre_tags)
+
+    if not affiliate_url:
+        return {}
+
+    # リンクは hatena 記事 URL を優先（スパム判定回避）
+    link_url = hatena_url if hatena_url else affiliate_url
+
+    # Bitly 短縮（利用可能なら）
+    try:
+        sys.path.insert(0, str(Path(__file__).parent.parent / "money_agent"))
+        from affiliate_tracker import shorten_url
+        link_url = shorten_url(link_url) or link_url
+    except Exception:
+        pass
+
+    # ── Gemini で投稿本文生成 ────────────────────────────────
+    tweet_body = ""
+    api_key = os.getenv("GEMINI_API_KEY")
+    if api_key:
+        try:
+            from money_agent.gemini_client import generate as gemini_generate
+        except ImportError:
+            gemini_generate = None
+
+        if gemini_generate:
+            style_name, style_guide = random.choice(list(CTR_STYLES.items()))
+            cta = random.choice(ENGAGEMENT_CTAS)
+
+            prompt = f"""# 役割
+あなたはSNSマーケティングとコピーライティングの専門家です。
+A8.netのアフィリエイトプログラムをX（Twitter）で自然に紹介する投稿文を1つ作成してください。
+
+# プログラム情報
+- サービス名: {name}
+- 報酬・特徴: {reward}
+- ジャンルキーワード: {' '.join(genre_tags)}
+
+# 選択されたスタイル: {style_name}
+{style_guide}
+
+# 制約条件（厳守）
+- 本文は 80〜110 文字以内（URL・ハッシュタグ除く）
+- 広告感を抑えつつ「使ってみた」「試した」などリアルな体験談風に書く
+- 「いかがでしたか？」などの定型文は禁止
+- URL・ハッシュタグは不要（別で付加する）
+- 最後は「{cta}」で締める
+
+投稿本文のみ出力。前置き・説明は不要。"""
+
+            tweet_body = (gemini_generate(prompt, use_cache=False) or "").strip()
+
+    # ── フォールバック: テンプレート ────────────────────────
+    if not tweet_body:
+        templates = [
+            f"{name}、使ってみたら思ったより良かった。\n\n{reward}のキャッシュバックもあって、登録して損はない感じ。\n\n気になる人はリンクから確認してみて。",
+            f"副業仲間に教えてもらった{name}。\n\n報酬{reward}で、今申し込みで特典あり。\n\nコスパ良すぎて紹介したくなった。",
+            f"{name}を先週から使い始めた。\n\n{reward}のアフィリエイト報酬付きで、紹介できるレベルのサービス。\n\n詳細は下のリンクへ。",
+        ]
+        tweet_body = random.choice(templates)
+
+    # ── 全体テキスト組み立て ─────────────────────────────────
+    full_text = f"{tweet_body}\n\n{link_url}\n{hashtag_str}"
+
+    # 280単位オーバー時は本文を切り詰め
+    if x_char_count(full_text) > MAX_TWEET_UNITS:
+        suffix    = f"\n\n{link_url}\n{hashtag_str}"
+        max_body  = MAX_TWEET_UNITS - x_char_count(suffix)
+        tweet_body = _truncate_to_x_units(tweet_body, max_body)
+        full_text  = f"{tweet_body}{suffix}"
+
+    # posted_count を更新
+    _a8_increment_posted(program.get("ins_id", ""))
+
+    print(
+        f"[A8Post] 生成完了: {name} "
+        f"(posted_count: {program.get('posted_count', 0)} → {program.get('posted_count', 0) + 1}) "
+        f"タグ: {hashtag_str}"
+    )
+    return {
+        "type":    "a8",
+        "label":   "A8アフィリエイト",
+        "text":    full_text,
+        "chars":   len(full_text),
+        "program": program,
+        "thread":  {"tweet1": full_text, "tweet2": ""},
+    }
 
 
 def get_today_schedule() -> list:

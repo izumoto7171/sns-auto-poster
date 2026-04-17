@@ -20,7 +20,6 @@ from pathlib import Path
 
 BASE_DIR  = Path(__file__).parent
 ROOT_DIR  = BASE_DIR.parent
-DEALS_JSON = BASE_DIR / "amazon_deals.json"
 
 # .env 読み込み
 env_path = ROOT_DIR / ".env"
@@ -31,8 +30,11 @@ if env_path.exists():
             k, _, v = line.partition("=")
             os.environ.setdefault(k.strip(), v.strip())
 
+# Supabase クライアント
+sys.path.insert(0, str(ROOT_DIR))
+from db_client import db
+
 ASSOCIATE_TAG = os.getenv("AMAZON_ASSOCIATE_TAG", "smartearn22-22")
-STATIC_JSON   = BASE_DIR / "static_products.json"
 
 
 def _make_search_url(keyword: str) -> str:
@@ -434,43 +436,36 @@ _STATIC_PRODUCTS = [
 def _static_fallback(category: str, count: int) -> list:
     """
     静的な商品データを返す（全APIが利用できない場合）。
-    static_products.json が存在すればそちらを優先し、
-    なければコード内の _STATIC_PRODUCTS にフォールバックする。
+    DB の static_products を優先し、なければコード内の _STATIC_PRODUCTS にフォールバック。
     """
-    if STATIC_JSON.exists():
-        try:
-            data = json.loads(STATIC_JSON.read_text(encoding="utf-8"))
-            if data:
-                cat_label = CATEGORIES.get(category, CATEGORIES["gadget"])["label"]
-                filtered  = [p for p in data if p.get("category") == cat_label]
-                result    = filtered if filtered else data  # カテゴリ一致がなければ全件
-                return result[:count]
-        except Exception as e:
-            print(f"  ⚠️  static_products.json 読み込みエラー: {e} → 内蔵データを使用")
+    try:
+        data = db.get_static_products()
+        if data:
+            cat_label = CATEGORIES.get(category, CATEGORIES["gadget"])["label"]
+            filtered  = [p for p in data if p.get("category") == cat_label]
+            result    = filtered if filtered else data
+            return result[:count]
+    except Exception as e:
+        print(f"  ⚠️  static_products DB読み込みエラー: {e} → 内蔵データを使用")
     return _STATIC_PRODUCTS[:count]
 
 
 # ─────────────────────────────────────────
 def load_cache() -> list:
-    """当日のキャッシュを返す。期限切れ or なければ空リスト"""
-    if not DEALS_JSON.exists():
-        return []
+    """当日のキャッシュを DB から返す。期限切れ or なければ空リスト（DB版）"""
     try:
-        data = json.loads(DEALS_JSON.read_text(encoding="utf-8"))
-        if not data:
-            return []
-        fetched_at = data[0].get("fetched_at", "")
-        if fetched_at:
-            age = datetime.now() - datetime.fromisoformat(fetched_at)
-            if age < timedelta(hours=6):  # 6時間以内はキャッシュ使用
-                return data
-    except Exception:
-        pass
-    return []
+        return db.get_amazon_deals(max_age_hours=6.0)
+    except Exception as e:
+        print(f"⚠️  キャッシュDB読み込み失敗: {e}")
+        return []
 
 
-def save_cache(products: list):
-    DEALS_JSON.write_text(json.dumps(products, ensure_ascii=False, indent=2), encoding="utf-8")
+def save_cache(products: list) -> None:
+    """商品リストを DB に保存する（DB版）"""
+    try:
+        db.save_amazon_deals(products)
+    except Exception as e:
+        print(f"⚠️  キャッシュDB書き込み失敗: {e}")
 
 
 # ─────────────────────────────────────────
@@ -532,10 +527,13 @@ def fetch_deals(category: str = "gadget", count: int = 5, force_refresh: bool = 
         except Exception as e:
             print(f"  ⚠️  コンテキストブーストスキップ: {e}")
 
-        # 既存キャッシュとマージして保存
+        # 既存キャッシュとマージして保存（asin がない商品は search_keyword で比較）
         existing = load_cache()
-        existing_asins = {p["asin"] for p in existing}
-        new_products = [p for p in products if p["asin"] not in existing_asins]
+        existing_keys = {p.get("asin") or p.get("search_keyword", "") for p in existing}
+        new_products = [
+            p for p in products
+            if (p.get("asin") or p.get("search_keyword", "")) not in existing_keys
+        ]
         save_cache(existing + new_products)
         print(f"✅ {len(products)}件取得完了（コンテキスト補正済みスコア順）")
 

@@ -29,8 +29,8 @@ BASE_DIR        = Path(__file__).parent
 ANALYSIS_FILE   = BASE_DIR / "search_console_analysis.json"
 EDIT_LOG_FILE   = BASE_DIR / "hatena_edit_log.json"
 
-HATENA_ID      = os.environ.get("HATENA_ID", "pi-natu-butter")
-HATENA_BLOG_ID = os.environ.get("HATENA_BLOG_ID", "smart-earn-life.hateblo.jp")
+HATENA_ID      = os.environ.get("HATENA_ID", "")
+HATENA_BLOG_ID = os.environ.get("HATENA_BLOG_ID", "")
 HATENA_API_KEY = os.environ.get("HATENA_API_KEY", "")
 
 # Atom名前空間

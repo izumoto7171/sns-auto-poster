@@ -11,24 +11,39 @@ import tempfile
 from datetime import datetime
 from x_post_generator import generate_post, get_today_schedule, generate_value_thread
 
-LOG_FILE = os.path.join(os.path.dirname(__file__), "post_log.json")
+# Supabase クライアント・リトライユーティリティ（プロジェクトルートから import）
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+from db_client import db
+from retry_utils import with_retry
 
 
 # ─────────────────────────────────────────
-# ログ管理
+# ログ管理（DB版）
 # ─────────────────────────────────────────
 def load_log() -> list:
-    if os.path.exists(LOG_FILE):
-        with open(LOG_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return []
+    """過去ログを取得する（show_log 用）"""
+    try:
+        return db.get_posts(platform="x", limit=200)
+    except Exception as e:
+        print(f"⚠️ DB読み込みエラー: {e}")
+        return []
 
 
 def save_log(entry: dict):
-    log = load_log()
-    log.append(entry)
-    with open(LOG_FILE, "w", encoding="utf-8") as f:
-        json.dump(log, f, ensure_ascii=False, indent=2)
+    """投稿ログを DB に INSERT する（競合排除）"""
+    try:
+        db.insert_post(
+            platform  = "x",
+            post_type = entry.get("type", ""),
+            label     = entry.get("label", ""),
+            chars     = entry.get("chars", 0),
+            text      = entry.get("text", ""),
+            success   = entry.get("success", False),
+            mode      = entry.get("mode", "live"),
+            has_image = entry.get("has_image", False),
+        )
+    except Exception as e:
+        print(f"⚠️ DB書き込みエラー（ログ保存失敗）: {e}")
 
 
 # ─────────────────────────────────────────
@@ -193,20 +208,29 @@ def post_amazon_thread(thread: dict) -> bool:
                 access_token=access_token,
                 access_token_secret=access_secret,
             )
+            # tweet1: 重複投稿防止のためリトライなし（1回のみ）
             resp1 = client.create_tweet(text=tweet1)
             id1   = resp1.data["id"]
             print(f"Tweet1投稿成功: {id1}")
 
             if tweet2:
-                resp2 = client.create_tweet(text=tweet2, in_reply_to_tweet_id=id1)
-                id2   = resp2.data["id"]
-                print(f"Tweet2投稿成功: {id2}")
+                @with_retry(api="x", context="tweet2", log_on_giveup=True)
+                def _post_tweet2():
+                    return client.create_tweet(text=tweet2, in_reply_to_tweet_id=id1)
+                resp2 = _post_tweet2()
+                id2   = resp2.data["id"] if resp2 else id1
+                if resp2:
+                    print(f"Tweet2投稿成功: {id2}")
             else:
                 id2 = id1
 
             if tweet3:
-                resp3 = client.create_tweet(text=tweet3, in_reply_to_tweet_id=id2)
-                print(f"Tweet3投稿成功（アフィリンク）: {resp3.data['id']}")
+                @with_retry(api="x", context="tweet3", log_on_giveup=True)
+                def _post_tweet3():
+                    return client.create_tweet(text=tweet3, in_reply_to_tweet_id=id2)
+                resp3 = _post_tweet3()
+                if resp3:
+                    print(f"Tweet3投稿成功（アフィリンク）: {resp3.data['id']}")
 
             return True
     except Exception as e:
@@ -509,14 +533,22 @@ def show_log(days: int = 7):
     from datetime import timedelta
     cutoff = datetime.now() - timedelta(days=days)
 
-    for entry in reversed(log):
-        dt = datetime.fromisoformat(entry["datetime"])
+    for entry in log:  # get_posts は降順なのでそのまま
+        dt_str = entry.get("datetime") or entry.get("created_at", "")
+        if not dt_str:
+            continue
+        try:
+            dt = datetime.fromisoformat(dt_str.replace("Z", "").split("+")[0])
+        except ValueError:
+            continue
         if dt < cutoff:
             continue
-        status = "✅" if entry["success"] else "❌"
+        status = "✅" if entry.get("success") else "❌"
         mode   = "🧪" if entry.get("mode") == "dry_run" else "🚀"
         img    = "🖼" if entry.get("has_image") else "  "
-        print(f"{status}{mode}{img} {dt.strftime('%m/%d %H:%M')} [{entry['label']}] {entry['chars']}文字")
+        label  = entry.get("label") or entry.get("post_type") or ""
+        chars  = entry.get("chars", 0)
+        print(f"{status}{mode}{img} {dt.strftime('%m/%d %H:%M')} [{label}] {chars}文字")
 
 
 if __name__ == "__main__":

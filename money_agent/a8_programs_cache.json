@@ -1,0 +1,41 @@
+[
+  {
+    "ins_id": "aaa",
+    "name": "freee（クラウド会計）",
+    "reward": "2,000円/件",
+    "affiliate_url": "https://px.a8.net/test_aaa",
+    "hatena_url": "",
+    "hashtags": [
+      "#クラウド会計",
+      "#確定申告",
+      "#副業"
+    ],
+    "posted_count": 0
+  },
+  {
+    "ins_id": "bbb",
+    "name": "マネーフォワードクラウド",
+    "reward": "3,000円/件",
+    "affiliate_url": "https://px.a8.net/test_bbb",
+    "hatena_url": "",
+    "hashtags": [
+      "#会計ソフト",
+      "#中小企業",
+      "#DX"
+    ],
+    "posted_count": 5
+  },
+  {
+    "ins_id": "ccc",
+    "name": "SBI証券",
+    "reward": "5,000円/件",
+    "affiliate_url": "https://px.a8.net/test_ccc",
+    "hatena_url": "",
+    "hashtags": [
+      "#投資",
+      "#証券口座",
+      "#NISA"
+    ],
+    "posted_count": 3
+  }
+]

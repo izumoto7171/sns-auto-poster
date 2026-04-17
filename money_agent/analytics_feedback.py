@@ -17,57 +17,48 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).parent
 
-INSIGHTS_FILE = BASE_DIR / "feedback_insights.json"
-ANALYTICS_HISTORY_FILE = BASE_DIR / "analytics_history.json"
+# Supabase クライアント
+sys.path.insert(0, str(BASE_DIR.parent))
+from db_client import db
 
 
 # ============================================================
-# ユーティリティ
+# ユーティリティ（DB版）
 # ============================================================
 
 def load_insights() -> dict:
-    if INSIGHTS_FILE.exists():
-        try:
-            return json.loads(INSIGHTS_FILE.read_text(encoding="utf-8"))
-        except Exception:
-            pass
-    return {
-        "x": "",
-        "bluesky": "",
-        "best_keywords": [],
-        "avoid_patterns": [],
-        "updated_at": "",
-    }
+    """feedback_insights を DB から読み込む"""
+    try:
+        return db.get_insights()
+    except Exception as e:
+        print(f"[Analytics] insights DB読み込み失敗: {e}")
+        return {"x": "", "bluesky": "", "best_keywords": [], "avoid_patterns": [], "updated_at": ""}
 
 
 def save_insights(insights: dict):
-    insights["updated_at"] = datetime.now().isoformat()
-    INSIGHTS_FILE.write_text(
-        json.dumps(insights, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
+    """feedback_insights を DB に upsert する"""
+    try:
+        db.save_insights(insights)
+    except Exception as e:
+        print(f"[Analytics] insights DB書き込み失敗: {e}")
 
 
 def load_history() -> list:
-    if ANALYTICS_HISTORY_FILE.exists():
-        try:
-            return json.loads(ANALYTICS_HISTORY_FILE.read_text(encoding="utf-8"))
-        except Exception:
-            pass
-    return []
+    """analytics_history を DB から読み込む"""
+    try:
+        return db.get_analytics_history(limit=500)
+    except Exception as e:
+        print(f"[Analytics] history DB読み込み失敗: {e}")
+        return []
 
 
-def save_history(records: list):
-    history = load_history()
-    existing_ids = {r["id"] for r in history}
-    new_records = [r for r in records if r["id"] not in existing_ids]
-    history.extend(new_records)
-    # 最新500件のみ保持
-    ANALYTICS_HISTORY_FILE.write_text(
-        json.dumps(history[-500:], ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    return len(new_records)
+def save_history(records: list) -> int:
+    """analytics_history を DB に保存し、新規挿入件数を返す"""
+    try:
+        return db.save_analytics_records(records)
+    except Exception as e:
+        print(f"[Analytics] history DB書き込み失敗: {e}")
+        return 0
 
 
 # ============================================================
@@ -226,23 +217,20 @@ def analyze_with_gemini(records: list) -> dict:
 JSONのみ出力してください。"""
 
         try:
-            from google import genai
-            client = genai.Client(api_key=api_key)
-            response = client.models.generate_content(
-                model="gemini-2.0-flash-lite",
-                contents=prompt,
-            )
-            text = response.text.strip()
-
+            from gemini_client import generate, strip_code_block
             import re
-            json_match = re.search(r'\{.*\}', text, re.DOTALL)
-            if json_match:
-                data = json.loads(json_match.group())
-                insights[platform] = data
-                print(f"[Analytics/AI] {platform} 分析完了")
-                print(f"  勝ちパターン: {data.get('winning_patterns', [])[:1]}")
+            text = generate(prompt, use_cache=False)
+            if text:
+                json_match = re.search(r'\{.*\}', strip_code_block(text), re.DOTALL)
+                if json_match:
+                    data = json.loads(json_match.group())
+                    insights[platform] = data
+                    print(f"[Analytics/AI] {platform} 分析完了")
+                    print(f"  勝ちパターン: {data.get('winning_patterns', [])[:1]}")
+                else:
+                    print(f"[Analytics/AI] {platform}: JSON解析失敗")
             else:
-                print(f"[Analytics/AI] {platform}: JSON解析失敗")
+                print(f"[Analytics/AI] {platform}: Gemini応答なし（全リトライ失敗）")
         except Exception as e:
             print(f"[Analytics/AI] {platform} エラー: {e}")
 
@@ -285,16 +273,13 @@ def generate_keyword_strategy(records: list, current_insights: dict) -> dict:
 JSONのみ出力してください。"""
 
     try:
-        from google import genai
-        client = genai.Client(api_key=api_key)
-        response = client.models.generate_content(
-            model="gemini-2.0-flash-lite",
-            contents=prompt,
-        )
+        from gemini_client import generate, strip_code_block
         import re
-        json_match = re.search(r'\{.*\}', response.text, re.DOTALL)
-        if json_match:
-            return json.loads(json_match.group())
+        text = generate(prompt, use_cache=False)
+        if text:
+            json_match = re.search(r'\{.*\}', strip_code_block(text), re.DOTALL)
+            if json_match:
+                return json.loads(json_match.group())
     except Exception as e:
         print(f"[Analytics/Strategy] エラー: {e}")
 
@@ -345,7 +330,7 @@ def run_analytics_feedback() -> dict:
         current["keyword_strategy"] = keyword_strategy
 
     save_insights(current)
-    print(f"[Analytics] insights保存完了: {INSIGHTS_FILE}")
+    print("[Analytics] insights保存完了")
 
     return current
 

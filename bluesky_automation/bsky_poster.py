@@ -13,7 +13,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from bsky_post_generator import generate_post, get_today_schedule, POST_TYPES
 
-LOG_FILE = Path(__file__).parent / "bsky_post_log.json"
+# Supabase クライアント
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from db_client import db
 
 # ─────────────────────────────────────────
 # .env読み込み
@@ -72,44 +74,53 @@ def dry_run(text: str) -> dict:
 
 
 # ─────────────────────────────────────────
-# ログ管理
+# ログ管理（DB版）
 # ─────────────────────────────────────────
 def save_log(post: dict, result: dict):
-    log = []
-    if LOG_FILE.exists():
-        with open(LOG_FILE) as f:
-            log = json.load(f)
-    log.append({
-        "datetime": datetime.now().isoformat(),
-        "type":     post["type"],
-        "label":    post["label"],
-        "chars":    post["chars"],
-        "text":     post["text"],
-        "success":  result.get("success", False),
-        "url":      result.get("url", ""),
-        "dry_run":  result.get("dry_run", False),
-    })
-    with open(LOG_FILE, "w") as f:
-        json.dump(log, f, ensure_ascii=False, indent=2)
+    """投稿ログを DB に INSERT する（競合排除）"""
+    try:
+        db.insert_post(
+            platform  = "bluesky",
+            post_type = post.get("type", ""),
+            label     = post.get("label", ""),
+            chars     = post.get("chars", 0),
+            text      = post.get("text", ""),
+            success   = result.get("success", False),
+            url       = result.get("url", ""),
+            dry_run   = result.get("dry_run", False),
+        )
+    except Exception as e:
+        print(f"⚠️ DB書き込みエラー（ログ保存失敗）: {e}")
 
 
 def show_log(days: int = 7):
-    if not LOG_FILE.exists():
+    from datetime import timedelta
+    try:
+        log = db.get_posts(platform="bluesky", limit=200)
+    except Exception as e:
+        print(f"⚠️ DB読み込みエラー: {e}")
+        return
+    if not log:
         print("ログなし")
         return
-    from datetime import timedelta
-    with open(LOG_FILE) as f:
-        log = json.load(f)
     cutoff = datetime.now() - timedelta(days=days)
     print(f"\n📊 Bluesky投稿ログ（直近{days}日）")
     print("─" * 50)
-    for entry in reversed(log):
-        dt = datetime.fromisoformat(entry["datetime"])
+    for entry in log:
+        dt_str = entry.get("datetime") or entry.get("created_at", "")
+        if not dt_str:
+            continue
+        try:
+            dt = datetime.fromisoformat(dt_str.replace("Z", "").split("+")[0])
+        except ValueError:
+            continue
         if dt < cutoff:
             continue
-        st   = "✅" if entry["success"] else "❌"
-        mode = "🧪" if entry.get("dry_run") else "🦋"
-        print(f"{st}{mode} {dt.strftime('%m/%d %H:%M')} [{entry['label']}] {entry['chars']}文字")
+        st    = "✅" if entry.get("success") else "❌"
+        mode  = "🧪" if entry.get("dry_run") else "🦋"
+        label = entry.get("label") or entry.get("post_type") or ""
+        chars = entry.get("chars", 0)
+        print(f"{st}{mode} {dt.strftime('%m/%d %H:%M')} [{label}] {chars}文字")
 
 
 # ─────────────────────────────────────────

@@ -37,10 +37,11 @@ if env_path.exists():
             k, _, v = line.partition("=")
             os.environ.setdefault(k.strip(), v.strip())
 
+# Supabase クライアント
+sys.path.insert(0, str(ROOT_DIR))
+from db_client import db
+
 ASSOCIATE_TAG    = os.getenv("AMAZON_ASSOCIATE_TAG", "smartearn22-22")
-HISTORY_JSON     = BASE_DIR / "product_history.json"
-STATIC_JSON      = BASE_DIR / "static_products.json"
-DEALS_JSON       = BASE_DIR / "amazon_deals.json"
 HISTORY_DAYS     = 14    # 過去何日分の履歴を除外するか
 PRODUCTS_PER_DAY = 5     # 毎日生成する商品数
 
@@ -89,53 +90,23 @@ def get_season(month: int) -> str:
 
 
 # ─────────────────────────────────────────
-# 履歴管理
+# 履歴管理（DB版）
 # ─────────────────────────────────────────
-def load_history() -> dict:
-    """product_history.json を読み込む"""
-    if not HISTORY_JSON.exists():
-        return {"entries": []}
+def get_recent_keywords(days: int = HISTORY_DAYS) -> list:
+    """過去N日の使用済みキーワードを DB から返す"""
     try:
-        return json.loads(HISTORY_JSON.read_text(encoding="utf-8"))
-    except Exception:
-        return {"entries": []}
+        return db.get_recent_keywords(days=days)
+    except Exception as e:
+        print(f"  ⚠️  キーワード履歴DB読み込み失敗: {e}")
+        return []
 
 
-def save_history(history: dict):
-    HISTORY_JSON.write_text(json.dumps(history, ensure_ascii=False, indent=2), encoding="utf-8")
-
-
-def get_recent_keywords(history: dict, days: int = HISTORY_DAYS) -> list:
-    """過去N日の使用済みキーワードを返す"""
-    cutoff = datetime.now() - timedelta(days=days)
-    keywords = []
-    for entry in history.get("entries", []):
-        try:
-            entry_date = datetime.fromisoformat(entry.get("date", "2000-01-01"))
-        except ValueError:
-            continue
-        if entry_date >= cutoff:
-            keywords.extend(entry.get("keywords", []))
-    return list(set(keywords))
-
-
-def add_history_entry(history: dict, keywords: list, month: int, season: str) -> dict:
-    """今日の使用済みキーワードを履歴に追加し、古いエントリを削除"""
-    entry = {
-        "date":     datetime.now().isoformat(),
-        "keywords": keywords,
-        "season":   season,
-        "month":    month,
-    }
-    history["entries"].append(entry)
-
-    # 30日以上前のエントリを削除
-    cutoff = datetime.now() - timedelta(days=30)
-    history["entries"] = [
-        e for e in history["entries"]
-        if datetime.fromisoformat(e.get("date", "2000-01-01")) >= cutoff
-    ]
-    return history
+def add_history_entry(keywords: list, month: int, season: str) -> None:
+    """今日の使用済みキーワードを DB に INSERT する（古いエントリは自動削除）"""
+    try:
+        db.add_keyword_history(keywords, month, season)
+    except Exception as e:
+        print(f"  ⚠️  キーワード履歴DB書き込み失敗: {e}")
 
 
 # ─────────────────────────────────────────
@@ -275,19 +246,23 @@ def generate_products_via_gemini(
 
 
 # ─────────────────────────────────────────
-# static_products.json 管理
+# static_products 管理（DB版）
 # ─────────────────────────────────────────
 def load_static_products() -> list:
-    if not STATIC_JSON.exists():
-        return []
+    """静的商品マスタを DB から返す"""
     try:
-        return json.loads(STATIC_JSON.read_text(encoding="utf-8"))
-    except Exception:
+        return db.get_static_products()
+    except Exception as e:
+        print(f"  ⚠️  静的商品DB読み込み失敗: {e}")
         return []
 
 
-def save_static_products(products: list):
-    STATIC_JSON.write_text(json.dumps(products, ensure_ascii=False, indent=2), encoding="utf-8")
+def save_static_products(products: list) -> None:
+    """静的商品マスタを DB に保存する"""
+    try:
+        db.save_static_products(products)
+    except Exception as e:
+        print(f"  ⚠️  静的商品DB書き込み失敗: {e}")
 
 
 def refresh_stale_static(month: int, season: str, events: list, theme: str, dry_run: bool = False):
@@ -378,23 +353,18 @@ def rotate(dry_run: bool = False, force: bool = False):
     print(f"{'=' * 60}")
 
     # 同日実行チェック（20時間以内はスキップ）
-    if not force and not dry_run and DEALS_JSON.exists():
+    if not force and not dry_run:
         try:
-            existing = json.loads(DEALS_JSON.read_text(encoding="utf-8"))
-            if existing:
-                fetched = existing[0].get("fetched_at", "")
-                if fetched:
-                    age_hours = (now - datetime.fromisoformat(fetched)).total_seconds() / 3600
-                    if age_hours < 20:
-                        print(f"✅ 本日分は生成済み（{age_hours:.1f}時間前）→ スキップ")
-                        print("   強制更新する場合: --force オプションを使用")
-                        return
+            age_hours = db.get_last_amazon_deal_age_hours()
+            if age_hours is not None and age_hours < 20:
+                print(f"✅ 本日分は生成済み（{age_hours:.1f}時間前）→ スキップ")
+                print("   強制更新する場合: --force オプションを使用")
+                return
         except Exception:
             pass
 
     # 履歴から除外キーワードを取得
-    history  = load_history()
-    excluded = get_recent_keywords(history, days=HISTORY_DAYS)
+    excluded = get_recent_keywords(days=HISTORY_DAYS)
     if excluded:
         print(f"\n📋 除外キーワード（過去{HISTORY_DAYS}日）: {', '.join(excluded[:10])}" +
               (f" 他{len(excluded) - 10}件" if len(excluded) > 10 else ""))
@@ -448,15 +418,17 @@ def rotate(dry_run: bool = False, force: bool = False):
         print(f"{'=' * 60}")
         return
 
-    # amazon_deals.json 更新
-    DEALS_JSON.write_text(json.dumps(products, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"\n💾 amazon_deals.json を更新 ({len(products)}件)")
+    # amazon_products DB 更新
+    try:
+        db.save_amazon_deals(products)
+        print(f"\n💾 amazon_products テーブルを更新 ({len(products)}件)")
+    except Exception as e:
+        print(f"⚠️  amazon_products DB書き込み失敗: {e}")
 
-    # product_history.json 更新
+    # keyword_history DB 更新
     used_keywords = [p.get("search_keyword", p.get("title", "")) for p in products]
-    history = add_history_entry(history, used_keywords, month, season)
-    save_history(history)
-    print(f"📝 product_history.json を更新 ({len(used_keywords)}件追記)")
+    add_history_entry(used_keywords, month, season)
+    print(f"📝 keyword_history テーブルを更新 ({len(used_keywords)}件追記)")
 
     print(f"\n✅ ローテーション完了")
 

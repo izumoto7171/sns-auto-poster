@@ -1,0 +1,87 @@
+name: Analytics & Click Update
+
+on:
+  schedule:
+    # 毎日 JST 6:00（UTC 21:00）にクリック数更新 + SNS分析
+    - cron: '0 21 * * *'
+  workflow_dispatch:  # 手動実行ボタン
+
+jobs:
+  update-clicks:
+    name: クリック数更新 (Bitly → Supabase)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Python セットアップ
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 依存関係インストール
+        run: pip install requests
+
+      - name: クリック数更新
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          BITLY_ACCESS_TOKEN: ${{ secrets.BITLY_ACCESS_TOKEN }}
+        run: |
+          python3 -c "
+          import sys, os
+          sys.path.insert(0, 'money_agent')
+          from affiliate_tracker import update_click_counts
+          update_click_counts()
+          "
+
+  run-analytics:
+    name: SNS分析フィードバック
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # クリック数更新の後に実行
+    needs: update-clicks
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Python セットアップ
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 依存関係インストール
+        run: pip install google-genai tweepy atproto requests
+
+      - name: SNS分析 + フィードバック生成
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+          BSKY_HANDLE: ${{ secrets.BSKY_HANDLE }}
+          BSKY_APP_PASSWORD: ${{ secrets.BSKY_APP_PASSWORD }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          BITLY_ACCESS_TOKEN: ${{ secrets.BITLY_ACCESS_TOKEN }}
+        run: |
+          python3 -c "
+          import sys
+          sys.path.insert(0, 'money_agent')
+          from analytics_feedback import run_analytics_feedback
+          run_analytics_feedback()
+          "
+
+      - name: insights をコミット & プッシュ
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add money_agent/feedback_insights.json \
+                  money_agent/analytics_history.json || true
+          git diff --staged --quiet || \
+            git commit -m "chore: SNS分析insights更新 $(date +'%Y-%m-%d')"
+          git push || true

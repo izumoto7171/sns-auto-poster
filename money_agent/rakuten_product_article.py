@@ -47,7 +47,10 @@ RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID", "")  # アフィ�
 GEMINI_API_KEY       = os.environ.get("GEMINI_API_KEY", "")
 
 RAKUTEN_SEARCH_URL = "https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20220601"
-RAKUTEN_ORIGIN     = os.environ.get("RAKUTEN_ORIGIN", "https://smart-earn-life.hateblo.jp")
+RAKUTEN_ORIGIN     = os.environ.get("RAKUTEN_ORIGIN", "")
+
+# crawlers パッケージ（楽天APIキャッシュ管理）
+from crawlers.crawler_rakuten import fetch_products as _fetch_products_cached
 
 # ============================================================
 # 記事化するカテゴリ（楽天ジャンルID + SEOキーワード）
@@ -99,98 +102,14 @@ ARTICLE_CATEGORIES = [
 
 DRAFTS_DIR  = Path(__file__).parent / "hatena_drafts"
 LOG_PATH    = Path(__file__).parent / "rakuten_article_log.json"
-CACHE_PATH  = Path(__file__).parent / "rakuten_product_cache.json"
-CACHE_TTL   = 60 * 60 * 24  # 24時間（秒）
 
 
 # ============================================================
-# 楽天APIキャッシュ
-# ============================================================
-def _load_cache() -> dict:
-    if CACHE_PATH.exists():
-        try:
-            return json.loads(CACHE_PATH.read_text(encoding="utf-8"))
-        except Exception:
-            pass
-    return {}
-
-
-def _save_cache(cache: dict):
-    CACHE_PATH.write_text(json.dumps(cache, ensure_ascii=False, indent=2), encoding="utf-8")
-
-
-# ============================================================
-# 楽天APIで商品取得
+# 楽天APIで商品取得（crawlers.crawler_rakuten に委譲）
 # ============================================================
 def fetch_rakuten_products(genre_id: str, hits: int = 10) -> list:
     """楽天市場APIで人気商品を取得する。24時間キャッシュ付き。"""
-    import time
-    cache_key = f"{genre_id}_{hits}"
-    cache = _load_cache()
-
-    # キャッシュヒット判定
-    if cache_key in cache:
-        entry = cache[cache_key]
-        if time.time() - entry.get("ts", 0) < CACHE_TTL:
-            print(f"[rakuten] キャッシュヒット (genre_id={genre_id})")
-            return entry["products"]
-
-    if not RAKUTEN_APP_ID:
-        print("[rakuten] RAKUTEN_APP_ID 未設定")
-        return cache.get(cache_key, {}).get("products", [])  # 期限切れキャッシュを返す
-
-    params = {
-        "applicationId": RAKUTEN_APP_ID,
-        "accessKey":     RAKUTEN_ACCESS_KEY,
-        "genreId":       genre_id,
-        "sort":          "-reviewCount",
-        "hits":          hits,
-        "imageFlag":     1,
-        "format":        "json",
-    }
-    if RAKUTEN_AFFILIATE_ID:
-        params["affiliateId"] = RAKUTEN_AFFILIATE_ID
-
-    try:
-        res = requests.get(
-            RAKUTEN_SEARCH_URL,
-            params=params,
-            headers={"Origin": RAKUTEN_ORIGIN},
-            timeout=15,
-        )
-        res.raise_for_status()
-        items_raw = res.json().get("Items", [])
-    except Exception as e:
-        print(f"[rakuten] 商品取得エラー: {e}")
-        # エラー時は期限切れキャッシュで代替
-        return cache.get(cache_key, {}).get("products", [])
-
-    products = []
-    for item_wrap in items_raw:
-        item = item_wrap.get("Item", item_wrap)
-        # アフィリエイトIDが設定されていればaff URLを使う
-        url = item.get("affiliateUrl") or item.get("itemUrl", "")
-        products.append({
-            "name":         item.get("itemName", "")[:60],
-            "price":        item.get("itemPrice", 0),
-            "url":          url,
-            "shop":         item.get("shopName", ""),
-            "review_count": item.get("reviewCount", 0),
-            "review_avg":   item.get("reviewAverage", 0.0),
-            "image_url":    (item.get("mediumImageUrls") or [{"imageUrl": ""}])[0].get("imageUrl", ""),
-            "catchcopy":    item.get("catchcopy", ""),
-        })
-
-    print(f"[rakuten] {len(products)}件取得 (genre_id={genre_id})")
-
-    # キャッシュ保存
-    cache[cache_key] = {"ts": time.time(), "products": products}
-    try:
-        _save_cache(cache)
-    except Exception:
-        pass
-
-    return products
+    return _fetch_products_cached(genre_id, hits=hits)
 
 
 # ============================================================

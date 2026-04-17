@@ -106,6 +106,8 @@ jobs:
           X_COOKIES: ${{ secrets.X_COOKIES }}
           X_BROWSER_COOKIES: ${{ secrets.X_BROWSER_COOKIES }}
           AMAZON_ASSOCIATE_TAG: ${{ secrets.AMAZON_ASSOCIATE_TAG }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
           cd x_automation
           python3 x_poster.py live

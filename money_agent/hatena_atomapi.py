@@ -13,15 +13,43 @@
 
 import os
 import re
+import sys
 import base64
 import requests
 from datetime import datetime
 from pathlib import Path
 
-HATENA_ID = os.environ.get("HATENA_ID", "pi-natu-butter")
-HATENA_BLOG_ID = os.environ.get("HATENA_BLOG_ID", "smart-earn-life.hateblo.jp")
+HATENA_ID      = os.environ.get("HATENA_ID", "")
+HATENA_BLOG_ID = os.environ.get("HATENA_BLOG_ID", "")
 HATENA_API_KEY = os.environ.get("HATENA_API_KEY", "")
-DRAFTS_DIR = Path(__file__).parent / "hatena_drafts"
+DRAFTS_DIR     = Path(__file__).parent / "hatena_drafts"
+
+# Supabase クライアント（DBログ用）
+sys.path.insert(0, str(Path(__file__).parent.parent))
+try:
+    from db_client import db as _db
+    _DB_AVAILABLE = True
+except Exception:
+    _DB_AVAILABLE = False
+
+
+def _log_to_db(article: dict, success: bool, url: str = "", error_message: str = ""):
+    """投稿結果を DB に記録する（失敗しても例外は抑制）"""
+    if not _DB_AVAILABLE:
+        return
+    try:
+        _db.insert_post(
+            platform="hatena",
+            post_type=article.get("category", ""),
+            label=article.get("keyword", article.get("program_name", "")),
+            chars=len(article.get("body", "")),
+            text=article.get("title", "")[:500],
+            success=success,
+            url=url,
+            error_message=error_message,
+        )
+    except Exception as e:
+        print(f"[Hatena] DBログ書き込み失敗: {e}")
 
 
 def markdown_to_html(body_md: str) -> str:
@@ -114,22 +142,32 @@ generated_at: {article.get("generated_at", "")}
 
 def post(article: dict, draft: bool = False) -> str:
     """
-    はてなブログに記事を投稿する。
-    APIキーが無効な場合はローカルにMarkdownとして保存してそのパスを返す。
+    はてなブログに AtomPub API で記事を投稿してURLを返す。
+    APIキー未設定 / 認証失敗時はローカルに Markdown として保存してそのパスを返す。
+    投稿結果（成否・エラー）は DB にも記録する。
     """
-    title = article.get("title", "無題")
-    tags = article.get("tags", [])
-    category = article.get("category", "副業")
+    title     = article.get("title", "無題")
+    tags      = article.get("tags", [])
+    category  = article.get("category", "副業")
     body_html = markdown_to_html(article.get("body", ""))
 
-    if not HATENA_API_KEY:
-        print(f"[Hatena] HATENA_API_KEY未設定 → ローカルに下書き保存")
+    if not HATENA_ID or not HATENA_BLOG_ID:
+        msg = "HATENA_ID / HATENA_BLOG_ID 未設定"
+        print(f"[Hatena] {msg} → ローカルに下書き保存")
         path = save_as_draft(article)
-        print(f"[Hatena] 下書き保存: {path}")
+        _log_to_db(article, success=False, error_message=msg)
         return f"file://{path}"
 
-    categories_xml = "\n".join(f'<category term="{t}" />' for t in [category] + tags)
-    draft_xml = "<app:draft>yes</app:draft>" if draft else "<app:draft>no</app:draft>"
+    if not HATENA_API_KEY:
+        msg = "HATENA_API_KEY未設定"
+        print(f"[Hatena] {msg} → ローカルに下書き保存")
+        path = save_as_draft(article)
+        print(f"[Hatena] 下書き保存: {path}")
+        _log_to_db(article, success=False, error_message=msg)
+        return f"file://{path}"
+
+    categories_xml = "\n    ".join(f'<category term="{t}" />' for t in [category] + tags)
+    draft_xml      = "<app:draft>yes</app:draft>" if draft else "<app:draft>no</app:draft>"
 
     atom_xml = f"""<?xml version="1.0" encoding="utf-8"?>
 <entry xmlns="http://www.w3.org/2005/Atom"
@@ -144,41 +182,70 @@ def post(article: dict, draft: bool = False) -> str:
 </entry>"""
 
     endpoint = f"https://blog.hatena.ne.jp/{HATENA_ID}/{HATENA_BLOG_ID}/atom/entry"
-    auth = base64.b64encode(f"{HATENA_ID}:{HATENA_API_KEY}".encode()).decode()
+    auth     = base64.b64encode(f"{HATENA_ID}:{HATENA_API_KEY}".encode()).decode()
 
     try:
         resp = requests.post(
             endpoint,
             data=atom_xml.encode("utf-8"),
             headers={
-                "Content-Type": "application/atom+xml; charset=utf-8",
+                "Content-Type":  "application/atom+xml; charset=utf-8",
                 "Authorization": f"Basic {auth}",
             },
             timeout=30,
         )
+    except requests.RequestException as e:
+        error_msg = f"ネットワークエラー: {e}"
+        print(f"[Hatena] {error_msg}")
+        _log_to_db(article, success=False, error_message=error_msg)
+        path = save_as_draft(article)
+        return f"file://{path}"
 
-        if resp.status_code in (200, 201):
-            match = re.search(r'<link[^>]*rel="alternate"[^>]*href="([^"]+)"', resp.text)
-            url = match.group(1) if match else ""
-            print(f"[Hatena] 投稿成功: {title[:50]}")
-            if url:
-                print(f"[Hatena] URL: {url}")
-            return url
+    status = resp.status_code
 
-        elif resp.status_code == 401:
-            print(f"[Hatena] APIキー認証失敗 (401)")
-            print(f"[Hatena] APIキーの取得方法: https://blog.hatena.ne.jp/{HATENA_ID}/{HATENA_BLOG_ID}/config/api")
-            print(f"[Hatena] → ローカルに下書き保存")
-            path = save_as_draft(article)
-            print(f"[Hatena] 下書き保存: {path}")
-            return f"file://{path}"
+    if status in (200, 201):
+        match = re.search(r'<link[^>]*rel="alternate"[^>]*href="([^"]+)"', resp.text)
+        url   = match.group(1) if match else ""
+        print(f"[Hatena] 投稿成功: {title[:50]}")
+        if url:
+            print(f"[Hatena] URL: {url}")
+        _log_to_db(article, success=True, url=url)
+        return url
 
-        else:
-            print(f"[Hatena] 投稿失敗 HTTP {resp.status_code}: {resp.text[:200]}")
-            path = save_as_draft(article)
-            return f"file://{path}"
+    elif status == 400:
+        error_msg = f"HTTP 400 Bad Request: {resp.text[:200]}"
+        print(f"[Hatena] リクエスト不正 — {error_msg}")
+        _log_to_db(article, success=False, error_message=error_msg)
+        path = save_as_draft(article)
+        return f"file://{path}"
 
-    except Exception as e:
-        print(f"[Hatena] 投稿エラー: {e}")
+    elif status == 401:
+        error_msg = (
+            f"HTTP 401 Unauthorized: APIキー認証失敗。"
+            f"https://blog.hatena.ne.jp/{HATENA_ID}/{HATENA_BLOG_ID}/config/api で確認してください"
+        )
+        print(f"[Hatena] {error_msg}")
+        _log_to_db(article, success=False, error_message=error_msg)
+        path = save_as_draft(article)
+        print(f"[Hatena] 下書き保存: {path}")
+        return f"file://{path}"
+
+    elif status == 429:
+        error_msg = "HTTP 429 Too Many Requests: レートリミット超過"
+        print(f"[Hatena] {error_msg}")
+        _log_to_db(article, success=False, error_message=error_msg)
+        return ""
+
+    elif 500 <= status < 600:
+        error_msg = f"HTTP {status} Server Error: {resp.text[:200]}"
+        print(f"[Hatena] サーバーエラー — {error_msg}")
+        _log_to_db(article, success=False, error_message=error_msg)
+        path = save_as_draft(article)
+        return f"file://{path}"
+
+    else:
+        error_msg = f"HTTP {status}: {resp.text[:200]}"
+        print(f"[Hatena] 予期しないレスポンス — {error_msg}")
+        _log_to_db(article, success=False, error_message=error_msg)
         path = save_as_draft(article)
         return f"file://{path}"

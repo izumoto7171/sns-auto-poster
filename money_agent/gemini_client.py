@@ -16,9 +16,12 @@ Gemini API 共通クライアント
 import hashlib
 import json
 import os
-import time
+import sys
 from datetime import datetime, timedelta
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from utils.decorators import api_retry
 
 # ── 定数 ────────────────────────────────────────────────
 DEFAULT_MODEL  = "gemini-2.0-flash-lite"
@@ -72,8 +75,8 @@ def generate(
     model: str = DEFAULT_MODEL,
     cache_key: str = None,
     use_cache: bool = True,
-    max_retries: int = 4,
-    initial_wait: int = 35,
+    max_retries: int = 4,   # 後方互換のために残す（utils/decorators.py の設定が優先）
+    initial_wait: int = 35, # 後方互換のために残す（utils/decorators.py の設定が優先）
     temperature: float = 0.7,
 ) -> "str | None":
     """
@@ -85,8 +88,8 @@ def generate(
     model        : 使用モデル（デフォルト: gemini-2.0-flash-lite）
     cache_key    : キャッシュキーを手動指定する場合（省略時はプロンプトの MD5）
     use_cache    : True = キャッシュを使用。SNS 投稿など毎回違う内容には False を渡す
-    max_retries  : 429/503 時の最大リトライ数
-    initial_wait : 最初の待機秒数（以降 2 倍ずつ最大 120 秒）
+    max_retries  : 後方互換のために残す（リトライ設定は utils/decorators.py が管理）
+    initial_wait : 後方互換のために残す（リトライ設定は utils/decorators.py が管理）
     temperature  : 生成の多様性 (0.0〜1.0)。停滞検知時は 0.9〜1.0 を渡す
 
     Returns
@@ -109,7 +112,7 @@ def generate(
             print(f"  [Gemini] キャッシュヒット ({key[:8]}...)")
             return entry["text"]
 
-    # API 呼び出し
+    # API 呼び出し（tenacity ベースのリトライ付き）
     try:
         from google import genai
         from google.genai import types as genai_types
@@ -118,43 +121,28 @@ def generate(
         return None
 
     client = genai.Client(api_key=api_key)
-    wait   = initial_wait
     config = genai_types.GenerateContentConfig(temperature=temperature)
 
-    for attempt in range(max_retries):
-        try:
-            resp = client.models.generate_content(model=model, contents=prompt, config=config)
-            text = resp.text.strip()
+    @api_retry("gemini", context=f"gemini.generate: {prompt[:60]}")
+    def _call_api() -> str:
+        resp = client.models.generate_content(model=model, contents=prompt, config=config)
+        return resp.text.strip()
 
-            # キャッシュ保存
-            if use_cache:
-                cache[key] = {
-                    "text":      text,
-                    "cached_at": datetime.now().isoformat(),
-                    "model":     model,
-                }
-                _save_cache(cache)
+    text = _call_api()
+    if text is None:
+        print(f"  [Gemini] 全リトライ消耗 → スキップ")
+        return None
 
-            return text
+    # キャッシュ保存
+    if use_cache:
+        cache[key] = {
+            "text":      text,
+            "cached_at": datetime.now().isoformat(),
+            "model":     model,
+        }
+        _save_cache(cache)
 
-        except Exception as e:
-            err = str(e)
-            is_rate   = "429" in err or "RESOURCE_EXHAUSTED" in err
-            is_server = "503" in err or "500" in err or "UNAVAILABLE" in err
-
-            if (is_rate or is_server) and attempt < max_retries - 1:
-                reason = "レートリミット" if is_rate else "サーバーエラー"
-                print(
-                    f"  [Gemini] {reason} → {wait}秒後にリトライ"
-                    f" ({attempt + 1}/{max_retries - 1}): {err[:120]}"
-                )
-                time.sleep(wait)
-                wait = min(wait * 2, 120)
-            else:
-                print(f"  [Gemini] 失敗（リトライ上限）: {err[:200]}")
-                return None
-
-    return None
+    return text
 
 
 def strip_code_block(text: str) -> str:

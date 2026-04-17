@@ -6,8 +6,13 @@ Bluesky投稿文 自動生成
 インプレ強化：ハッシュタグ + バイラルフック + エンゲージCTA
 """
 import os
+import sys
 import random
 from datetime import datetime
+from pathlib import Path
+
+# gemini_client（money_agent/）をパスに追加
+sys.path.insert(0, str(Path(__file__).parent.parent / "money_agent"))
 
 # ─────────────────────────────────────────
 # 投稿タイプ
@@ -147,8 +152,7 @@ def generate_with_template(post_type: str) -> str:
 def rewrite_x_to_bsky(x_text: str, api_key: str) -> str:
     """X投稿をBluesky用にリライト（検証ログスタイルに変換）"""
     try:
-        from google import genai
-        client = genai.Client(api_key=api_key)
+        from gemini_client import generate
         prompt = f"""
 以下のX（Twitter）の投稿文を、Bluesky用にリライトしてください。
 
@@ -165,11 +169,8 @@ def rewrite_x_to_bsky(x_text: str, api_key: str) -> str:
 
 リライトした投稿文のみ出力してください。
 """
-        resp = client.models.generate_content(
-            model="gemini-2.0-flash-lite",
-            contents=prompt,
-        )
-        return resp.text.strip()
+        result = generate(prompt, use_cache=False)
+        return result if result else x_text
     except Exception as e:
         print(f"⚠️ Gemini失敗: {e}")
         return x_text
@@ -177,8 +178,7 @@ def rewrite_x_to_bsky(x_text: str, api_key: str) -> str:
 
 def generate_with_gemini(post_type: str, label: str, api_key: str) -> str:
     try:
-        from google import genai
-        client = genai.Client(api_key=api_key)
+        from gemini_client import generate
 
         ai_kw   = random.choice(FEED_KEYWORDS["ai"])
         side_kw = random.choice(FEED_KEYWORDS["side"])
@@ -232,12 +232,11 @@ def generate_with_gemini(post_type: str, label: str, api_key: str) -> str:
 
 投稿文のみ出力してください。
 """
-        resp = client.models.generate_content(
-            model="gemini-2.0-flash-lite",
-            contents=prompt,
-        )
-        text = resp.text.strip()
-        return append_hashtags(text, post_type)
+        text = generate(prompt, use_cache=False)
+        if text:
+            return append_hashtags(text.strip(), post_type)
+        print("⚠️ Gemini応答なし（全リトライ失敗）、テンプレート使用")
+        return generate_with_template(post_type)
     except Exception as e:
         print(f"⚠️ Gemini失敗、テンプレート使用: {e}")
         return generate_with_template(post_type)
