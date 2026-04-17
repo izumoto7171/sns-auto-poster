@@ -18,9 +18,12 @@ from db_client import db
 
 # A8キャッシュ操作は crawlers パッケージに委譲
 from crawlers.crawler_a8 import (
-    load_programs   as _a8_load_programs,
-    weighted_choice as _a8_weighted_choice_fn,
-    increment_posted as _a8_increment_posted_fn,
+    load_programs            as _a8_load_programs,
+    weighted_choice          as _a8_weighted_choice_fn,
+    increment_posted         as _a8_increment_posted_fn,
+    select_for_post          as _a8_select_for_post,
+    pop_from_cache           as _a8_pop_from_cache,
+    increment_posted_history as _a8_increment_history,
 )
 
 
@@ -1173,24 +1176,24 @@ def _a8_increment_posted(ins_id: str) -> None:
 
 def generate_a8_program_post() -> dict:
     """
-    A8.net 承認済みプログラムの X投稿を生成する。
+    A8.net 承認済みプログラムの X投稿を生成する（永久機関版）。
 
-    ・重み付き選択: posted_count が少ないプログラムを優先
-    ・ハッシュタグ: キャッシュに保存された hashtags フィールドを使用
-      （保存時に Gemini がジャンルに合わせて抽出済み）
+    【選択ロジック】
+    1. a8_programs_cache.json（キュー）に在庫あり
+       → weighted_choice で1件選択 → 投稿後にキューから削除
+    2. キューが空
+       → a8_programs_history.json（全履歴）からランダム選択
+       → キューが補充されるまで A8投稿が止まらない
+
+    ・ハッシュタグ: 保存時に Gemini が抽出済み
     ・リンク: hatena_url 優先、なければ affiliate_url
     ・景品表示法対応: 必ず #PR を付与
 
     Returns: generate_post() と同じ形式 dict、失敗時は空 dict
     """
-    programs = _a8_load_programs()
-    if not programs:
-        print("[A8Post] キャッシュなし → スキップ")
+    program, source = _a8_select_for_post()
+    if not program:
         return {}
-
-    # 直近 20 件を対象に重み付き選択
-    candidates = programs[-20:]
-    program = _a8_weighted_choice(candidates)
 
     name          = program.get("name", "")
     reward        = program.get("reward", "")
@@ -1269,12 +1272,17 @@ A8.netのアフィリエイトプログラムをX（Twitter）で自然に紹介
         tweet_body = _truncate_to_x_units(tweet_body, max_body)
         full_text  = f"{tweet_body}{suffix}"
 
-    # posted_count を更新
-    _a8_increment_posted(program.get("ins_id", ""))
+    ins_id = program.get("ins_id", "")
+
+    # キューから消費 or 履歴の投稿カウントを更新
+    if source == "cache":
+        _a8_pop_from_cache(ins_id)          # キューから削除（消費）
+    elif source == "history":
+        _a8_increment_history(ins_id)       # 履歴の投稿回数を記録
 
     print(
         f"[A8Post] 生成完了: {name} "
-        f"(posted_count: {program.get('posted_count', 0)} → {program.get('posted_count', 0) + 1}) "
+        f"(source={source}, posted_count: {program.get('posted_count', 0)+1}) "
         f"タグ: {hashtag_str}"
     )
     return {
@@ -1283,6 +1291,7 @@ A8.netのアフィリエイトプログラムをX（Twitter）で自然に紹介
         "text":    full_text,
         "chars":   len(full_text),
         "program": program,
+        "source":  source,
         "thread":  {"tweet1": full_text, "tweet2": ""},
     }
 
