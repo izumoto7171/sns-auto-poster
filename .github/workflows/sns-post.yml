@@ -4,9 +4,10 @@ on:
   schedule:
     # Amazon商品データ更新（JST 5:00 = UTC 20:00）※投稿より先に実行
     - cron: '0 20 * * *'   # JST 5:00 → 商品ローテーション
-    # X/Bluesky/はてな/note 投稿（JST 7/11/15/19/23時）
+    # X/Bluesky/はてな/note 投稿（JST 7/11/12/15/19/23時）
     - cron: '0 22 * * *'   # JST 7:00
     - cron: '0 2 * * *'    # JST 11:00
+    - cron: '0 3 * * *'    # JST 12:00 ← 楽天ルーム + 通常SNS投稿
     - cron: '0 6 * * *'    # JST 15:00
     - cron: '0 10 * * *'   # JST 19:00
     - cron: '0 14 * * *'   # JST 23:00
@@ -106,6 +107,8 @@ jobs:
           X_COOKIES: ${{ secrets.X_COOKIES }}
           X_BROWSER_COOKIES: ${{ secrets.X_BROWSER_COOKIES }}
           AMAZON_ASSOCIATE_TAG: ${{ secrets.AMAZON_ASSOCIATE_TAG }}
+          RAKUTEN_APP_ID: ${{ secrets.RAKUTEN_APP_ID }}
+          RAKUTEN_AFFILIATE_ID: ${{ secrets.RAKUTEN_AFFILIATE_ID }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
