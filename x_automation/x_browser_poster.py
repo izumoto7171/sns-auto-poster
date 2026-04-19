@@ -172,7 +172,7 @@ async def _click_post_button(page, testid: str = "tweetButtonInline"):
         await post_btn.click(timeout=10000)
     except Exception:
         print("⚠️ ネイティブクリック失敗 → JSクリック")
-        await page.evaluate("btn => btn.click()", await post_btn.element_handle())
+        await page.evaluate("btn => btn.click()", post_btn)
 
     # 投稿リクエストが飛んで画面が更新されるまで待つ
     await page.wait_for_timeout(AFTER_POST_MS)
