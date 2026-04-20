@@ -343,36 +343,71 @@ def _save_edit_log(log: dict) -> None:
     EDIT_LOG_FILE.write_text(json.dumps(log, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+EDITOR_RESULT_FILE = Path("/tmp/editor_result.json")
+
+
+def _write_result(result: dict):
+    """GitHub Actions サマリー用に結果ファイルを書き出す（常に成功）"""
+    try:
+        EDITOR_RESULT_FILE.write_text(
+            json.dumps(result, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+    except Exception as e:
+        print(f"[HatenaEditor] 結果ファイル書き出し失敗: {e}")
+
+
 # ── メイン処理 ────────────────────────────────────────────
 def run(dry_run: bool = False) -> dict:
+    """
+    比較クエリ流入記事への比較表・ガイド自動挿入。
+
+    失敗しても sys.exit(1) しない「ソフトエラー」設計。
+    処理結果は /tmp/editor_result.json に書き出す。
+    """
     print("[HatenaEditor] 比較クエリ流入記事への自動挿入を開始...")
 
+    # API キー未設定は skip 扱い（エラーではない）
     if not HATENA_API_KEY:
-        print("[HatenaEditor] HATENA_API_KEY 未設定 — 終了")
-        return {"status": "skip", "reason": "no_api_key"}
+        msg = "HATENA_API_KEY 未設定"
+        print(f"[HatenaEditor] {msg} — スキップ（ソフトエラー）")
+        result = {"status": "skip", "reason": "no_api_key", "error_summary": msg,
+                  "updated": 0, "skipped": 0, "results": []}
+        _write_result(result)
+        return result
 
-    # 1. 比較クエリを抽出
+    # 比較クエリ抽出
     comparison_queries = _load_comparison_queries()
     if not comparison_queries:
-        print("[HatenaEditor] 比較クエリが見つかりません（search_console_analysis.json が必要）")
-        return {"status": "skip", "reason": "no_comparison_queries"}
+        msg = f"比較クエリなし（{ANALYSIS_FILE.name} が未生成か比較シグナルのクエリが0件）"
+        print(f"[HatenaEditor] {msg} — スキップ")
+        result = {"status": "skip", "reason": "no_comparison_queries", "error_summary": msg,
+                  "updated": 0, "skipped": 0, "results": []}
+        _write_result(result)
+        return result
 
     preview = [q["query"] for q in comparison_queries[:3]]
     print(f"[HatenaEditor] 比較クエリ {len(comparison_queries)} 件: {preview}")
 
-    # 2. エントリ一覧を取得
+    # エントリ一覧取得
     entries = _fetch_entry_list(max_pages=5)
     if not entries:
-        print("[HatenaEditor] エントリ取得失敗")
-        return {"status": "error", "reason": "fetch_entries_failed"}
+        msg = "AtomPub エントリ一覧取得失敗（API認証 or ネットワーク問題の可能性）"
+        print(f"[HatenaEditor] {msg}")
+        result = {"status": "error", "reason": "fetch_entries_failed", "error_summary": msg,
+                  "updated": 0, "skipped": 0, "results": []}
+        _write_result(result)
+        return result
+
     print(f"[HatenaEditor] エントリ取得: {len(entries)} 件")
 
     edit_log      = _load_edit_log()
     updated_count = 0
     skipped_count = 0
     results       = []
+    errors        = []  # 1行エラーサマリー収集
 
-    # 3. 各比較クエリについて対応記事を検索・更新
+    # 各比較クエリについて対応記事を検索・更新
     for q_info in comparison_queries:
         query    = q_info["query"]
         position = q_info.get("position", 0)
@@ -405,12 +440,25 @@ def run(dry_run: bool = False) -> dict:
         print(f"  [HatenaEditor] 対象: 「{title[:50]}」 順位:{position:.1f} スコア:{score}")
 
         # 記事本文を取得
-        _, body_html = _fetch_entry_body(entry_id)
-        if not body_html:
-            print(f"  [HatenaEditor] 本文取得失敗: {entry_id}")
+        try:
+            _, body_html = _fetch_entry_body(entry_id)
+        except Exception as e:
+            msg = f"本文取得例外 ({entry_id}): {type(e).__name__}: {e}"
+            print(f"  [HatenaEditor] {msg}")
+            errors.append(msg)
+            results.append({"query": query, "entry_id": entry_id, "title": title,
+                             "status": "error", "error": msg})
             continue
 
-        # 本文の SENTINEL チェック
+        if not body_html:
+            msg = f"本文が空 ({entry_id}): AtomPub PUT 認証エラーの可能性"
+            print(f"  [HatenaEditor] {msg}")
+            errors.append(msg)
+            results.append({"query": query, "entry_id": entry_id, "title": title,
+                             "status": "error", "error": msg})
+            continue
+
+        # 挿入済みマーカーチェック
         if SENTINEL in body_html:
             print(f"  [HatenaEditor] 本文に挿入済みマーカーあり — スキップ")
             skipped_count += 1
@@ -418,10 +466,24 @@ def run(dry_run: bool = False) -> dict:
 
         # Gemini で比較セクション生成
         print(f"  [HatenaEditor] Gemini生成: {tool_a} vs {tool_b}")
-        table_html, guide_html = _generate_comparison_sections(tool_a, tool_b, query)
-        if not table_html and not guide_html:
-            print(f"  [HatenaEditor] Gemini生成失敗 — スキップ")
+        try:
+            table_html, guide_html = _generate_comparison_sections(tool_a, tool_b, query)
+        except Exception as e:
+            msg = f"Gemini生成例外 ({query}): {type(e).__name__}: {e}"
+            print(f"  [HatenaEditor] {msg}")
+            errors.append(msg)
+            results.append({"query": query, "entry_id": entry_id, "title": title,
+                             "status": "error", "error": msg})
             continue
+
+        # Gemini 生成失敗 → 末尾に警告コメントだけ挿入してソフトエラー
+        if not table_html and not guide_html:
+            msg = f"Gemini生成結果が空 ({query}): Regex Mismatch か API制限の可能性"
+            print(f"  [HatenaEditor] {msg} — 末尾に警告コメント挿入して継続")
+            errors.append(msg)
+            # 本文末尾に「要手動挿入」コメントを追記して処理を続行
+            table_html = f"<!-- [HatenaEditor] 比較表生成失敗: {query} — 要手動作成 -->"
+            guide_html = ""
 
         new_body = _insert_sections(body_html, table_html, guide_html)
 
@@ -434,7 +496,16 @@ def run(dry_run: bool = False) -> dict:
             continue
 
         # PUT で更新
-        success = _update_entry(entry_id, title, new_body)
+        try:
+            success = _update_entry(entry_id, title, new_body)
+        except Exception as e:
+            msg = f"PUT更新例外 ({title[:30]}): {type(e).__name__}: {e}"
+            print(f"  [HatenaEditor] {msg}")
+            errors.append(msg)
+            results.append({"query": query, "entry_id": entry_id, "title": title,
+                             "status": "error", "error": msg})
+            continue
+
         if success:
             edit_log[entry_id] = {
                 "title":               title,
@@ -449,17 +520,25 @@ def run(dry_run: bool = False) -> dict:
             updated_count += 1
             results.append({"query": query, "entry_id": entry_id, "title": title, "status": "updated"})
         else:
-            results.append({"query": query, "entry_id": entry_id, "title": title, "status": "failed"})
+            msg = f"PUT失敗 ({title[:30]}): API認証・レート制限・記事フォーマット問題の可能性"
+            errors.append(msg)
+            results.append({"query": query, "entry_id": entry_id, "title": title,
+                             "status": "failed", "error": msg})
 
         time.sleep(2)  # API レート制限回避
 
-    print(f"\n[HatenaEditor] 完了 — 更新: {updated_count} / スキップ: {skipped_count}")
-    return {
-        "status":   "ok",
-        "updated":  updated_count,
-        "skipped":  skipped_count,
-        "results":  results,
+    print(f"\n[HatenaEditor] 完了 — 更新: {updated_count} / スキップ: {skipped_count} / エラー: {len(errors)}")
+
+    final = {
+        "status":        "ok" if not errors else "partial",
+        "updated":       updated_count,
+        "skipped":       skipped_count,
+        "results":       results,
+        "errors":        errors,
+        "error_summary": "; ".join(errors[:3]) if errors else "",
     }
+    _write_result(final)
+    return final
 
 
 if __name__ == "__main__":

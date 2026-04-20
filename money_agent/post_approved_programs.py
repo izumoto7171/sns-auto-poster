@@ -25,6 +25,10 @@ def load_env():
 
 load_env()
 
+# Supabase クライアント
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from db_client import db
+
 # ============================================================
 # 承認済みプログラム定義（A8.net から取得済み）
 # ============================================================
@@ -79,17 +83,21 @@ APPROVED_PROGRAMS = [
     },
 ]
 
-SEEN_FILE = Path(__file__).parent / "seen_a8_programs.json"
-
-
 def load_seen() -> set:
-    if SEEN_FILE.exists():
-        return set(json.loads(SEEN_FILE.read_text(encoding="utf-8")))
-    return set()
+    """処理済みプログラム ID の set を DB から返す"""
+    try:
+        return db.get_a8_processed_ids("new")
+    except Exception as e:
+        print(f"[PostApproved] 処理済みDB読み込み失敗: {e}")
+        return set()
 
 
-def save_seen(seen: set):
-    SEEN_FILE.write_text(json.dumps(sorted(seen), ensure_ascii=False, indent=2), encoding="utf-8")
+def mark_single(program_id: str) -> None:
+    """1件を処理済みとして DB にマークする（並列安全）"""
+    try:
+        db.mark_a8_processed(program_id, "new")
+    except Exception as e:
+        print(f"[PostApproved] 処理済みDB書き込み失敗 ({program_id}): {e}")
 
 
 def generate_article(program: dict, max_retries: int = 5):
@@ -214,19 +222,17 @@ def run(dry_run: bool = False, force: bool = False):
 
         if dry_run:
             print(f"  [DRY RUN] 本文冒頭:\n{article.get('body','')[:300]}...")
-            seen.add(program["id"])
+            mark_single(program["id"])
             posted += 1
         else:
             url = hatena_post(article)
             if url:
                 print(f"  投稿完了: {url}")
-                seen.add(program["id"])
+                mark_single(program["id"])
                 posted += 1
             else:
                 print(f"  投稿失敗")
             time.sleep(5)  # 連続投稿間隔
-
-    save_seen(seen)
     print(f"\n=== 完了: {posted}/{len(targets)}件投稿 ===")
 
 

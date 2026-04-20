@@ -25,8 +25,10 @@ from collections import defaultdict
 
 BASE_DIR  = Path(__file__).parent
 ROOT_DIR  = BASE_DIR.parent
-LOG_FILE  = BASE_DIR / "post_log.json"
 REPORT_FILE = BASE_DIR / "engagement_report.json"
+
+# gemini_client（money_agent/）をパスに追加
+sys.path.insert(0, str(ROOT_DIR / "money_agent"))
 
 # .env 読み込み
 env_path = ROOT_DIR / ".env"
@@ -37,22 +39,27 @@ if env_path.exists():
             k, _, v = line.partition("=")
             os.environ.setdefault(k.strip(), v.strip())
 
+sys.path.insert(0, str(ROOT_DIR))
+from db_client import db
+
 
 # ─────────────────────────────────────────
 # ログ読み込み & フィルタリング
 # ─────────────────────────────────────────
 def load_recent_logs(days: int = 7) -> list:
-    """過去N日分の投稿ログを返す"""
-    if not LOG_FILE.exists():
+    """過去N日分の投稿ログを DB から返す"""
+    try:
+        all_logs = db.get_posts(platform="x", limit=500)
+    except Exception as e:
+        print(f"[Engagement] DB読み込み失敗: {e}")
         return []
-
-    all_logs = json.loads(LOG_FILE.read_text(encoding="utf-8"))
-    cutoff   = datetime.now() - timedelta(days=days)
+    cutoff = datetime.now() - timedelta(days=days)
 
     recent = []
     for entry in all_logs:
         try:
-            dt = datetime.fromisoformat(entry["datetime"])
+            dt_str = entry.get("datetime") or entry.get("created_at", "")
+            dt = datetime.fromisoformat(dt_str.replace("Z", "+00:00")).replace(tzinfo=None)
             if dt >= cutoff and entry.get("success"):
                 entry["_dt"] = dt
                 recent.append(entry)
@@ -278,7 +285,7 @@ def describe_patterns(analysis: dict) -> list:
 def _describe_with_gemini(analysis: dict, api_key: str) -> list:
     """Gemini APIで共通点を言語化"""
     try:
-        from google import genai
+        from gemini_client import generate, strip_code_block
 
         type_avg = analysis.get("type_avg", {})
         slot_avg = analysis.get("slot_avg", {})
@@ -320,12 +327,11 @@ def _describe_with_gemini(analysis: dict, api_key: str) -> list:
 ]
 """
 
-        client = genai.Client(api_key=api_key)
-        resp   = client.models.generate_content(
-            model="gemini-2.0-flash-lite",
-            contents=prompt,
-        )
-        raw = resp.text.strip()
+        raw = generate(prompt, use_cache=False)
+        if not raw:
+            print("⚠️  Gemini応答なし（全リトライ失敗）")
+            return []
+        raw = strip_code_block(raw.strip())
         if "```json" in raw:
             raw = raw.split("```json")[1].split("```")[0].strip()
         elif "```" in raw:

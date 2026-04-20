@@ -18,7 +18,7 @@ import time
 from pathlib import Path
 from datetime import datetime
 
-HATENA_BLOG_DOMAIN = os.environ.get("HATENA_BLOG_DOMAIN", "smart-earn-life.hateblo.jp")
+HATENA_BLOG_DOMAIN = os.environ.get("HATENA_BLOG_DOMAIN", "")
 HATENA_SITEMAP_URL = f"https://{HATENA_BLOG_DOMAIN}/sitemap.xml"
 INDEXING_ENDPOINT  = "https://indexing.googleapis.com/v3/urlNotifications:publish"
 GOOGLE_PING_URL    = "https://www.google.com/ping"

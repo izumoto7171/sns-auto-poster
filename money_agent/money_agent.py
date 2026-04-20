@@ -282,7 +282,7 @@ def _build_insights_hint(insights: dict) -> str:
 
 def _generate_with_gemini(keyword: str, category: str, api_key: str, insights: dict = None) -> dict:
     """Gemini APIで高品質な記事生成（SNS insightsを反映）"""
-    from google import genai
+    from gemini_client import generate, strip_code_block
 
     affiliates = get_affiliates_for_category(category)
     affiliate_text = "\n".join([f"- {a['name']}: {a['description']} ({a['commission']})" for a in affiliates[:3]])
@@ -316,15 +316,12 @@ JSON形式で出力:
 }}
 """
 
-    client = genai.Client(api_key=api_key)
-    response = client.models.generate_content(
-        model="gemini-2.0-flash-lite",
-        contents=prompt
-    )
+    text = generate(prompt, use_cache=False)
+    if not text:
+        raise ValueError("Gemini APIが応答を返しませんでした（全リトライ失敗）")
 
     import re
-    text = response.text
-    json_match = re.search(r'\{.*\}', text, re.DOTALL)
+    json_match = re.search(r'\{.*\}', strip_code_block(text), re.DOTALL)
     if json_match:
         data = json.loads(json_match.group())
         affiliates = get_affiliates_for_category(category)
@@ -342,25 +339,33 @@ JSON形式で出力:
 
 
 def _post_to_hatena(article: dict) -> dict:
-    """はてなブログに投稿"""
+    """はてなブログに投稿（AtomPub API）"""
     try:
         sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), "hatena_automation"))
-        from hatena_poster import post_article
-        is_ci = os.getenv("CI", "false").lower() == "true"
-        success = post_article(article["title"], article["body"], headless=is_ci)
-        return {"success": success}
+        from hatena_poster import post_article, save_log
+        url     = post_article(
+            article["title"], article["body"],
+            category=article.get("category", ""),
+            tags=article.get("tags", []),
+        )
+        success = bool(url and not url.startswith("file://"))
+        error   = "" if success else "投稿失敗"
+        save_log(article, success=success, url=url or "", error_message=error)
+        return {"success": success, "url": url}
     except Exception as e:
         return {"success": False, "error": str(e)}
 
 
 def _post_to_note(article: dict) -> dict:
-    """noteに投稿"""
+    """noteに投稿（note.com API）"""
     try:
         sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), "note_automation"))
-        from note_poster import post_article
-        is_ci = os.getenv("CI", "false").lower() == "true"
-        success = post_article(article["title"], article["body"], headless=is_ci)
-        return {"success": success}
+        from note_poster import post_article, save_log
+        url     = post_article(article["title"], article["body"])
+        success = bool(url)
+        error   = "" if success else "投稿失敗"
+        save_log(article, success=success, url=url or "", error_message=error)
+        return {"success": success, "url": url}
     except Exception as e:
         return {"success": False, "error": str(e)}
 

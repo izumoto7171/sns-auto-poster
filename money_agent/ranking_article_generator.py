@@ -43,8 +43,8 @@ load_env()
 # ============================================================
 # 定数
 # ============================================================
-HATENA_ID = os.environ.get("HATENA_ID", "pi-natu-butter")
-HATENA_BLOG_ID = os.environ.get("HATENA_BLOG_ID", "smart-earn-life.hateblo.jp")
+HATENA_ID      = os.environ.get("HATENA_ID", "")
+HATENA_BLOG_ID = os.environ.get("HATENA_BLOG_ID", "")
 HATENA_API_KEY = os.environ.get("HATENA_API_KEY", "")
 GENERATED_FILE = Path(__file__).parent / "ranking_generated.json"
 

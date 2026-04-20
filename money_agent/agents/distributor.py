@@ -210,13 +210,35 @@ def _generate_sns_texts(article: dict) -> dict:
 def run(article: dict, dry_run: bool = False) -> dict:
     """
     ディストリビューター実行
-    Returns: 配信結果
+
+    Returns:
+        {
+            "hatena":  bool,         # 投稿成功フラグ
+            "note":    bool,
+            "x":       bool,
+            "bluesky": bool,
+            "urls":    {             # 投稿成功時のURL（失敗時は空文字）
+                "hatena":  str,
+                "note":    str,
+                "bluesky": str,
+            },
+            "errors":  {             # 失敗したプラットフォームのエラー1行
+                "hatena":  str,
+                "note":    str,
+                "x":       str,
+                "bluesky": str,
+            },
+        }
     """
     slot = article.get("slot", 0)
     keyword = article.get("keyword", "")
     print(f"\n  📡 [Distributor-{slot}] 「{keyword}」配信開始...")
 
-    results = {"hatena": False, "note": False, "x": False, "bluesky": False}
+    results = {
+        "hatena": False, "note": False, "x": False, "bluesky": False,
+        "urls": {"hatena": "", "note": "", "bluesky": ""},
+        "errors": {},
+    }
 
     # 承認済み記事のSNS投稿バリエーションを保存（発信準備）
     try:
@@ -230,25 +252,31 @@ def run(article: dict, dry_run: bool = False) -> dict:
         return results
 
     # === はてなブログ投稿 ===
-    hatena_url = ""
     try:
         sys.path.insert(0, str(ROOT_DIR))
         from hatena_automation.hatena_poster import post_article as hatena_post_article
         title = article.get("title", "")
         body = article.get("body", "")
         category = article.get("category", "")
-        results["hatena"] = hatena_post_article(title, body, category=category)
-        status = "✅" if results["hatena"] else "❌"
-        print(f"  {status} [Distributor-{slot}] はてな投稿")
+        raw = hatena_post_article(title, body, category=category)
+        # post_article はURL文字列を返す（失敗時は ""、ローカルは "file://..."）
+        hatena_url = raw if isinstance(raw, str) else ""
+        ok = bool(hatena_url) and not hatena_url.startswith("file://")
+        results["hatena"] = ok
+        results["urls"]["hatena"] = hatena_url if ok else ""
+        status = "✅" if ok else "❌"
+        print(f"  {status} [Distributor-{slot}] はてな投稿" + (f" → {hatena_url}" if ok else ""))
     except Exception as e:
-        print(f"  ❌ [Distributor-{slot}] はてな失敗: {e}")
+        err_msg = f"{type(e).__name__}: {e}"
+        results["errors"]["hatena"] = err_msg
+        print(f"  ❌ [Distributor-{slot}] はてな失敗: {err_msg}")
 
     # === Google Indexing API（はてな投稿成功時）===
     if results["hatena"]:
         try:
             sys.path.insert(0, str(BASE_DIR))
             from money_agent.google_indexing import notify_article
-            idx_result = notify_article(article, hatena_url=hatena_url)
+            idx_result = notify_article(article, hatena_url=results["urls"]["hatena"])
             if idx_result.get("success"):
                 print(f"  ✅ [Distributor-{slot}] Googleインデックス通知: {idx_result.get('url','')[:50]}")
             else:
@@ -265,13 +293,19 @@ def run(article: dict, dry_run: bool = False) -> dict:
         from note_automation.note_poster import post_article as note_post_article
         title = article.get("title", "")
         body = article.get("body", "")
-        results["note"] = note_post_article(title, body)
-        status = "✅" if results["note"] else "❌"
-        print(f"  {status} [Distributor-{slot}] note投稿")
+        raw = note_post_article(title, body)
+        note_url = raw if isinstance(raw, str) else ""
+        ok = bool(note_url)
+        results["note"] = ok
+        results["urls"]["note"] = note_url if ok else ""
+        status = "✅" if ok else "❌"
+        print(f"  {status} [Distributor-{slot}] note投稿" + (f" → {note_url}" if ok else ""))
     except Exception as e:
-        print(f"  ❌ [Distributor-{slot}] note失敗: {e}")
+        err_msg = f"{type(e).__name__}: {e}"
+        results["errors"]["note"] = err_msg
+        print(f"  ❌ [Distributor-{slot}] note失敗: {err_msg}")
 
-    # === X / Bluesky 投稿 ===
+    # === X 投稿 ===
     sns_texts = _generate_sns_texts(article)
 
     try:
@@ -286,20 +320,52 @@ def run(article: dict, dry_run: bool = False) -> dict:
         if not x_ok:
             print(f"  ⚠️ [Distributor-{slot}] twikit失敗、ブラウザ で再試行...")
             x_ok = post_with_browser(x_text)
-        results["x"] = x_ok
+        results["x"] = bool(x_ok)
         status = "✅" if x_ok else "❌"
         print(f"  {status} [Distributor-{slot}] X投稿")
+        if not x_ok:
+            results["errors"]["x"] = "tweepy/twikit/browser 全フォールバック失敗"
     except Exception as e:
-        print(f"  ❌ [Distributor-{slot}] X失敗: {e}")
+        err_msg = f"{type(e).__name__}: {e}"
+        results["errors"]["x"] = err_msg
+        print(f"  ❌ [Distributor-{slot}] X失敗: {err_msg}")
 
+    # === Bluesky 投稿 ===
     try:
         from bluesky_automation.bsky_poster import post_to_bluesky
-        post_to_bluesky(sns_texts["bluesky"])
-        results["bluesky"] = True
-        print(f"  ✅ [Distributor-{slot}] Bluesky投稿")
+        bsky_result = post_to_bluesky(sns_texts["bluesky"])
+        # post_to_bluesky は {"success": bool, "url": str, "error": str} を返す
+        if isinstance(bsky_result, dict):
+            ok = bsky_result.get("success", False)
+            bsky_url = bsky_result.get("url", "")
+            bsky_err = bsky_result.get("error", "")
+        else:
+            # 旧バージョン互換: 戻り値が bool の場合
+            ok = bool(bsky_result)
+            bsky_url = ""
+            bsky_err = ""
+        results["bluesky"] = ok
+        results["urls"]["bluesky"] = bsky_url
+        if ok:
+            print(f"  ✅ [Distributor-{slot}] Bluesky投稿" + (f" → {bsky_url}" if bsky_url else ""))
+        else:
+            err_msg = bsky_err or "投稿失敗（詳細不明）"
+            results["errors"]["bluesky"] = err_msg
+            print(f"  ❌ [Distributor-{slot}] Bluesky失敗: {err_msg}")
     except Exception as e:
-        print(f"  ❌ [Distributor-{slot}] Bluesky失敗: {e}")
+        # atproto の認証エラーや接続エラーを詳細にログ出力
+        exc_type = type(e).__name__
+        err_detail = str(e)
+        # 401 Unauthorized の特定
+        if "401" in err_detail or "Unauthorized" in err_detail or "AuthenticationRequired" in err_detail:
+            err_msg = f"Auth Error (401 Unauthorized): BSKY_HANDLE / BSKY_APP_PASSWORD を確認"
+        elif "NetworkError" in exc_type or "ConnectionError" in exc_type or "Timeout" in exc_type:
+            err_msg = f"Network Error: {err_detail[:80]}"
+        else:
+            err_msg = f"{exc_type}: {err_detail[:100]}"
+        results["errors"]["bluesky"] = err_msg
+        print(f"  ❌ [Distributor-{slot}] Bluesky失敗: {err_msg}")
 
-    success_count = sum(results.values())
+    success_count = sum(bool(results[k]) for k in ("hatena", "note", "x", "bluesky"))
     print(f"  📊 [Distributor-{slot}] 配信完了: {success_count}/4プラットフォーム")
     return results

@@ -11,7 +11,7 @@ from datetime import datetime
 RAKUTEN_APP_ID       = os.environ.get("RAKUTEN_APP_ID", "")
 RAKUTEN_ACCESS_KEY   = os.environ.get("RAKUTEN_ACCESS_KEY", "")
 RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID", "")
-RAKUTEN_ORIGIN       = os.environ.get("RAKUTEN_ORIGIN", "https://smart-earn-life.hateblo.jp")
+RAKUTEN_ORIGIN       = os.environ.get("RAKUTEN_ORIGIN", "")
 
 # 女性ウケカテゴリ（楽天ジャンルID）
 FEMALE_CATEGORIES = [

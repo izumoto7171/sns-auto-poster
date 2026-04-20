@@ -11,12 +11,6 @@ on:
     - cron: '0 6 * * *'    # JST 15:00
     - cron: '0 10 * * *'   # JST 19:00
     - cron: '0 14 * * *'   # JST 23:00
-    # ショート動画コンテンツ投稿（JST 7:45/11:45/15:45/19:45/23:45 = +45分ずらして衝突回避）
-    - cron: '45 22 * * *'  # JST 7:45
-    - cron: '45 2 * * *'   # JST 11:45
-    - cron: '45 6 * * *'   # JST 15:45
-    - cron: '45 10 * * *'  # JST 19:45
-    - cron: '45 14 * * *'  # JST 23:45
   workflow_dispatch:        # 手動実行ボタン
 
 jobs:
@@ -65,16 +59,11 @@ jobs:
     name: X (Twitter) 投稿
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # JST 5:00（商品データ更新）とtiktok専用cronでは実行しない
+    # JST 5:00（商品データ更新）では実行しない
     if: |
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'schedule' &&
-       github.event.schedule != '0 20 * * *' &&
-       github.event.schedule != '45 22 * * *' &&
-       github.event.schedule != '45 2 * * *' &&
-       github.event.schedule != '45 6 * * *' &&
-       github.event.schedule != '45 10 * * *' &&
-       github.event.schedule != '45 14 * * *')
+       github.event.schedule != '0 20 * * *')
     steps:
       - uses: actions/checkout@v5
 
@@ -122,12 +111,7 @@ jobs:
     if: |
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'schedule' &&
-       github.event.schedule != '0 20 * * *' &&
-       github.event.schedule != '45 22 * * *' &&
-       github.event.schedule != '45 2 * * *' &&
-       github.event.schedule != '45 6 * * *' &&
-       github.event.schedule != '45 10 * * *' &&
-       github.event.schedule != '45 14 * * *')
+       github.event.schedule != '0 20 * * *')
     steps:
       - uses: actions/checkout@v5
 
@@ -156,12 +140,7 @@ jobs:
     if: |
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'schedule' &&
-       github.event.schedule != '0 20 * * *' &&
-       github.event.schedule != '45 22 * * *' &&
-       github.event.schedule != '45 2 * * *' &&
-       github.event.schedule != '45 6 * * *' &&
-       github.event.schedule != '45 10 * * *' &&
-       github.event.schedule != '45 14 * * *')
+       github.event.schedule != '0 20 * * *')
     steps:
       - uses: actions/checkout@v5
 
@@ -201,12 +180,7 @@ jobs:
     if: |
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'schedule' &&
-       github.event.schedule != '0 20 * * *' &&
-       github.event.schedule != '45 22 * * *' &&
-       github.event.schedule != '45 2 * * *' &&
-       github.event.schedule != '45 6 * * *' &&
-       github.event.schedule != '45 10 * * *' &&
-       github.event.schedule != '45 14 * * *')
+       github.event.schedule != '0 20 * * *')
     steps:
       - uses: actions/checkout@v5
 
@@ -300,42 +274,3 @@ jobs:
           git add rakuten_room/post_log.json || true
           git diff --staged --quiet || git commit -m "chore: 楽天ルーム投稿ログ更新 $(date +'%Y-%m-%d')"
           git push || true
-
-  # ============================================================
-  # 🎬 ショート動画コンテンツ生成（X + Bluesky に投稿）
-  # ============================================================
-  tiktok-content:
-    name: 🎬 ショート動画コンテンツ
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    # JST 7:45/11:45/15:45/19:45/23:45 専用（post-xと45分ずらして衝突回避）
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      github.event.schedule == '45 22 * * *' ||
-      github.event.schedule == '45 2 * * *' ||
-      github.event.schedule == '45 6 * * *' ||
-      github.event.schedule == '45 10 * * *' ||
-      github.event.schedule == '45 14 * * *'
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Python セットアップ
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-
-      - name: 依存関係インストール
-        run: |
-          pip install google-genai python-dotenv atproto "twikit==1.7.4" gtts
-          sudo apt-get install -y ffmpeg
-
-      - name: ショート動画コンテンツ投稿
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          BSKY_HANDLE: ${{ secrets.BSKY_HANDLE }}
-          BSKY_APP_PASSWORD: ${{ secrets.BSKY_APP_PASSWORD }}
-          X_COOKIES: ${{ secrets.X_COOKIES }}
-          X_USERNAME: ${{ secrets.X_USERNAME }}
-        run: |
-          python3 tiktok_automation/tiktok_poster.py live

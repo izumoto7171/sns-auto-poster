@@ -52,6 +52,7 @@ jobs:
             ${{ runner.os }}-gemini-cache-
 
       - name: CEO AIエージェント実行
+        id: ceo
         env:
           CI: "true"
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -66,25 +67,309 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
-          python3 money_agent/ceo_agent.py run-auto
+          set -euo pipefail
+          python3 money_agent/ceo_agent.py run-auto 2>&1 | tee /tmp/ceo_output.log
+          EXIT_CODE=${PIPESTATUS[0]}
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "::error title=CEO Agent失敗::終了コード $EXIT_CODE"
+            echo "## CEOエージェント エラー詳細" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            tail -50 /tmp/ceo_output.log >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            exit $EXIT_CODE
+          fi
+
+      - name: pending/ フラッシュ投稿（溜まり解消）
+        id: flush
+        if: always()
+        env:
+          CI: "true"
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          HATENA_COOKIES: ${{ secrets.HATENA_COOKIES }}
+          HATENA_ID: ${{ secrets.HATENA_ID }}
+          HATENA_BLOG_ID: ${{ secrets.HATENA_BLOG_ID }}
+          HATENA_API_KEY: ${{ secrets.HATENA_API_KEY }}
+          NOTE_COOKIES: ${{ secrets.NOTE_COOKIES }}
+          BSKY_HANDLE: ${{ secrets.BSKY_HANDLE }}
+          BSKY_APP_PASSWORD: ${{ secrets.BSKY_APP_PASSWORD }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+        run: |
+          # 古い順に最大2件を投稿（CEOが失敗してもフラッシュは試みる）
+          python3 money_agent/flush_pending.py --count 2 \
+            || echo "[Flush] エラーで終了（後続ステップは継続）"
 
       - name: 比較クエリ記事へ比較表・選定ガイドを挿入
+        id: editor
+        if: always()
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           HATENA_ID: ${{ secrets.HATENA_ID }}
           HATENA_BLOG_ID: ${{ secrets.HATENA_BLOG_ID }}
           HATENA_API_KEY: ${{ secrets.HATENA_API_KEY }}
         run: |
-          python3 money_agent/hatena_editor.py
+          python3 money_agent/hatena_editor.py || echo "[hatena_editor] エラー（続行）"
 
       - name: ステート変更をコミット
+        id: commit
         if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add money_agent/agent_state.json money_agent/approved.json || true
+          git add \
+            money_agent/agent_state.json \
+            money_agent/approved.json \
+            money_agent/pending/ \
+            money_agent/posted/ \
+            || true
           git diff --staged --quiet || git commit -m "chore: CEOエージェント実行ログ更新 $(date +'%Y-%m-%d %H:%M')"
           git pull --rebase origin main && git push || true
+
+      - name: 実行サマリー出力
+        if: always()
+        env:
+          CEO_OUTCOME:    ${{ steps.ceo.outcome }}
+          FLUSH_OUTCOME:  ${{ steps.flush.outcome }}
+          EDITOR_OUTCOME: ${{ steps.editor.outcome }}
+          COMMIT_OUTCOME: ${{ steps.commit.outcome }}
+        run: |
+          python3 - << 'PYEOF'
+          import json, os, pathlib, datetime
+
+          S  = os.environ
+          GS = pathlib.Path(os.environ["GITHUB_STEP_SUMMARY"])
+
+          ICON = {"success": "✅", "failure": "❌", "skipped": "⏭️", "cancelled": "🚫"}
+          def oi(o): return ICON.get(o, "❓")
+
+          lines = []
+
+          # ════════════════════════════════════════════════════
+          # ヘッダー
+          # ════════════════════════════════════════════════════
+          now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M JST")
+          lines += [f"# Money Agent 実行レポート — {now}", ""]
+
+          # ════════════════════════════════════════════════════
+          # ステップ結果テーブル（エラー1行サマリー付き）
+          # ════════════════════════════════════════════════════
+
+          # 各ステップのエラー詳細を収集
+          step_errors: dict[str, str] = {}
+
+          # CEO ログから末行を抽出
+          ceo_log_path = pathlib.Path("/tmp/ceo_output.log")
+          if S.get("CEO_OUTCOME") == "failure" and ceo_log_path.exists():
+              tail_lines = ceo_log_path.read_text(errors="replace").strip().splitlines()
+              last_err = next((l for l in reversed(tail_lines) if l.strip()), "")
+              step_errors["ceo"] = last_err[:120] if last_err else "終了コード非ゼロ"
+
+          # Flush エラー詳細
+          fr_path = pathlib.Path("/tmp/flush_result.json")
+          if fr_path.exists():
+              try:
+                  fr_data = json.loads(fr_path.read_text(encoding="utf-8"))
+                  all_errs = fr_data.get("errors", [])
+                  # プラットフォーム別エラーを flushed から集める
+                  plat_errs = []
+                  for a in fr_data.get("flushed", []):
+                      plat_errs.extend(a.get("platform_errors", []))
+                  combined = [e.get("error", str(e)) for e in all_errs] + plat_errs
+                  if combined:
+                      step_errors["flush"] = "; ".join(combined[:2])[:150]
+              except Exception as ex:
+                  step_errors["flush"] = f"結果ファイル読み込み失敗: {ex}"
+
+          # Editor エラー詳細
+          ed_path = pathlib.Path("/tmp/editor_result.json")
+          if ed_path.exists():
+              try:
+                  ed_data = json.loads(ed_path.read_text(encoding="utf-8"))
+                  if ed_data.get("error_summary"):
+                      step_errors["editor"] = ed_data["error_summary"][:150]
+              except Exception as ex:
+                  step_errors["editor"] = f"結果ファイル読み込み失敗: {ex}"
+
+          # テーブル出力
+          lines += ["## ステップ結果", ""]
+          lines += ["| ステップ | 結果 | エラー詳細 |", "|---|---|---|"]
+          step_defs = [
+              ("ceo",    "🏢 CEO AIエージェント",   S.get("CEO_OUTCOME",    "unknown")),
+              ("flush",  "📦 フラッシュ投稿",        S.get("FLUSH_OUTCOME",  "unknown")),
+              ("editor", "✏️  比較表・ガイド挿入",   S.get("EDITOR_OUTCOME", "unknown")),
+              ("commit", "💾 Git コミット",          S.get("COMMIT_OUTCOME", "unknown")),
+          ]
+          any_failure = False
+          for key, label, outcome in step_defs:
+              icon = oi(outcome)
+              err  = step_errors.get(key, "")
+              err_cell = f"`{err}`" if err else "—"
+              lines.append(f"| {label} | {icon} {outcome} | {err_cell} |")
+              if outcome == "failure":
+                  any_failure = True
+          lines.append("")
+
+          # 失敗バナー
+          if any_failure:
+              lines += [
+                  "> [!CAUTION]",
+                  "> **失敗したステップがあります。** 上記の ❌ 行と「エラー詳細」列を確認してください。",
+                  "",
+              ]
+
+          # ════════════════════════════════════════════════════
+          # キュー状態テーブル
+          # ════════════════════════════════════════════════════
+          pend_dir   = pathlib.Path("money_agent/pending")
+          post_dir   = pathlib.Path("money_agent/posted")
+          pend_files = sorted(pend_dir.glob("*.json")) if pend_dir.exists() else []
+          post_files = sorted(post_dir.glob("*.json")) if post_dir.exists() else []
+
+          lines += ["## キュー状態", ""]
+          lines += ["| 項目 | 値 |", "|---|---|"]
+          lines.append(f"| 📥 pending（未投稿） | **{len(pend_files)}** 件 |")
+          lines.append(f"| 📤 posted（累計）    | {len(post_files)} 件 |")
+
+          sf = pathlib.Path("money_agent/agent_state.json")
+          if sf.exists():
+              try:
+                  st = json.loads(sf.read_text(encoding="utf-8"))
+                  lines.append(f"| 📝 総生成記事数      | {st.get('total_articles', 0)} 記事 |")
+                  lr = str(st.get("last_run", "-"))[:16]
+                  lines.append(f"| 🕐 last_run          | {lr} |")
+              except Exception:
+                  pass
+          lines.append("")
+
+          # ════════════════════════════════════════════════════
+          # 今回フラッシュ投稿した記事（URLs付き）
+          # ════════════════════════════════════════════════════
+          lines += ["## 今回フラッシュ投稿した記事", ""]
+
+          if fr_path.exists():
+              try:
+                  fr      = json.loads(fr_path.read_text(encoding="utf-8"))
+                  flushed = fr.get("flushed", [])
+                  f_errs  = fr.get("errors", [])
+
+                  if flushed:
+                      for i, a in enumerate(flushed, 1):
+                          ok_str = " / ".join(a.get("ok_platforms", [])) or "なし"
+                          ng_str = " / ".join(a.get("ng_platforms", [])) or ""
+                          sc     = a.get("success_count", 0)
+                          icon   = "✅" if sc >= 3 else ("⚠️" if sc >= 1 else "❌")
+                          title  = a.get("title", "")[:60]
+                          kw     = a.get("keyword", "")
+                          since  = str(a.get("pending_since", ""))[:10]
+                          urls   = a.get("urls", {})
+                          plat_errs = a.get("platform_errors", [])
+
+                          lines += [
+                              f"### {icon} {i}. {title}",
+                              f"- キーワード: `{kw}`  |  pending保存日: {since}",
+                              f"- 成功: **{ok_str}**" + (f"  /  失敗: {ng_str}" if ng_str else ""),
+                          ]
+
+                          # 投稿URL（あるものだけ表示）
+                          url_lines = []
+                          if urls.get("hatena"):
+                              url_lines.append(f"  - はてな: [{urls['hatena'][:60]}]({urls['hatena']})")
+                          if urls.get("note"):
+                              url_lines.append(f"  - note: [{urls['note'][:60]}]({urls['note']})")
+                          if urls.get("bluesky"):
+                              url_lines.append(f"  - Bluesky: [{urls['bluesky'][:60]}]({urls['bluesky']})")
+                          if url_lines:
+                              lines.append("- 投稿URL:")
+                              lines.extend(url_lines)
+
+                          # プラットフォーム別エラー
+                          if plat_errs:
+                              lines.append("- プラットフォームエラー:")
+                              for pe in plat_errs:
+                                  lines.append(f"  - `{pe}`")
+
+                          lines.append("")
+                  else:
+                      lines += ["_今回投稿した記事はありません（pending が空か dry-run）_", ""]
+
+                  if f_errs:
+                      lines += ["### ⚠️ Flush 全体エラー", ""]
+                      for e in f_errs:
+                          kw  = e.get("keyword", e.get("file", "?"))
+                          msg = e.get("error", str(e))
+                          lines.append(f"- `{kw}`: {msg}")
+                      lines.append("")
+
+              except Exception as ex:
+                  lines += [f"> ⚠️ flush_result.json の読み込みに失敗: {ex}", ""]
+          else:
+              lines += ["_flush_result.json が存在しません_", ""]
+
+          # ════════════════════════════════════════════════════
+          # pending 残件リスト
+          # ════════════════════════════════════════════════════
+          if pend_files:
+              lines += ["## pending に残っている記事（未投稿）", ""]
+              for pf in pend_files:
+                  try:
+                      d     = json.loads(pf.read_text(encoding="utf-8"))
+                      since = str(d.get("pending_since", ""))[:10]
+                      kw    = d.get("keyword", pf.stem)
+                      ttl   = d.get("title", "")[:50]
+                      lines.append(f"- `{since}` **{kw}** — {ttl}")
+                  except Exception:
+                      lines.append(f"- {pf.name}")
+              lines.append("")
+
+          # ════════════════════════════════════════════════════
+          # 比較表・ガイド挿入 詳細（editor_result.json）
+          # ════════════════════════════════════════════════════
+          if ed_path.exists():
+              try:
+                  ed = json.loads(ed_path.read_text(encoding="utf-8"))
+                  status  = ed.get("status", "?")
+                  updated = ed.get("updated", 0)
+                  skipped = ed.get("skipped", 0)
+                  ed_errs = ed.get("errors", [])
+
+                  lines += ["## ✏️ 比較表・ガイド挿入 詳細", ""]
+                  lines += ["| 項目 | 値 |", "|---|---|"]
+                  lines.append(f"| ステータス | {status} |")
+                  lines.append(f"| 更新成功   | {updated} 件 |")
+                  lines.append(f"| スキップ   | {skipped} 件 |")
+                  lines.append(f"| エラー     | {len(ed_errs)} 件 |")
+                  lines.append("")
+
+                  if ed_errs:
+                      lines += ["**エラー詳細:**", ""]
+                      for ee in ed_errs[:5]:
+                          lines.append(f"- {ee}")
+                      lines.append("")
+              except Exception as ex:
+                  lines += [f"> ⚠️ editor_result.json の読み込みに失敗: {ex}", ""]
+
+          # ════════════════════════════════════════════════════
+          # CEO エラーログ（失敗時のみ・末尾3000字）
+          # ════════════════════════════════════════════════════
+          if S.get("CEO_OUTCOME") == "failure" and ceo_log_path.exists():
+              tail = ceo_log_path.read_text(errors="replace")[-3000:]
+              lines += [
+                  "## ❌ CEO エージェント エラーログ（末尾）",
+                  "<details><summary>クリックして展開</summary>",
+                  "",
+                  "```",
+                  tail,
+                  "```",
+                  "",
+                  "</details>",
+                  "",
+              ]
+
+          GS.write_text("\n".join(lines), encoding="utf-8")
+          print("[Summary] GitHub Actions サマリーを出力しました")
+          PYEOF
 
   # ============================================================
   # 📡 トレンドデータ収集（毎日JST 3:00 に同時実行）

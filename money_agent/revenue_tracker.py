@@ -5,29 +5,21 @@
 """
 
 import os
+import sys
 import json
 from datetime import datetime, timedelta
+from pathlib import Path
 
-TRACKER_FILE = os.path.join(os.path.dirname(__file__), "revenue_log.json")
+# Supabase クライアント
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from db_client import db
+
 TARGET_MONTHLY = 100000  # 月10万円
-
-
-def load_log() -> dict:
-    if os.path.exists(TRACKER_FILE):
-        with open(TRACKER_FILE) as f:
-            return json.load(f)
-    return {"posts": [], "monthly_summary": {}}
-
-
-def save_log(data: dict):
-    with open(TRACKER_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
 
 
 def record_post(platform: str, title: str, keyword: str, category: str,
                 affiliate_count: int = 0, url: str = ""):
     """投稿を記録"""
-    log = load_log()
     entry = {
         "date": datetime.now().strftime("%Y-%m-%d"),
         "time": datetime.now().strftime("%H:%M"),
@@ -41,8 +33,10 @@ def record_post(platform: str, title: str, keyword: str, category: str,
         "estimated_pv_30days": estimate_pv(platform, category),
         "estimated_revenue_30days": estimate_revenue(platform, category, affiliate_count),
     }
-    log["posts"].append(entry)
-    save_log(log)
+    try:
+        db.insert_revenue_record(entry)
+    except Exception as e:
+        print(f"[Revenue] DB書き込み失敗: {e}")
     return entry
 
 
@@ -79,11 +73,14 @@ def estimate_revenue(platform: str, category: str, affiliate_count: int) -> int:
 
 def get_monthly_summary() -> dict:
     """今月の収益サマリー"""
-    log = load_log()
     now = datetime.now()
     month_str = now.strftime("%Y-%m")
 
-    posts_this_month = [p for p in log["posts"] if p["date"].startswith(month_str)]
+    try:
+        posts_this_month = db.get_revenue_records(year=now.year, month=now.month)
+    except Exception as e:
+        print(f"[Revenue] DB読み込み失敗: {e}")
+        posts_this_month = []
 
     total_estimated_revenue = sum(p.get("estimated_revenue_30days", 0) for p in posts_this_month)
     total_posts = len(posts_this_month)
