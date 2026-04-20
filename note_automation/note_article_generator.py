@@ -14,13 +14,10 @@ from pathlib import Path
 # money_agent をインポートできるようにパスを追加
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-_INSIGHTS_FILE = Path(__file__).parent.parent / "money_agent" / "feedback_insights.json"
-
-
 def _load_feedback_insights() -> dict:
     try:
-        if _INSIGHTS_FILE.exists():
-            return json.loads(_INSIGHTS_FILE.read_text(encoding="utf-8"))
+        from db_client import db
+        return db.get_insights()
     except Exception:
         pass
     return {}
