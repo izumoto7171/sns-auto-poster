@@ -92,6 +92,7 @@ def _a8_score(today: date, programs: list) -> ServiceScore:
             best_multiplier = max(best_multiplier, multiplier)
 
     # キャッシュ内プログラムのうちキーワードにマッチする ins_id を収集
+    # weekly_trend_hunter が付与した sns_score(0-10) があれば乗数に加算
     boosted_ids: list[str] = []
     for prog in programs:
         name      = prog.get("name", "")
@@ -99,6 +100,14 @@ def _a8_score(today: date, programs: list) -> ServiceScore:
         combined  = name + " " + hashtags
         if any(kw in combined for kw in matched_keywords):
             boosted_ids.append(prog.get("ins_id", ""))
+
+    # 新規案件の sns_score ボーナス: score=8以上なら multiplier を +0.3 加算
+    high_score_ids = [
+        p.get("ins_id", "")
+        for p in programs
+        if p.get("sns_score", 0) >= 8 and p.get("ins_id", "") not in boosted_ids
+    ]
+    boosted_ids.extend(high_score_ids)
 
     if matched_keywords and boosted_ids:
         score  = BASE * best_multiplier

@@ -1,0 +1,49 @@
+name: 週次アフィリエイト案件リサーチ
+
+on:
+  schedule:
+    # 毎週月曜 JST 9:00 (UTC 0:00)
+    - cron: '0 0 * * 1'
+  workflow_dispatch:   # 手動実行ボタン
+
+jobs:
+  hunt-programs:
+    name: トレンド案件リサーチ & ポートフォリオ更新
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Python セットアップ
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 依存関係インストール
+        run: |
+          pip install google-genai requests pytrends
+
+      - name: 週次トレンドリサーチ実行
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python3 crawlers/weekly_trend_hunter.py
+
+      - name: 結果を JSON にコミット & プッシュ
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add \
+            money_agent/config/program_portfolio.json \
+            money_agent/a8_programs_cache.json \
+            money_agent/a8_programs_history.json || true
+          git diff --staged --quiet || \
+            git commit -m "chore: 週次案件リサーチ更新 $(date +'%Y-%m-%d')"
+          git push || true

@@ -1,15 +1,137 @@
 [
   {
-    "ins_id": "bbb",
-    "name": "マネーフォワードクラウド",
-    "reward": "3,000円/件",
-    "affiliate_url": "https://px.a8.net/test_bbb",
+    "ins_id": "mf_kakutei_2026",
+    "name": "マネーフォワード クラウド確定申告",
+    "reward": "新規会員登録1500円",
+    "affiliate_url": "https://px.a8.net/svt/ejp?a8mat=4B1DXL+8UIXF6+4JGQ+BWVTE",
     "hatena_url": "",
     "hashtags": [
-      "#会計ソフト",
-      "#中小企業",
-      "#DX"
+      "#副業",
+      "#在宅ワーク",
+      "#確定申告",
+      "#節税"
     ],
-    "posted_count": 5
+    "posted_count": 0,
+    "description": "はじめての方でも確定申告がラクラク完了できるクラウド型確定申告ソフト"
+  },
+  {
+    "ins_id": "mf_kaikeigyo_2026",
+    "name": "マネーフォワード クラウド開業届",
+    "reward": "新規無料会員登録300円",
+    "affiliate_url": "https://px.a8.net/svt/ejp?a8mat=4B1DXL+8XI3G2+4JGQ+1NQUK2",
+    "hatena_url": "",
+    "hashtags": [
+      "#副業",
+      "#在宅ワーク",
+      "#フリーランス",
+      "#個人事業主"
+    ],
+    "posted_count": 0,
+    "description": "簡単3ステップで開業届を作成・提出できるサービス"
+  },
+  {
+    "ins_id": "mf_kaikei_2026",
+    "name": "マネーフォワード クラウド会計",
+    "reward": "新規会員登録700円",
+    "affiliate_url": "https://px.a8.net/svt/ejp?a8mat=4B1DXL+987WC2+4JGQ+60WN6",
+    "hatena_url": "",
+    "hashtags": [
+      "#副業",
+      "#在宅ワーク",
+      "#会計ソフト",
+      "#経費管理"
+    ],
+    "posted_count": 0,
+    "description": "会計業務を約1/2に削減するクラウド会計ソフト"
+  },
+  {
+    "ins_id": "freee_2026",
+    "name": "freee会計",
+    "reward": "新規導入1500円〜20000円（補助金プラン）",
+    "affiliate_url": "https://px.a8.net/svt/ejp?a8mat=4B1DXL+8AVMGI+3SPO+9FDI8Y",
+    "hatena_url": "",
+    "hashtags": [
+      "#副業",
+      "#在宅ワーク",
+      "#会計ソフト",
+      "#経費管理"
+    ],
+    "posted_count": 0,
+    "description": "クラウド会計シェアNo.1のfreee会計"
+  },
+  {
+    "ins_id": "rakuten_card",
+    "name": "楽天カード",
+    "reward": "新規申込・利用",
+    "affiliate_url": "https://rpx.a8.net/svt/ejp?a8mat=4AZMKI+BFEJSI+2HOM+BW8O1&rakuten=y&a8ejpredirect=http%3A%2F%2Fhb.afl.rakuten.co.jp%2Fhgc%2F0ea62065.34400275.0ea62066.204f04c0%2Fa26032392970_4AZMKI_BFEJSI_2HOM_BW8O1%3Fpc%3Dhttps%253A%252F%252Fcard.rakuten.co.jp%252F%26m%3Dhttps%253A%252F%252Fcard.rakuten.co.jp%252F",
+    "hatena_url": "",
+    "hashtags": [
+      "#投資",
+      "#資産運用",
+      "#節約",
+      "#生活費削減"
+    ],
+    "posted_count": 0,
+    "description": "ポイント還元率業界最高水準の定番クレジットカード"
+  },
+  {
+    "ins_id": "rakuten_securities",
+    "name": "楽天証券",
+    "reward": "口座開設",
+    "affiliate_url": "https://rpx.a8.net/svt/ejp?a8mat=4AZMKI+BFEJSI+2HOM+BW8O1&rakuten=y&a8ejpredirect=http%3A%2F%2Fhb.afl.rakuten.co.jp%2Fhgc%2F0ea62065.34400275.0ea62066.204f04c0%2Fa26032392970_4AZMKI_BFEJSI_2HOM_BW8O1%3Fpc%3Dhttps%253A%252F%252Fwww.rakuten-sec.co.jp%252F%26m%3Dhttps%253A%252F%252Fwww.rakuten-sec.co.jp%252F",
+    "hatena_url": "",
+    "hashtags": [
+      "#投資",
+      "#資産運用",
+      "#新NISA",
+      "#積立投資"
+    ],
+    "posted_count": 0,
+    "description": "楽天ポイントで投資できる証券口座"
+  },
+  {
+    "ins_id": "matsui_ideco",
+    "name": "松井証券 iDeCo",
+    "reward": "新規口座開設申込500円",
+    "affiliate_url": "https://px.a8.net/svt/ejp?a8mat=4AZPOR+8OKLDE+3XCC+BXIYQ",
+    "hatena_url": "",
+    "hashtags": [
+      "#投資",
+      "#資産運用",
+      "#新NISA",
+      "#積立投資"
+    ],
+    "posted_count": 0,
+    "description": "業界最低水準の運用コストで老後資金を準備できるiDeCo"
+  },
+  {
+    "ins_id": "onamae_domain",
+    "name": "お名前.com",
+    "reward": "ドメイン取得・サーバー申込",
+    "affiliate_url": "https://px.a8.net/svt/ejp?a8mat=4AZMKI+BRWNHU+50+2HV61T",
+    "hatena_url": "",
+    "hashtags": [
+      "#副業",
+      "#在宅ワーク",
+      "#ブログ",
+      "#アフィリエイト"
+    ],
+    "posted_count": 0,
+    "description": "国内最大手のドメイン登録サービス"
+  },
+  {
+    "ins_id": "tossy",
+    "name": "TOSSY（節約サービス）",
+    "reward": "",
+    "affiliate_url": "https://px.a8.net/svt/ejp?a8mat=4AZPOR+A94RUA+1WP2+1HL85U",
+    "hatena_url": "",
+    "hashtags": [
+      "#投資",
+      "#資産運用",
+      "#節約",
+      "#生活費削減"
+    ],
+    "posted_count": 0,
+    "description": "節約・固定費削減サービス"
   }
 ]
