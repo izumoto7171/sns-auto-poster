@@ -35,14 +35,15 @@ import re
 import json
 import random
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 _ROOT_DIR    = Path(__file__).parent.parent
 _CACHE_PATH  = _ROOT_DIR / "money_agent" / "a8_programs_cache.json"
 _HISTORY_PATH = _ROOT_DIR / "money_agent" / "a8_programs_history.json"
-_CACHE_MAX   = 30   # キューの最大件数（古いものは履歴に残してキューから溢れる）
-_HISTORY_MAX = 500  # 履歴の上限（半永久的に保持）
+_CACHE_MAX      = 30   # キューの最大件数（古いものは履歴に残してキューから溢れる）
+_HISTORY_MAX    = 500  # 履歴の上限（半永久的に保持）
+A8_COOLDOWN_DAYS = 30  # 同じプログラムを再投稿しない日数
 
 sys.path.insert(0, str(_ROOT_DIR))
 from crawlers.cache_manager import CacheManager
@@ -136,9 +137,17 @@ def save_program(
 
 # ── 投稿選択（永久機関の中核） ────────────────────────────────────
 
+def _cooldown_cutoff() -> str:
+    """クールダウン期限（ISO形式文字列）を返す。この値より古い last_posted_at なら投稿可"""
+    return (datetime.now() - timedelta(days=A8_COOLDOWN_DAYS)).isoformat()
+
+
 def select_for_post() -> tuple[dict, str]:
     """
     X投稿用に案件を1件選択する。
+
+    同じプログラムは A8_COOLDOWN_DAYS 日間再投稿しない。
+    クールダウン中の全件は「最も古く投稿されたもの」を選んで再利用する。
 
     Returns
     -------
@@ -147,18 +156,28 @@ def select_for_post() -> tuple[dict, str]:
       source == "history" : 履歴フォールバック（キューは空のまま）
       source == "empty"   : キューも履歴も空（program は {}）
     """
-    # 1. キュー（消費型）から weighted_choice
+    cutoff = _cooldown_cutoff()
+
+    # 1. キュー（消費型）から選択（クールダウン除外）
     queue = _cache.list_load()
     if queue:
-        selected = weighted_choice(queue[-20:])
-        print(f"  [A8Post] キューから選択: {selected.get('name','')} (残 {len(queue)} 件)")
+        available = [p for p in queue if (p.get("last_posted_at") or "") < cutoff]
+        pool = available if available else queue  # 全件クールダウン中なら全件から選ぶ
+        selected = weighted_choice(pool[-20:])
+        print(f"  [A8Post] キューから選択: {selected.get('name','')} (残 {len(queue)} 件, 利用可 {len(available)} 件)")
         return selected, "cache"
 
-    # 2. キューが空 → 履歴からランダム選択（投稿は止まらない）
+    # 2. キューが空 → 履歴からクールダウン除外で選択
     hist = _history.list_load()
     if hist:
-        selected = random.choice(hist)
-        print(f"  [A8Post] 履歴フォールバック: {selected.get('name','')} (履歴 {len(hist)} 件)")
+        available = [p for p in hist if (p.get("last_posted_at") or "") < cutoff]
+        if available:
+            selected = weighted_choice(available)
+            print(f"  [A8Post] 履歴から選択: {selected.get('name','')} (利用可 {len(available)}/{len(hist)} 件)")
+        else:
+            # 全件クールダウン中 → 最も古く投稿されたものを選ぶ
+            selected = min(hist, key=lambda p: p.get("last_posted_at") or "")
+            print(f"  [A8Post] 全件クールダウン中 → 最古投稿を再利用: {selected.get('name','')}")
         return selected, "history"
 
     print("  [A8Post] キューも履歴も空 → A8投稿スキップ")
@@ -184,7 +203,7 @@ def pop_from_cache(ins_id: str) -> None:
 
 def increment_posted_history(ins_id: str) -> None:
     """
-    履歴の posted_count をインクリメントする（分析用）。
+    履歴の posted_count をインクリメントする（後方互換・分析用）。
     キューが空で履歴から選ばれた場合に呼ぶ。
     """
     if not ins_id:
@@ -193,6 +212,40 @@ def increment_posted_history(ins_id: str) -> None:
         _history.increment(key_field="ins_id", key_value=ins_id, field="posted_count")
     except Exception as e:
         print(f"  [A8Post] 履歴 posted_count 更新失敗 ({ins_id}): {e}")
+
+
+def mark_as_posted(ins_id: str) -> None:
+    """
+    投稿完了時にキャッシュ・履歴両方の last_posted_at と posted_count を更新する。
+    cache / history どちらのソースでも必ず呼ぶこと。
+    これにより A8_COOLDOWN_DAYS 日間は同じプログラムが再選択されなくなる。
+    """
+    if not ins_id:
+        return
+    now = datetime.now().isoformat()
+
+    def _update(store) -> bool:
+        entries = store.list_load()
+        updated = False
+        for e in entries:
+            if e.get("ins_id") == ins_id:
+                e["last_posted_at"] = now
+                e["posted_count"]   = e.get("posted_count", 0) + 1
+                updated = True
+                break
+        if updated:
+            store.list_save(entries)
+        return updated
+
+    try:
+        hit_cache   = _update(_cache)
+        hit_history = _update(_history)
+        if hit_cache or hit_history:
+            print(f"  [A8Post] mark_as_posted: {ins_id} (last_posted_at={now[:10]})")
+        else:
+            print(f"  [A8Post] mark_as_posted: {ins_id} がキャッシュ・履歴に見つかりません")
+    except Exception as e:
+        print(f"  [A8Post] mark_as_posted 失敗 ({ins_id}): {e}")
 
 
 # ── 後方互換 API ─────────────────────────────────────────────────

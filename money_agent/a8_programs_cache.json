@@ -75,21 +75,6 @@
     "description": "ポイント還元率業界最高水準の定番クレジットカード"
   },
   {
-    "ins_id": "rakuten_securities",
-    "name": "楽天証券",
-    "reward": "口座開設",
-    "affiliate_url": "https://rpx.a8.net/svt/ejp?a8mat=4AZMKI+BFEJSI+2HOM+BW8O1&rakuten=y&a8ejpredirect=http%3A%2F%2Fhb.afl.rakuten.co.jp%2Fhgc%2F0ea62065.34400275.0ea62066.204f04c0%2Fa26032392970_4AZMKI_BFEJSI_2HOM_BW8O1%3Fpc%3Dhttps%253A%252F%252Fwww.rakuten-sec.co.jp%252F%26m%3Dhttps%253A%252F%252Fwww.rakuten-sec.co.jp%252F",
-    "hatena_url": "",
-    "hashtags": [
-      "#投資",
-      "#資産運用",
-      "#新NISA",
-      "#積立投資"
-    ],
-    "posted_count": 0,
-    "description": "楽天ポイントで投資できる証券口座"
-  },
-  {
     "ins_id": "matsui_ideco",
     "name": "松井証券 iDeCo",
     "reward": "新規口座開設申込500円",

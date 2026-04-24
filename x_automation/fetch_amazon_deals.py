@@ -356,6 +356,21 @@ def fetch_via_gemini(category: str, count: int) -> list:
 # ─────────────────────────────────────────
 _STATIC_PRODUCTS = [
     {
+        "asin": "B09W2PNZQQ",
+        "title": "TP-Link WiFi 無線LAN ルーター AX3000",
+        "brand": "TP-Link",
+        "price": {"amount": 5980, "currency": "JPY", "display": "¥5,980"},
+        "original_price": {"amount": 7980, "display": "¥7,980"},
+        "discount_rate": 25,
+        "category": "ガジェット",
+        "features": ["WiFi 6対応", "AX3000 高速通信", "簡単セットアップ"],
+        "why_viral": "テレワーク勢が一度は検討するコスパ最強ルーター",
+        "story_hook": "Wi-Fiが遅かった原因、ルーターだった。",
+        "amazon_url": f"https://www.amazon.co.jp/dp/B09W2PNZQQ?tag={ASSOCIATE_TAG}",
+        "source": "static",
+        "fetched_at": datetime.now().isoformat(),
+    },
+    {
         "asin": "B0BQZPFQ2X",
         "title": "Anker 622 Magnetic Battery (MagGo) 5000mAh",
         "brand": "Anker",
@@ -430,6 +445,51 @@ _STATIC_PRODUCTS = [
         "source": "static",
         "fetched_at": datetime.now().isoformat(),
     },
+    {
+        "asin": "B08N5WRWNW",
+        "title": "Anker PowerCore 10000 モバイルバッテリー",
+        "brand": "Anker",
+        "price": {"amount": 2799, "currency": "JPY", "display": "¥2,799"},
+        "original_price": {"amount": 3499, "display": "¥3,499"},
+        "discount_rate": 20,
+        "category": "ガジェット",
+        "features": ["10000mAh大容量", "コンパクト・軽量", "PowerIQ対応高速充電"],
+        "why_viral": "国内Amazonで何年もベストセラー。間違いないやつ",
+        "story_hook": "モバイルバッテリー、今さらAnkerにした。",
+        "amazon_url": f"https://www.amazon.co.jp/dp/B08N5WRWNW?tag={ASSOCIATE_TAG}",
+        "source": "static",
+        "fetched_at": datetime.now().isoformat(),
+    },
+    {
+        "asin": "B09JQMJHXY",
+        "title": "Echo Dot 第5世代 スマートスピーカー with Alexa",
+        "brand": "Amazon",
+        "price": {"amount": 5980, "currency": "JPY", "display": "¥5,980"},
+        "original_price": {"amount": 7480, "display": "¥7,480"},
+        "discount_rate": 20,
+        "category": "ガジェット",
+        "features": ["Alexa音声操作", "スマートホーム対応", "改良されたサウンド"],
+        "why_viral": "スマートホームの入門機として圧倒的コスパ",
+        "story_hook": "声でエアコンを消せるようになったら、もう戻れない。",
+        "amazon_url": f"https://www.amazon.co.jp/dp/B09JQMJHXY?tag={ASSOCIATE_TAG}",
+        "source": "static",
+        "fetched_at": datetime.now().isoformat(),
+    },
+    {
+        "asin": "B0C6GYLGYB",
+        "title": "Kindle Paperwhite 電子書籍リーダー 防水",
+        "brand": "Amazon",
+        "price": {"amount": 14980, "currency": "JPY", "display": "¥14,980"},
+        "original_price": {"amount": 17980, "display": "¥17,980"},
+        "discount_rate": 17,
+        "category": "ガジェット",
+        "features": ["防水対応(IPX8)", "グレア軽減ディスプレイ", "最大12週間バッテリー"],
+        "why_viral": "読書習慣を作りたい人の最強デバイス",
+        "story_hook": "紙の本をやめた理由を正直に話す。",
+        "amazon_url": f"https://www.amazon.co.jp/dp/B0C6GYLGYB?tag={ASSOCIATE_TAG}",
+        "source": "static",
+        "fetched_at": datetime.now().isoformat(),
+    },
 ]
 
 
@@ -447,7 +507,11 @@ def _static_fallback(category: str, count: int) -> list:
             return result[:count]
     except Exception as e:
         print(f"  ⚠️  static_products DB読み込みエラー: {e} → 内蔵データを使用")
-    return _STATIC_PRODUCTS[:count]
+    # ランダムシャッフルして毎回異なる商品が先頭に来るようにする
+    import random as _random
+    pool = list(_STATIC_PRODUCTS)
+    _random.shuffle(pool)
+    return pool[:count]
 
 
 # ─────────────────────────────────────────

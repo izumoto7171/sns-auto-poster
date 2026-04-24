@@ -24,6 +24,7 @@ from crawlers.crawler_a8 import (
     select_for_post          as _a8_select_for_post,
     pop_from_cache           as _a8_pop_from_cache,
     increment_posted_history as _a8_increment_history,
+    mark_as_posted           as _a8_mark_as_posted,
 )
 
 
@@ -65,13 +66,13 @@ def _build_feedback_context(insights: dict, platform: str = "x") -> str:
 # 投稿タイプの定義と重み
 # ─────────────────────────────────────────
 POST_TYPES = [
-    {"type": "useful",    "label": "役立つ情報",        "weight": 20},
-    {"type": "empathy",   "label": "共感・体験",        "weight": 10},
-    {"type": "trivia",    "label": "雑学・ネタ",        "weight": 10},
-    {"type": "product",   "label": "Amazon商品紹介",    "weight": 30},
-    {"type": "rakuten",   "label": "楽天商品紹介",      "weight": 10},
-    {"type": "a8",        "label": "A8アフィリエイト",  "weight": 15},
-    {"type": "progress",  "label": "収益進捗ログ",      "weight": 5},
+    {"type": "useful",   "label": "役立つ情報",       "weight": 25},
+    {"type": "empathy",  "label": "共感・体験",       "weight": 15},
+    {"type": "progress", "label": "収益進捗ログ",     "weight": 15},
+    {"type": "product",  "label": "Amazon商品紹介",   "weight": 10},
+    {"type": "trivia",   "label": "雑学・ネタ",       "weight": 10},
+    {"type": "a8",       "label": "A8アフィリエイト", "weight": 15},
+    {"type": "rakuten",  "label": "楽天商品紹介",     "weight": 10},
 ]
 
 # ─────────────────────────────────────────
@@ -839,24 +840,53 @@ def pick_post_type() -> dict:
 _used_templates: dict = {}  # 同じ日に同じテンプレを使わないよう管理
 
 
+def _load_dedup_index():
+    """content_selector から重複インデックスをロード（import失敗時は空セットを返す）"""
+    try:
+        from content_selector import load_recent_log, build_recent_index
+        recent_log = load_recent_log()
+        return build_recent_index(recent_log)
+    except Exception:
+        return set(), set()
+
+
 def generate_with_template(post_type: str) -> str:
-    """テンプレートから投稿文を生成（同日重複防止）"""
+    """テンプレートから投稿文を生成（同日重複 + 過去14日間重複防止）"""
     templates = TEMPLATES.get(post_type, TEMPLATES["useful"])
     today = datetime.now().strftime("%Y%m%d")
     key = f"{today}_{post_type}"
 
+    full_texts, hooks = _load_dedup_index()
+
     used = _used_templates.get(key, [])
-    available = [t for i, t in enumerate(templates) if i not in used]
+    # 同日未使用 かつ 過去14日間未投稿のテンプレートに絞る
+    available = [
+        (i, t) for i, t in enumerate(templates)
+        if i not in used
+        and not _is_template_duplicate(t, full_texts, hooks)
+    ]
     if not available:
-        available = templates
+        # 全部重複なら同日制限だけ外してフォールバック
+        available = [
+            (i, t) for i, t in enumerate(templates)
+            if not _is_template_duplicate(t, full_texts, hooks)
+        ]
+    if not available:
+        # それでも全部重複ならテンプレート全体から選ぶ（最終フォールバック）
+        available = list(enumerate(templates))
         _used_templates[key] = []
 
-    t = random.choice(available)
-    idx = templates.index(t)
+    idx, t = random.choice(available)
     _used_templates.setdefault(key, []).append(idx)
 
     text = f"{t['hook']}\n\n{t['empathy']}\n\n{t['solution']}\n\n{t['summary']}"
     return append_hashtags(text, post_type)
+
+
+def _is_template_duplicate(t: dict, full_texts: set, hooks: set) -> bool:
+    """テンプレートの hook が過去の投稿と重複しているか判定"""
+    hook = t.get("hook", "").strip()
+    return hook in hooks
 
 
 def _load_progress_stats() -> dict:
@@ -985,10 +1015,29 @@ def generate_post(force_type: str = None) -> dict:
         label = "Amazon商品紹介"
 
     api_key = os.getenv("GEMINI_API_KEY")
-    if api_key:
-        text = generate_with_gemini(post_type, label)
-    else:
-        text = generate_with_template(post_type)
+
+    # 重複チェック用インデックスをロード
+    full_texts, hooks = _load_dedup_index()
+
+    # 重複していたら最大3回リトライ（Geminiの場合のみ）
+    MAX_RETRY = 3
+    text = None
+    for attempt in range(MAX_RETRY):
+        if api_key:
+            candidate = generate_with_gemini(post_type, label)
+        else:
+            candidate = generate_with_template(post_type)
+
+        hook_line = candidate.split("\n")[0].strip() if candidate else ""
+        if candidate and candidate.strip() not in full_texts and hook_line not in hooks:
+            text = candidate
+            break
+        if attempt < MAX_RETRY - 1:
+            print(f"[dedup] 重複検知（{attempt + 1}回目）→ リトライ")
+
+    # リトライ全部重複なら最後の候補をそのまま使う
+    if not text:
+        text = candidate if candidate else generate_with_template(post_type)
 
     return {
         "type":  post_type,
@@ -1063,6 +1112,76 @@ X（Twitter）スレッドの1ツイート目（リンクなし・バズ狙い�
     return {"tweet1": tweet1, "tweet2": tweet2}
 
 
+_AMAZON_PRODUCT_HISTORY_PATH = Path(__file__).parent / "product_history.json"
+_AMAZON_COOLDOWN_DAYS = 14
+
+
+def _load_amazon_product_history() -> list:
+    try:
+        data = json.loads(_AMAZON_PRODUCT_HISTORY_PATH.read_text(encoding="utf-8"))
+        if isinstance(data, dict):
+            return data.get("entries", [])
+        if isinstance(data, list):
+            return data
+    except Exception:
+        pass
+    return []
+
+
+def _save_amazon_product_history(entries: list) -> None:
+    try:
+        _AMAZON_PRODUCT_HISTORY_PATH.write_text(
+            json.dumps({"entries": entries}, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+    except Exception as e:
+        print(f"  [AmazonPost] product_history 保存失敗: {e}")
+
+
+def _mark_amazon_product_posted(product: dict) -> None:
+    """投稿完了後にproduct_history.jsonへ記録（14日クールダウン）"""
+    key = product.get("asin") or product.get("search_keyword", "")
+    if not key:
+        return
+    entries = _load_amazon_product_history()
+    now = datetime.now().isoformat()
+    for e in entries:
+        if e.get("key") == key:
+            e["last_posted_at"] = now
+            break
+    else:
+        entries.append({
+            "key":            key,
+            "title":          product.get("title", ""),
+            "last_posted_at": now,
+        })
+    # 古いエントリを削除（30日以上前）
+    cutoff = (datetime.now() - timedelta(days=30)).isoformat()
+    entries = [e for e in entries if (e.get("last_posted_at") or "") >= cutoff]
+    _save_amazon_product_history(entries)
+    print(f"  [AmazonPost] mark_posted: {product.get('title', key)[:40]}")
+
+
+def _filter_amazon_cooldown(products: list) -> list:
+    """last_posted_at が14日以内の商品をフィルタして返す"""
+    cutoff = (datetime.now() - timedelta(days=_AMAZON_COOLDOWN_DAYS)).isoformat()
+    history = {e["key"]: e.get("last_posted_at", "") for e in _load_amazon_product_history()}
+    available = []
+    for p in products:
+        key = p.get("asin") or p.get("search_keyword", "")
+        posted_at = history.get(key, "")
+        if posted_at < cutoff:
+            available.append(p)
+    if available:
+        return available
+    # 全件クールダウン中 → 最も古く投稿されたものを優先して全件返す
+    print("  [AmazonPost] 全商品クールダウン中 → 最古投稿を優先して全件返す")
+    history_oldest = sorted(products, key=lambda p: history.get(
+        p.get("asin") or p.get("search_keyword", ""), ""
+    ))
+    return history_oldest
+
+
 def generate_amazon_product_post(force_refresh: bool = False) -> dict:
     """
     Amazonガジェット商品のスレッド投稿を生成して返す
@@ -1074,11 +1193,21 @@ def generate_amazon_product_post(force_refresh: bool = False) -> dict:
         from fetch_amazon_deals import fetch_deals
         from generate_amazon_thread import generate_thread
 
-        products = fetch_deals("gadget", count=3, force_refresh=force_refresh)
+        products = fetch_deals("gadget", count=5, force_refresh=force_refresh)
         if not products:
             return {}
 
-        product = random.choice(products)
+        # クールダウン済み商品を除外
+        products = _filter_amazon_cooldown(products)
+
+        # intent_score 上位2件から重み付きランダム選択（1位を優遇）
+        top = products[:2]
+        scores = [p.get("intent_score", 50) for p in top]
+        product = random.choices(top, weights=scores, k=1)[0]
+
+        # 投稿済みとして記録（14日クールダウン開始）
+        _mark_amazon_product_posted(product)
+
         thread  = generate_thread(product)
 
         if not thread.get("tweet1"):
@@ -1097,6 +1226,65 @@ def generate_amazon_product_post(force_refresh: bool = False) -> dict:
         return {}
 
 
+_RAKUTEN_HISTORY_PATH  = Path(__file__).parent / "rakuten_post_history.json"
+_RAKUTEN_COOLDOWN_DAYS = 7
+
+
+def _load_rakuten_history() -> list:
+    try:
+        data = json.loads(_RAKUTEN_HISTORY_PATH.read_text(encoding="utf-8"))
+        return data if isinstance(data, list) else []
+    except Exception:
+        return []
+
+
+def _save_rakuten_history(entries: list) -> None:
+    try:
+        _RAKUTEN_HISTORY_PATH.write_text(
+            json.dumps(entries, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+    except Exception as e:
+        print(f"  [Rakuten] rakuten_post_history 保存失敗: {e}")
+
+
+def _mark_rakuten_posted(product: dict, category_name: str) -> None:
+    """投稿完了後に履歴へ記録（7日クールダウン）"""
+    key = product.get("url", product.get("name", ""))
+    if not key:
+        return
+    entries = _load_rakuten_history()
+    now = datetime.now().isoformat()
+    for e in entries:
+        if e.get("key") == key:
+            e["last_posted_at"] = now
+            break
+    else:
+        entries.append({
+            "key":            key,
+            "name":           product.get("name", "")[:40],
+            "category":       category_name,
+            "last_posted_at": now,
+        })
+    # 30日以上前のエントリを削除
+    cutoff = (datetime.now() - timedelta(days=30)).isoformat()
+    entries = [e for e in entries if (e.get("last_posted_at") or "") >= cutoff]
+    _save_rakuten_history(entries)
+    print(f"  [Rakuten] mark_posted: {product.get('name', key)[:40]}")
+
+
+def _filter_rakuten_cooldown(products: list) -> list:
+    """7日以内に投稿済みの商品を除外する"""
+    cutoff = (datetime.now() - timedelta(days=_RAKUTEN_COOLDOWN_DAYS)).isoformat()
+    history = {e["key"]: e.get("last_posted_at", "") for e in _load_rakuten_history()}
+    available = [p for p in products if history.get(p.get("url", p.get("name", "")), "") < cutoff]
+    if available:
+        return available
+    # 全件クールダウン中 → 最も古い投稿を先頭に並べ直して全件返す
+    print("  [Rakuten] 全商品クールダウン中 → 最古投稿を優先")
+    return sorted(products, key=lambda p: history.get(p.get("url", p.get("name", "")), ""))
+
+
 def generate_rakuten_product_post() -> dict:
     """
     楽天市場の人気商品をX投稿用テキストに変換して返す。
@@ -1108,12 +1296,24 @@ def generate_rakuten_product_post() -> dict:
         from money_agent.rakuten_product_article import fetch_rakuten_products, ARTICLE_CATEGORIES
         import random as _random
 
-        category = _random.choice(ARTICLE_CATEGORIES)
+        # クールダウン済みカテゴリを除外（週内に同カテゴリが重複しないよう）
+        hist_categories = {e.get("category") for e in _load_rakuten_history()
+                           if (e.get("last_posted_at") or "") >=
+                           (datetime.now() - timedelta(days=_RAKUTEN_COOLDOWN_DAYS)).isoformat()}
+        available_cats = [c for c in ARTICLE_CATEGORIES if c["name"] not in hist_categories]
+        if not available_cats:
+            available_cats = ARTICLE_CATEGORIES  # 全カテゴリ消化済みならリセット
+
+        category = _random.choice(available_cats)
         products = fetch_rakuten_products(category["genre_id"], hits=10)
         if not products:
             return {}
 
-        product = _random.choice(products[:5])  # 上位5件からランダム選択
+        # クールダウン済み商品を除外してランダム選択
+        candidates = _filter_rakuten_cooldown(products[:5])
+        product = _random.choice(candidates)
+        _mark_rakuten_posted(product, category["name"])
+
         name    = product["name"][:30]
         price   = product["price"]
         reviews = product["review_count"]
@@ -1274,11 +1474,10 @@ A8.netのアフィリエイトプログラムをX（Twitter）で自然に紹介
 
     ins_id = program.get("ins_id", "")
 
-    # キューから消費 or 履歴の投稿カウントを更新
+    # キューから消費 + 履歴に last_posted_at を記録（30日クールダウン）
     if source == "cache":
-        _a8_pop_from_cache(ins_id)          # キューから削除（消費）
-    elif source == "history":
-        _a8_increment_history(ins_id)       # 履歴の投稿回数を記録
+        _a8_pop_from_cache(ins_id)   # キューから削除（消費）
+    _a8_mark_as_posted(ins_id)       # 履歴の last_posted_at / posted_count を更新
 
     print(
         f"[A8Post] 生成完了: {name} "

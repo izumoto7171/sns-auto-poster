@@ -278,6 +278,25 @@ def main():
         sys.exit(1)
 
     print_posts(posts)
+
+    # 重複フィルタリング（過去14日間と照合）
+    try:
+        from content_selector import filter_new_posts, write_skip_log
+        posts, skipped = filter_new_posts(posts)
+        if skipped:
+            print(f"\n[dedup] {len(skipped)}件が過去14日以内の重複として除外されました:")
+            for s in skipped:
+                reason = s.get("_skip_reason", "")
+                print(f"  - [{reason}] {s['text'][:50]}...")
+            written = write_skip_log(skipped)
+            print(f"  → post_skip.log に {written}件 追記")
+        if not posts:
+            print("\n全投稿が重複のためキューへの保存をスキップしました。")
+            print("human_post_generator.py を再実行するか、--count を増やしてください。")
+            return
+    except ImportError:
+        print("[WARN] content_selector が見つかりません。重複チェックをスキップします。")
+
     save_queue(posts, append_mode=args.append)
 
     print("\n次のステップ:")

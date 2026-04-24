@@ -4,13 +4,11 @@ on:
   schedule:
     # Amazon商品データ更新（JST 5:00 = UTC 20:00）※投稿より先に実行
     - cron: '0 20 * * *'   # JST 5:00 → 商品ローテーション
-    # X/Bluesky/はてな/note 投稿（JST 7/11/12/15/19/23時）
-    - cron: '0 22 * * *'   # JST 7:00
-    - cron: '0 2 * * *'    # JST 11:00
+    # X/Bluesky/はてな/note 投稿（JST 7/12/19/21時）
+    - cron: '0 22 * * *'   # JST 7:00  ← 朝ピーク
     - cron: '0 3 * * *'    # JST 12:00 ← 楽天ルーム + 通常SNS投稿
-    - cron: '0 6 * * *'    # JST 15:00
-    - cron: '0 10 * * *'   # JST 19:00
-    - cron: '0 14 * * *'   # JST 23:00
+    - cron: '0 10 * * *'   # JST 19:00 ← 夜ピーク
+    - cron: '0 12 * * *'   # JST 21:00 ← 夜の余暇時間
   workflow_dispatch:        # 手動実行ボタン
 
 jobs:
@@ -66,6 +64,8 @@ jobs:
        github.event.schedule != '0 20 * * *')
     steps:
       - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Python セットアップ
         uses: actions/setup-python@v6
@@ -103,6 +103,22 @@ jobs:
         run: |
           cd x_automation
           python3 x_poster.py live
+
+      - name: クールダウン履歴をコミット & プッシュ
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add \
+            x_automation/product_history.json \
+            x_automation/rakuten_post_history.json \
+            money_agent/a8_programs_history.json \
+            money_agent/a8_programs_cache.json || true
+          git diff --staged --quiet && exit 0
+          git commit -m "chore: アフィリエイト投稿クールダウン履歴更新 $(date +'%Y-%m-%d %H:%M')"
+          # 他のジョブが先にpushしていた場合はrebaseしてretry
+          git pull --rebase origin main && git push || \
+          git pull --rebase origin main && git push
 
   post-bluesky:
     name: Bluesky 投稿
