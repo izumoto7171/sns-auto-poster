@@ -21,7 +21,7 @@ jobs:
           cache: 'pip'
 
       - name: 依存関係インストール
-        run: pip install requests
+        run: pip install requests tenacity
 
       - name: クリック数更新
         env:
@@ -40,6 +40,8 @@ jobs:
     name: SNS分析フィードバック
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: write
     # クリック数更新の後に実行
     needs: update-clicks
     steps:
@@ -52,7 +54,7 @@ jobs:
           cache: 'pip'
 
       - name: 依存関係インストール
-        run: pip install google-genai tweepy atproto requests
+        run: pip install google-genai tweepy atproto requests tenacity
 
       - name: SNS分析 + フィードバック生成
         env:
