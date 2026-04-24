@@ -4,10 +4,8 @@ on:
   schedule:
     # Amazon商品データ更新（JST 5:00 = UTC 20:00）※投稿より先に実行
     - cron: '0 20 * * *'   # JST 5:00 → 商品ローテーション
-    # X/Bluesky/はてな/note 投稿（JST 7/12/19/21時）
+    # X/Bluesky/はてな/note 投稿（JST 7/21時 → Gemini無料枠節約のため2回に削減）
     - cron: '0 22 * * *'   # JST 7:00  ← 朝ピーク
-    - cron: '0 3 * * *'    # JST 12:00 ← 楽天ルーム + 通常SNS投稿
-    - cron: '0 10 * * *'   # JST 19:00 ← 夜ピーク
     - cron: '0 12 * * *'   # JST 21:00 ← 夜の余暇時間
   workflow_dispatch:        # 手動実行ボタン
 
