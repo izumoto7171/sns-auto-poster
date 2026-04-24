@@ -19,6 +19,8 @@ jobs:
     name: 🔄 Amazon商品データ更新
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: write
     if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 20 * * *'
     steps:
       - uses: actions/checkout@v5
@@ -57,6 +59,8 @@ jobs:
     name: X (Twitter) 投稿
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: write
     # JST 5:00（商品データ更新）では実行しない
     if: |
       github.event_name == 'workflow_dispatch' ||
@@ -247,6 +251,8 @@ jobs:
     name: 🛍️ 楽天ルーム投稿
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: write
     # JST 12:00（UTC 3:00）のみ実行（1日1商品）
     if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 3 * * *'
     steps:
