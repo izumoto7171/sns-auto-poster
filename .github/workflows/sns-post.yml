@@ -114,10 +114,11 @@ jobs:
           git add \
             x_automation/product_history.json \
             x_automation/rakuten_post_history.json \
+            x_automation/post_log.json \
             money_agent/a8_programs_history.json \
             money_agent/a8_programs_cache.json || true
           git diff --staged --quiet && exit 0
-          git commit -m "chore: アフィリエイト投稿クールダウン履歴更新 $(date +'%Y-%m-%d %H:%M')"
+          git commit -m "chore: X投稿ログ更新 $(date +'%Y-%m-%d %H:%M')"
           # 他のジョブが先にpushしていた場合はrebaseしてretry
           git pull --rebase origin main && git push || \
           git pull --rebase origin main && git push

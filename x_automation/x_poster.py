@@ -29,8 +29,41 @@ def load_log() -> list:
         return []
 
 
+_LOCAL_LOG_FILE = os.path.join(os.path.dirname(__file__), "post_log.json")
+_LOCAL_LOG_MAX  = 200  # ローカルログの最大保持件数
+
+
+def _save_log_local(entry: dict):
+    """ローカルJSONにもログを書く（Supabase不要・dedup用）"""
+    now = datetime.now().isoformat()
+    record = {
+        "datetime":  now,
+        "type":      entry.get("type", ""),
+        "label":     entry.get("label", ""),
+        "chars":     entry.get("chars", 0),
+        "text":      entry.get("text", ""),
+        "success":   entry.get("success", False),
+        "mode":      entry.get("mode", "live"),
+    }
+    try:
+        if os.path.exists(_LOCAL_LOG_FILE):
+            with open(_LOCAL_LOG_FILE, encoding="utf-8") as f:
+                log = json.load(f)
+        else:
+            log = []
+        log.append(record)
+        # 上限超えたら古いものから削除
+        if len(log) > _LOCAL_LOG_MAX:
+            log = log[-_LOCAL_LOG_MAX:]
+        with open(_LOCAL_LOG_FILE, "w", encoding="utf-8") as f:
+            json.dump(log, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"⚠️ ローカルログ書き込みエラー: {e}")
+
+
 def save_log(entry: dict):
-    """投稿ログを DB に INSERT する（競合排除）"""
+    """投稿ログを DB に INSERT する。DB未設定時はローカルJSONにフォールバック。"""
+    db_ok = False
     try:
         db.insert_post(
             platform  = "x",
@@ -42,8 +75,11 @@ def save_log(entry: dict):
             mode      = entry.get("mode", "live"),
             has_image = entry.get("has_image", False),
         )
+        db_ok = True
     except Exception as e:
         print(f"⚠️ DB書き込みエラー（ログ保存失敗）: {e}")
+    # Supabase成否にかかわらずローカルにも書く（dedup用）
+    _save_log_local(entry)
 
 
 # ─────────────────────────────────────────
