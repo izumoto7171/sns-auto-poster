@@ -165,7 +165,7 @@ VIRAL_HOOK_PATTERNS = [
     "〇〇を始めて△△ヶ月。正直に言います",
 ]
 
-MAX_TWEET_UNITS = 280
+MAX_TWEET_UNITS = 275  # Twitter実測で280ちょうどが拒否されるため5単位の安全マージン
 
 
 def x_char_count(text: str) -> int:
@@ -198,11 +198,12 @@ def x_char_count(text: str) -> int:
 
 
 def _truncate_to_x_units(text: str, max_units: int) -> str:
-    """X文字単位でmax_units以内に切り詰める"""
+    """X文字単位でmax_units以内に切り詰める（末尾の…1単位を含む）"""
     count = 0
     for i, ch in enumerate(text):
         units = 2 if x_char_count(ch) == 2 else 1
-        if count + units > max_units:
+        # …(1単位)を追加した場合でも超えないか確認
+        if count + units > max_units - 1:
             return text[:i] + "…"
         count += units
     return text
