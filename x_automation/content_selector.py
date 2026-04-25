@@ -50,7 +50,8 @@ TIME_SLOTS = [
 # ─────────────────────────────────────────
 
 def _parse_dt(entry: dict) -> datetime:
-    dt_str = entry.get("datetime") or entry.get("posted_at") or ""
+    # post_log.jsonは"timestamp"キー、x_poster.pyは"datetime"キーで記録するため両対応
+    dt_str = entry.get("datetime") or entry.get("posted_at") or entry.get("timestamp") or ""
     try:
         return datetime.fromisoformat(dt_str)
     except (ValueError, TypeError):
@@ -58,10 +59,27 @@ def _parse_dt(entry: dict) -> datetime:
 
 
 def load_recent_log(days: int = COOLDOWN_DAYS) -> list[dict]:
-    """post_log.json から過去days日分の成功エントリを返す"""
+    """
+    過去days日分の投稿ログを返す。
+    Supabase が利用可能な場合はDBから、そうでなければローカルJSONにフォールバック。
+    x_poster.py はSupabaseに書き込むため、ローカルJSONは古くなる場合がある。
+    """
+    cutoff = datetime.now() - timedelta(days=days)
+
+    # Supabase から読み込み（x_poster.py の保存先と一致させる）
+    try:
+        import sys as _sys
+        _sys.path.insert(0, str(BASE_DIR.parent))
+        from db_client import db
+        rows = db.get_posts(platform="x", limit=200)
+        if rows:
+            return [r for r in rows if r.get("success") and _parse_dt(r) >= cutoff]
+    except Exception:
+        pass
+
+    # フォールバック: ローカルJSONファイル
     if not POST_LOG_FILE.exists():
         return []
-    cutoff = datetime.now() - timedelta(days=days)
     try:
         with POST_LOG_FILE.open(encoding="utf-8") as f:
             log = json.load(f)
