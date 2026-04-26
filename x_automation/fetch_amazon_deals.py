@@ -133,14 +133,16 @@ def sort_by_intent(products: list) -> list:
     return sorted(products, key=lambda x: x["intent_score"], reverse=True)
 
 
-# ガジェット好きに刺さるカテゴリ定義
+# 一人暮らし男性向けカテゴリ定義
 CATEGORIES = {
-    "gadget":    {"label": "ガジェット",         "keywords": ["ガジェット", "スマート家電", "IoT"], "search_index": "Electronics"},
-    "audio":     {"label": "オーディオ",         "keywords": ["ワイヤレスイヤホン", "ノイキャン"],  "search_index": "Electronics"},
-    "charging":  {"label": "充電・バッテリー",   "keywords": ["モバイルバッテリー", "急速充電"],    "search_index": "Electronics"},
-    "camera":    {"label": "カメラ・映像",       "keywords": ["アクションカメラ", "ウェブカメラ"],  "search_index": "Electronics"},
-    "pc":        {"label": "PC周辺機器",         "keywords": ["メカニカルキーボード", "トラックパッド"], "search_index": "Computers"},
-    "smart_home":{"label": "スマートホーム",     "keywords": ["スマートスピーカー", "スマート電球"], "search_index": "Electronics"},
+    "kitchen":      {"label": "キッチン家電",       "keywords": ["電気圧力鍋", "炊飯器", "電子レンジ", "トースター"], "search_index": "Kitchen"},
+    "cooking_tools":{"label": "調理器具",           "keywords": ["フライパン", "包丁", "まな板", "シリコンスチーマー"], "search_index": "Kitchen"},
+    "cleaning":     {"label": "掃除・生活家電",     "keywords": ["コードレス掃除機", "ロボット掃除機", "食洗機"],     "search_index": "Appliances"},
+    "daily_goods":  {"label": "日用品・消耗品",     "keywords": ["節水シャワーヘッド", "消臭剤", "収納ボックス"],     "search_index": "HealthPersonalCare"},
+    "food":         {"label": "食品・飲料",         "keywords": ["冷凍食品", "インスタント", "プロテイン"],           "search_index": "Grocery"},
+    "audio":        {"label": "オーディオ",         "keywords": ["ワイヤレスイヤホン", "ノイズキャンセリング"],       "search_index": "Electronics"},
+    "smart_home":   {"label": "スマートホーム",     "keywords": ["スマートスピーカー", "スマート電球", "温湿度計"],   "search_index": "Electronics"},
+    "pc":           {"label": "PC・デスク環境",     "keywords": ["モニター", "USBハブ", "ウェブカメラ"],             "search_index": "Computers"},
 }
 
 
