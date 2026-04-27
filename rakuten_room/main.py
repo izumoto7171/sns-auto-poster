@@ -48,7 +48,8 @@ def save_log(log: list):
 
 
 def already_posted(product_url: str, log: list) -> bool:
-    posted_urls = {entry["url"] for entry in log}
+    # 成功した投稿のみをスキップ対象にする（失敗はリトライ対象）
+    posted_urls = {entry["url"] for entry in log if entry.get("success")}
     return product_url in posted_urls
 
 

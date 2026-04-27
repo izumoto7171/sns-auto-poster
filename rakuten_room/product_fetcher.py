@@ -11,18 +11,19 @@ from datetime import datetime
 RAKUTEN_APP_ID       = os.environ.get("RAKUTEN_APP_ID", "")
 RAKUTEN_ACCESS_KEY   = os.environ.get("RAKUTEN_ACCESS_KEY", "")
 RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID", "")
-RAKUTEN_ORIGIN       = os.environ.get("RAKUTEN_ORIGIN", "")
+# RAKUTEN_ORIGIN 未設定時はブログURLをデフォルト値として使用
+RAKUTEN_ORIGIN       = os.environ.get("RAKUTEN_ORIGIN", "https://smart-earn-life.hateblo.jp")
 
-# 女性ウケカテゴリ（楽天ジャンルID）
-FEMALE_CATEGORIES = [
-    {"name": "スキンケア・基礎化粧品", "genre_id": "558885",  "tag": "美容"},
-    {"name": "ボディケア・バスグッズ",  "genre_id": "558887",  "tag": "バス"},
-    {"name": "コスメ・ネイル",          "genre_id": "558886",  "tag": "コスメ"},
-    {"name": "ルームフレグランス",       "genre_id": "512830",  "tag": "香り"},
-    {"name": "ヘアケア",               "genre_id": "558888",  "tag": "ヘア"},
-    {"name": "おしゃれ小物・雑貨",      "genre_id": "101164",  "tag": "雑貨"},
-    {"name": "スイーツ・お菓子",        "genre_id": "408100",  "tag": "スイーツ"},
-    {"name": "キッチン用品",            "genre_id": "100804",  "tag": "キッチン"},
+# 一人暮らし男性向けカテゴリ（楽天ジャンルID）
+MALE_SOLO_CATEGORIES = [
+    {"name": "キッチン用品・調理器具",     "genre_id": "100804",  "tag": "キッチン"},
+    {"name": "家電・生活家電",             "genre_id": "215783",  "tag": "家電"},
+    {"name": "日用品・消耗品",             "genre_id": "551167",  "tag": "日用品"},
+    {"name": "インスタント・レトルト食品", "genre_id": "116631",  "tag": "時短飯"},
+    {"name": "コーヒー・飲料",             "genre_id": "400395",  "tag": "コーヒー"},
+    {"name": "健康食品・プロテイン",       "genre_id": "100227",  "tag": "プロテイン"},
+    {"name": "収納・インテリア雑貨",       "genre_id": "101164",  "tag": "収納"},
+    {"name": "スイーツ・お菓子",           "genre_id": "408100",  "tag": "おやつ"},
 ]
 
 # 1商品あたりの価格帯 (円)
@@ -32,14 +33,14 @@ PRICE_MAX = 8000
 
 def fetch_products(count: int = 5) -> list[dict]:
     """
-    ランダムカテゴリから女性ウケ商品を取得する。
+    ランダムカテゴリから一人暮らし男性向け商品を取得する。
     RAKUTEN_APP_ID が未設定の場合はモックデータを返す。
     """
     if not RAKUTEN_APP_ID:
         print("[product_fetcher] RAKUTEN_APP_ID 未設定 → モックデータを使用")
         return _mock_products(count)
 
-    category = random.choice(FEMALE_CATEGORIES)
+    category = random.choice(MALE_SOLO_CATEGORIES)
     params = {
         "applicationId": RAKUTEN_APP_ID,
         "genreId":       category["genre_id"],
@@ -59,7 +60,7 @@ def fetch_products(count: int = 5) -> list[dict]:
         res = requests.get(
             "https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20220601",
             params=params,
-            headers={"Origin": RAKUTEN_ORIGIN},
+            headers={"Origin": RAKUTEN_ORIGIN, "Referer": RAKUTEN_ORIGIN + "/"},
             timeout=10,
         )
         res.raise_for_status()
