@@ -187,6 +187,9 @@ jobs:
       - name: はてなブログ投稿
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          HATENA_ID: ${{ secrets.HATENA_ID }}
+          HATENA_BLOG_ID: ${{ secrets.HATENA_BLOG_ID }}
+          HATENA_API_KEY: ${{ secrets.HATENA_API_KEY }}
           HATENA_COOKIES: ${{ secrets.HATENA_COOKIES }}
         run: |
           cd hatena_automation
