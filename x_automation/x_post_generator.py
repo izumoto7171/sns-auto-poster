@@ -1,8 +1,9 @@
 """
 X（Twitter）投稿文 自動生成
-戦略：役立つ情報60% / 共感20% / 雑学10% / 商品紹介10%
+戦略：役立つ情報35% / 進捗20% / Amazon20% / A815% / 楽天10%
 構造：①興味を引く一文 → ②共感・問題提起 → ③解決方法 → ④まとめ
 インプレ強化：バイラルフック + ハッシュタグ + エンゲージCTA
+アフィリエイト：deal_selector のスコアで商品/A8/楽天を動的に重み付け
 """
 import os
 import random
@@ -66,11 +67,9 @@ def _build_feedback_context(insights: dict, platform: str = "x") -> str:
 # 投稿タイプの定義と重み
 # ─────────────────────────────────────────
 POST_TYPES = [
-    {"type": "useful",   "label": "一人暮らし生活術",   "weight": 25},
-    {"type": "empathy",  "label": "共感・体験",          "weight": 15},
-    {"type": "progress", "label": "節約進捗ログ",        "weight": 15},
-    {"type": "product",  "label": "Amazon商品紹介",      "weight": 10},
-    {"type": "trivia",   "label": "雑学・ネタ",          "weight": 10},
+    {"type": "useful",   "label": "一人暮らし生活術",   "weight": 35},
+    {"type": "progress", "label": "節約進捗ログ",        "weight": 20},
+    {"type": "product",  "label": "Amazon商品紹介",      "weight": 20},
     {"type": "a8",       "label": "A8アフィリエイト",    "weight": 15},
     {"type": "rakuten",  "label": "楽天商品紹介",        "weight": 10},
 ]
@@ -90,8 +89,6 @@ TIME_SLOTS = [
 # ─────────────────────────────────────────
 HASHTAGS_BY_TYPE = {
     "useful":    ["#一人暮らし", "#節約", "#生活術"],
-    "empathy":   ["#一人暮らし", "#一人暮らし男性", "#節約生活"],
-    "trivia":    ["#一人暮らし", "#豆知識", "#生活の知恵"],
     "product":   ["#一人暮らし", "#コスパ最強", "#おすすめ家電"],
     "rakuten":   ["#楽天市場", "#一人暮らし", "#節約"],
     "a8":        ["#PR", "#一人暮らし"],
@@ -144,8 +141,6 @@ CTR_STYLES = {
 # スタイル別キーワード候補（Geminiに渡すコンテキスト）
 _STYLE_KEYWORDS_BY_TYPE = {
     "useful":   ["一人暮らし 節約", "時短料理", "生活費を抑える", "家事の効率化", "一人暮らし 便利グッズ"],
-    "empathy":  ["一人暮らし あるある", "自炊 面倒", "家事 苦手", "食費 高い", "部屋 片付かない"],
-    "trivia":   ["一人暮らしの豆知識", "節約の意外な事実", "食費の真実", "家電の選び方"],
     "product":  ["コスパ家電", "一人暮らし 必需品", "便利グッズ", "時短家電"],
     "progress": ["節約 進捗", "食費記録", "生活費ログ"],
     "rakuten":  ["楽天 一人暮らし", "コスパ最強", "生活用品 安い"],
@@ -850,16 +845,57 @@ TEMPLATES = {
 }
 
 
+def _get_affiliate_deal_scores() -> dict[str, float]:
+    """
+    deal_selector のスコアでアフィリエイトタイプの重み倍率を返す。
+    取得失敗時は空 dict（固定重みにフォールバック）。
+    """
+    try:
+        import sys as _sys
+        _root = str(Path(__file__).parent.parent)
+        _sys.path.insert(0, _root)
+        from crawlers.deal_selector import _rakuten_score, _a8_score, _amazon_score
+        from crawlers.crawler_a8 import load_programs
+        from datetime import date
+        today = date.today()
+        programs = load_programs()
+        return {
+            "rakuten": _rakuten_score(today).score,
+            "a8":      _a8_score(today, programs).score,
+            "product": _amazon_score(today).score,
+        }
+    except Exception:
+        return {}
+
+
 def pick_post_type() -> dict:
-    """重み付きランダムで投稿タイプを選択"""
-    total = sum(p["weight"] for p in POST_TYPES)
-    r = random.randint(1, total)
-    cumulative = 0
+    """
+    重み付きランダムで投稿タイプを選択。
+    アフィリエイトタイプ（product/a8/rakuten）は deal_selector のスコアで重みを動的調整。
+    """
+    affiliate_types = {"product", "a8", "rakuten"}
+    deal_scores = _get_affiliate_deal_scores()
+
+    candidates = []
     for pt in POST_TYPES:
+        if deal_scores and pt["type"] in affiliate_types:
+            multiplier = deal_scores.get(pt["type"], 1.0)
+            candidates.append({**pt, "weight": pt["weight"] * multiplier})
+        else:
+            candidates.append(pt)
+
+    if deal_scores:
+        best = max((t for t in affiliate_types if t in deal_scores), key=lambda t: deal_scores[t])
+        print(f"[DealSelector] アフィリエイトブースト: {best} (×{deal_scores[best]:.2f})")
+
+    total = sum(p["weight"] for p in candidates)
+    r = random.uniform(0, total)
+    cumulative = 0.0
+    for pt in candidates:
         cumulative += pt["weight"]
         if r <= cumulative:
             return pt
-    return POST_TYPES[0]
+    return candidates[0]
 
 
 _used_templates: dict = {}  # 同じ日に同じテンプレを使わないよう管理

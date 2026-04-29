@@ -28,14 +28,35 @@ COOLDOWN_DAYS = 14   # 同じ投稿を再掲しない日数
 MAX_RUN       = 2    # 同一タイプの連続上限（これを超えると除外候補）
 
 POST_TYPES = [
-    {"type": "useful",   "label": "役立つ情報",       "weight": 30},
-    {"type": "empathy",  "label": "共感・体験",       "weight": 15},
-    {"type": "progress", "label": "収益進捗ログ",     "weight": 15},
-    {"type": "product",  "label": "Amazon商品紹介",   "weight": 15},
-    {"type": "trivia",   "label": "雑学・ネタ",       "weight": 10},
-    {"type": "a8",       "label": "A8アフィリエイト", "weight":  8},
-    {"type": "rakuten",  "label": "楽天商品紹介",     "weight":  7},
+    {"type": "useful",   "label": "役立つ情報",       "weight": 35},
+    {"type": "progress", "label": "収益進捗ログ",     "weight": 20},
+    {"type": "product",  "label": "Amazon商品紹介",   "weight": 20},
+    {"type": "a8",       "label": "A8アフィリエイト", "weight": 15},
+    {"type": "rakuten",  "label": "楽天商品紹介",     "weight": 10},
 ]
+
+# deal_selector が使えるかチェック（オプション依存）
+def _get_deal_boosted_types() -> dict[str, float]:
+    """
+    deal_selector のスコアに基づいてアフィリエイトタイプの重みを動的に返す。
+    失敗時は空 dict（フォールバックで POST_TYPES の固定値を使う）。
+    """
+    try:
+        import sys as _sys
+        _sys.path.insert(0, str(BASE_DIR.parent))
+        from crawlers.deal_selector import _rakuten_score, _a8_score, _amazon_score
+        from crawlers.crawler_a8 import load_programs
+        from datetime import date
+        today = date.today()
+        programs = load_programs()
+        scores = {
+            "rakuten": _rakuten_score(today).score,
+            "a8":      _a8_score(today, programs).score,
+            "product": _amazon_score(today).score,
+        }
+        return scores
+    except Exception:
+        return {}
 
 TIME_SLOTS = [
     {"label": "朝",   "range": "07:00〜09:00"},
@@ -148,11 +169,31 @@ def load_pool() -> list[dict]:
 # タイプ選択
 # ─────────────────────────────────────────
 
-def weighted_type_select(exclude_types: Optional[list[str]] = None) -> dict:
-    """重み付きランダムで投稿タイプを選択"""
+def weighted_type_select(
+    exclude_types: Optional[list[str]] = None,
+    deal_scores: Optional[dict[str, float]] = None,
+) -> dict:
+    """
+    重み付きランダムで投稿タイプを選択。
+    deal_scores が渡された場合、アフィリエイトタイプ（product/a8/rakuten）の
+    重みを deal_selector のスコア比で動的に調整する。
+    """
+    affiliate_types = {"product", "a8", "rakuten"}
     candidates = [pt for pt in POST_TYPES if pt["type"] not in (exclude_types or [])]
     if not candidates:
         candidates = POST_TYPES
+
+    # deal_scores でアフィリエイト重みを上書き
+    if deal_scores:
+        adjusted = []
+        for pt in candidates:
+            if pt["type"] in affiliate_types and pt["type"] in deal_scores:
+                new_weight = pt["weight"] * deal_scores[pt["type"]]
+                adjusted.append({**pt, "weight": new_weight})
+            else:
+                adjusted.append(pt)
+        candidates = adjusted
+
     total = sum(pt["weight"] for pt in candidates)
     r = random.uniform(0, total)
     cumulative = 0.0
@@ -194,11 +235,17 @@ def select_daily_posts(n_slots: int = 4) -> list[dict]:
     1日分の投稿をn_slotsスロット分選出して返す。
 
     Returns:
-        各要素: {slot, range, type, label, item_id, text}
+        各要素: {slot, range, type, label, item_id, text, deal_reason?}
     """
     recent_log = load_recent_log()
     full_texts, hooks = build_recent_index(recent_log)
     pool = load_pool()
+
+    # deal_selector のスコアを取得（アフィリエイト重みの動的調整に使用）
+    deal_scores = _get_deal_boosted_types()
+    if deal_scores:
+        best_service = max(deal_scores, key=deal_scores.get)
+        print(f"[DealSelector] 今日のアフィリエイトブースト: {best_service} (score={deal_scores[best_service]:.2f})")
 
     results: list[dict] = []
     used_ids: set[str] = set()
@@ -218,7 +265,10 @@ def select_daily_posts(n_slots: int = 4) -> list[dict]:
         # タイプを変えながら最大5回試行
         tried_types: set[str] = set()
         for _ in range(5):
-            pt = weighted_type_select(exclude_types=list(set(exclude) | tried_types))
+            pt = weighted_type_select(
+                exclude_types=list(set(exclude) | tried_types),
+                deal_scores=deal_scores or None,
+            )
             item = select_for_slot(pool, pt["type"], full_texts, hooks, used_ids)
             if item:
                 chosen_type = pt
@@ -232,14 +282,18 @@ def select_daily_posts(n_slots: int = 4) -> list[dict]:
             # 同日内でも同じフック/テキストを重複させない
             hooks.add(_hook_of(chosen_item["text"]))
             full_texts.add(chosen_item["text"].strip())
-            results.append({
+            entry = {
                 "slot":    slot["label"],
                 "range":   slot["range"],
                 "type":    chosen_type["type"],
                 "label":   chosen_type["label"],
                 "item_id": chosen_item["id"],
                 "text":    chosen_item["text"],
-            })
+            }
+            # アフィリエイトタイプの場合、deal_selector の選択理由を付与
+            if deal_scores and chosen_type["type"] in {"product", "a8", "rakuten"}:
+                entry["deal_boost"] = deal_scores.get(chosen_type["type"], 1.0)
+            results.append(entry)
         else:
             results.append({
                 "slot":    slot["label"],

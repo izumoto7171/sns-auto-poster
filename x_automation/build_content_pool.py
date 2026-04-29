@@ -38,8 +38,6 @@ def build_pool() -> dict:
 
     type_labels = {
         "useful":   "役立つ情報",
-        "empathy":  "共感・体験",
-        "trivia":   "雑学・ネタ",
         "product":  "Amazon商品紹介",
         "progress": "収益進捗ログ",
     }
