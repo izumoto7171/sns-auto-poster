@@ -60,21 +60,6 @@
     "description": "ポイント還元率業界最高水準の定番クレジットカード"
   },
   {
-    "ins_id": "matsui_ideco",
-    "name": "松井証券 iDeCo",
-    "reward": "新規口座開設申込500円",
-    "affiliate_url": "https://px.a8.net/svt/ejp?a8mat=4AZPOR+8OKLDE+3XCC+BXIYQ",
-    "hatena_url": "",
-    "hashtags": [
-      "#投資",
-      "#資産運用",
-      "#新NISA",
-      "#積立投資"
-    ],
-    "posted_count": 0,
-    "description": "業界最低水準の運用コストで老後資金を準備できるiDeCo"
-  },
-  {
     "ins_id": "onamae_domain",
     "name": "お名前.com",
     "reward": "ドメイン取得・サーバー申込",
