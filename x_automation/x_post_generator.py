@@ -1174,7 +1174,7 @@ X（Twitter）スレッドの1ツイート目（リンクなし・バズ狙い�
 
 
 _AMAZON_PRODUCT_HISTORY_PATH = Path(__file__).parent / "product_history.json"
-_AMAZON_COOLDOWN_DAYS = 14
+_AMAZON_COOLDOWN_DAYS = 30
 
 
 def _load_amazon_product_history() -> list:

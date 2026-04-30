@@ -185,23 +185,66 @@ def get_season(month: int) -> str:
 
 
 # ─────────────────────────────────────────
-# 履歴管理（DB版）
+# 履歴管理（DB → ローカルファイルフォールバック）
 # ─────────────────────────────────────────
-def get_recent_keywords(days: int = HISTORY_DAYS) -> list:
-    """過去N日の使用済みキーワードを DB から返す"""
+_LOCAL_HISTORY_FILE = ROOT_DIR / "data" / "product_history.json"
+
+
+def _load_local_history() -> list:
+    """data/product_history.json からエントリを読み込む"""
     try:
-        return db.get_recent_keywords(days=days)
-    except Exception as e:
-        print(f"  ⚠️  キーワード履歴DB読み込み失敗: {e}")
+        data = json.loads(_LOCAL_HISTORY_FILE.read_text(encoding="utf-8"))
+        return data.get("entries", []) if isinstance(data, dict) else []
+    except Exception:
         return []
 
 
+def _save_local_history(entries: list) -> None:
+    try:
+        _LOCAL_HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+        _LOCAL_HISTORY_FILE.write_text(
+            json.dumps({"entries": entries}, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+    except Exception as e:
+        print(f"  ⚠️  ローカル履歴書き込み失敗: {e}")
+
+
+def get_recent_keywords(days: int = HISTORY_DAYS) -> list:
+    """過去N日の使用済みキーワードを DB → ローカルファイルの順で返す"""
+    from datetime import timedelta
+    cutoff = (datetime.now() - timedelta(days=days)).isoformat()
+    try:
+        result = db.get_recent_keywords(days=days)
+        if result:
+            return result
+    except Exception as e:
+        print(f"  ⚠️  キーワード履歴DB読み込み失敗: {e}")
+
+    # フォールバック: ローカルファイル
+    entries = _load_local_history()
+    keywords = []
+    for e in entries:
+        if e.get("date", "") >= cutoff:
+            keywords.extend(e.get("keywords", []))
+    print(f"  [Rotator] ローカル履歴から除外キーワード: {len(keywords)}件")
+    return keywords
+
+
 def add_history_entry(keywords: list, month: int, season: str) -> None:
-    """今日の使用済みキーワードを DB に INSERT する（古いエントリは自動削除）"""
+    """今日の使用済みキーワードを DB + ローカルファイルに記録"""
     try:
         db.add_keyword_history(keywords, month, season)
     except Exception as e:
         print(f"  ⚠️  キーワード履歴DB書き込み失敗: {e}")
+
+    # ローカルにも書く（DBが使えなくても翌日の除外に使う）
+    from datetime import timedelta
+    entries = _load_local_history()
+    cutoff = (datetime.now() - timedelta(days=HISTORY_DAYS * 2)).isoformat()
+    entries = [e for e in entries if e.get("date", "") >= cutoff]
+    entries.append({"date": datetime.now().isoformat(), "keywords": keywords, "month": month, "season": season})
+    _save_local_history(entries)
 
 
 # ─────────────────────────────────────────
