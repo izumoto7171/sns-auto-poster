@@ -2,9 +2,7 @@ name: SNS Auto Post
 
 on:
   schedule:
-    # Amazon商品データ更新（JST 5:00 = UTC 20:00）※投稿より先に実行
-    - cron: '0 20 * * *'   # JST 5:00 → 商品ローテーション
-    # X/Bluesky/はてな/note 投稿（JST 7/21時 → Gemini無料枠節約のため2回に削減）
+    # X投稿（JST 7/21時）+ 商品ローテーションを先行実行
     - cron: '0 22 * * *'   # JST 7:00  ← 朝ピーク
     - cron: '0 12 * * *'   # JST 21:00 ← 夜の余暇時間
   workflow_dispatch:        # 手動実行ボタン
@@ -19,7 +17,7 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: write
-    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 20 * * *'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     steps:
       - uses: actions/checkout@v5
         with:
@@ -59,11 +57,12 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: write
-    # JST 5:00（商品データ更新）では実行しない
+    needs: update-amazon-products
     if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'schedule' &&
-       github.event.schedule != '0 20 * * *')
+      always() && (
+        github.event_name == 'workflow_dispatch' ||
+        github.event_name == 'schedule'
+      )
     steps:
       - uses: actions/checkout@v5
         with:
@@ -125,13 +124,10 @@ jobs:
           git pull --rebase origin main && git push
 
   post-bluesky:
-    name: Bluesky 投稿
+    name: Bluesky 投稿（一時停止中）
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'schedule' &&
-       github.event.schedule != '0 20 * * *')
+    if: false  # 一時停止
     steps:
       - uses: actions/checkout@v5
 
@@ -154,13 +150,10 @@ jobs:
           python3 bsky_poster.py live
 
   post-hatena:
-    name: はてなブログ 投稿
+    name: はてなブログ 投稿（一時停止中）
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'schedule' &&
-       github.event.schedule != '0 20 * * *')
+    if: false  # 一時停止
     steps:
       - uses: actions/checkout@v5
 
@@ -197,13 +190,10 @@ jobs:
           python3 hatena_poster.py post
 
   post-note:
-    name: note 投稿
+    name: note 投稿（一時停止中）
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'schedule' &&
-       github.event.schedule != '0 20 * * *')
+    if: false  # 一時停止
     steps:
       - uses: actions/checkout@v5
 
