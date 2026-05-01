@@ -8,10 +8,7 @@ name: Amazon商品ローテーション & X投稿
 #  UTC 10:30 = JST 19:30 → X投稿 2回目
 # ─────────────────────────────────────────────────
 on:
-  schedule:
-    - cron: '0 20 * * *'   # JST  5:00 → 商品データ更新
-    - cron: '30 22 * * *'  # JST  7:30 → X投稿
-    - cron: '30 10 * * *'  # JST 19:30 → X投稿
+  # 一時停止中（sns-post.yml に統合）
   workflow_dispatch:
     inputs:
       job:
