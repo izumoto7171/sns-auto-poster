@@ -1,9 +1,7 @@
 name: Money Agent (アフィリエイト記事生成)
 
 on:
-  schedule:
-    # JST 3:00（UTC 18:00）— SNS投稿と時間をずらしてGemini API競合を回避
-    - cron: '0 18 * * *'
+  # 一時停止中（Geminiクォータをsns-post.ymlに集中させるため）
   workflow_dispatch:  # 手動実行ボタン
 
 # git pushに必要な書き込み権限

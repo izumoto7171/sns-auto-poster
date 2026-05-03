@@ -1,9 +1,7 @@
 name: A8新着案件パイプライン
 
 on:
-  schedule:
-    # JST 7:00（UTC 22:00）— 朝一番に新着案件を取得して記事化
-    - cron: '0 22 * * *'
+  # 一時停止中（Geminiクォータをsns-post.ymlに集中させるため）
   workflow_dispatch:
     inputs:
       mode:
