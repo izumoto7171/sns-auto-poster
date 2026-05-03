@@ -28,11 +28,9 @@ COOLDOWN_DAYS = 14   # 同じ投稿を再掲しない日数
 MAX_RUN       = 2    # 同一タイプの連続上限（これを超えると除外候補）
 
 POST_TYPES = [
-    {"type": "useful",   "label": "役立つ情報",       "weight": 35},
-    {"type": "progress", "label": "収益進捗ログ",     "weight": 20},
-    {"type": "product",  "label": "Amazon商品紹介",   "weight": 20},
-    {"type": "a8",       "label": "A8アフィリエイト", "weight": 15},
-    {"type": "rakuten",  "label": "楽天商品紹介",     "weight": 10},
+    {"type": "a8",       "label": "A8アフィリエイト",    "weight": 40},
+    {"type": "product",  "label": "Amazon商品紹介",      "weight": 35},
+    {"type": "rakuten",  "label": "楽天商品紹介",        "weight": 25},
 ]
 
 # deal_selector が使えるかチェック（オプション依存）

@@ -469,6 +469,31 @@ def post_now(force_type: str = None, test_mode: bool = False) -> bool:
             print("❌ Amazon商品取得完全失敗、投稿スキップ")
             return False
 
+    # 楽天タイプはスレッド投稿（tweet1=本文、tweet2=URL）
+    if post["type"] == "rakuten" and post.get("thread", {}).get("tweet2"):
+        thread = post["thread"]
+        print(f"楽天商品スレッド投稿: {thread.get('tweet1', '')[:40]}...")
+        if test_mode:
+            print("\n[DRY RUN] 楽天スレッド投稿プレビュー:")
+            print("── Tweet1 ──")
+            print(thread.get("tweet1", ""))
+            print("── Tweet2 ──")
+            print(thread.get("tweet2", ""))
+            success = True
+        else:
+            success = post_amazon_thread(thread)  # 同じスレッド投稿ロジックを流用
+        save_log({
+            "datetime": datetime.now().isoformat(),
+            "type":     "rakuten_thread",
+            "label":    "楽天商品紹介",
+            "chars":    len(thread.get("tweet1", "")),
+            "text":     thread.get("tweet1", ""),
+            "success":  success,
+            "mode":     "dry_run" if test_mode else "live",
+            "has_image": False,
+        })
+        return success
+
     text = post["text"]
 
     # useful / empathy タイプはスレッド形式（脱ボット化）
