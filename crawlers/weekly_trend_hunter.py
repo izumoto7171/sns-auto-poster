@@ -31,7 +31,9 @@ ROOT_DIR = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT_DIR))
 sys.path.insert(0, str(ROOT_DIR / "money_agent"))
 
-PORTFOLIO_PATH = ROOT_DIR / "money_agent" / "config" / "program_portfolio.json"
+PORTFOLIO_PATH        = ROOT_DIR / "money_agent" / "config" / "program_portfolio.json"
+AMAZON_KEYWORDS_PATH  = ROOT_DIR / "x_automation" / "weekly_amazon_keywords.json"
+RAKUTEN_KEYWORDS_PATH = ROOT_DIR / "x_automation" / "weekly_rakuten_keywords.json"
 CACHE_PATH     = ROOT_DIR / "money_agent" / "a8_programs_cache.json"
 HISTORY_PATH   = ROOT_DIR / "money_agent" / "a8_programs_history.json"
 
@@ -325,6 +327,139 @@ def _add_to_cache(portfolio_entry: dict, hashtags: list[str], dry_run: bool) -> 
             print(f"  [Cache] {label}書き込み失敗: {e}")
 
 
+# ── Amazon / Rakuten トレンドキーワードリサーチ ─────────────────
+
+def _research_amazon_keywords(trend_keywords: list[str], dry_run: bool) -> list[dict]:
+    """
+    Gemini に今週のAmazon商品キーワードを5件生成させ、
+    AMAZON_KEYWORDS_PATH に保存する（dry_run=False 時のみ書き込み）。
+    """
+    try:
+        from gemini_client import generate as gemini_generate
+    except ImportError:
+        print("[TrendHunter/Amazon] gemini_client インポート失敗")
+        return []
+
+    now          = datetime.now()
+    year         = now.year
+    month        = now.month
+    keywords_str = "、".join(trend_keywords[:10])
+    week_of      = now.strftime("%G-W%V")
+
+    prompt = f"""{year}年{month}月のトレンドキーワード: {keywords_str}
+
+これらを踏まえて、アフィリエイト収益を上げやすいAmazon商品検索キーワードを5件提案してください。
+
+【条件】
+- 価格帯: 2,000〜20,000円
+- ターゲット: 20〜40代男性
+- SNSでバズりやすい商品カテゴリ
+
+以下のJSON配列を返してください（コードブロック不要、配列だけ）:
+[{{"keyword": "商品検索キーワード", "title": "40文字以内の投稿タイトル", "reason": "30文字以内の選定理由"}}]"""
+
+    try:
+        raw = gemini_generate(prompt, use_cache=False)
+    except Exception as e:
+        print(f"[TrendHunter/Amazon] Gemini 呼び出し失敗: {e}")
+        return []
+
+    if not raw:
+        print("[TrendHunter/Amazon] Gemini からレスポンスなし")
+        return []
+
+    m = re.search(r'\[[\s\S]*\]', raw)
+    if not m:
+        print(f"[TrendHunter/Amazon] JSON パース失敗:\n{raw[:200]}")
+        return []
+
+    try:
+        items = json.loads(m.group())
+    except json.JSONDecodeError as e:
+        print(f"[TrendHunter/Amazon] JSON デコード失敗: {e}")
+        return []
+
+    # keyword キーがあるもののみ最大5件
+    keywords = [item for item in items if isinstance(item, dict) and "keyword" in item][:5]
+
+    if not dry_run:
+        payload = {
+            "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "week_of":      week_of,
+            "keywords":     keywords,
+        }
+        AMAZON_KEYWORDS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        AMAZON_KEYWORDS_PATH.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    print(f"[TrendHunter/Amazon] {len(keywords)}件生成")
+    return keywords
+
+
+def _research_rakuten_keywords(trend_keywords: list[str], dry_run: bool) -> list[dict]:
+    """
+    Gemini に今週の楽天商品キーワードを5件生成させ、
+    RAKUTEN_KEYWORDS_PATH に保存する（dry_run=False 時のみ書き込み）。
+    """
+    try:
+        from gemini_client import generate as gemini_generate
+    except ImportError:
+        print("[TrendHunter/Rakuten] gemini_client インポート失敗")
+        return []
+
+    now          = datetime.now()
+    year         = now.year
+    month        = now.month
+    keywords_str = "、".join(trend_keywords[:10])
+    week_of      = now.strftime("%G-W%V")
+
+    prompt = f"""{year}年{month}月のトレンドキーワード: {keywords_str}
+
+これらを踏まえて、楽天市場での商品紹介に適した検索キーワードを5件提案してください。
+
+【条件】
+- テーマ: 一人暮らし・副業・節約・生活改善
+- 楽天市場で実際に購入できる商品であること
+
+以下のJSON配列を返してください（コードブロック不要、配列だけ）:
+[{{"keyword": "楽天検索キーワード", "category": "食品/家電/日用品/ファッション/美容/スポーツのどれか", "reason": "30文字以内の選定理由"}}]"""
+
+    try:
+        raw = gemini_generate(prompt, use_cache=False)
+    except Exception as e:
+        print(f"[TrendHunter/Rakuten] Gemini 呼び出し失敗: {e}")
+        return []
+
+    if not raw:
+        print("[TrendHunter/Rakuten] Gemini からレスポンスなし")
+        return []
+
+    m = re.search(r'\[[\s\S]*\]', raw)
+    if not m:
+        print(f"[TrendHunter/Rakuten] JSON パース失敗:\n{raw[:200]}")
+        return []
+
+    try:
+        items = json.loads(m.group())
+    except json.JSONDecodeError as e:
+        print(f"[TrendHunter/Rakuten] JSON デコード失敗: {e}")
+        return []
+
+    # keyword キーがあるもののみ最大5件
+    search_terms = [item for item in items if isinstance(item, dict) and "keyword" in item][:5]
+
+    if not dry_run:
+        payload = {
+            "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "week_of":      week_of,
+            "search_terms": search_terms,
+        }
+        RAKUTEN_KEYWORDS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        RAKUTEN_KEYWORDS_PATH.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    print(f"[TrendHunter/Rakuten] {len(search_terms)}件生成")
+    return search_terms
+
+
 # ── メイン ──────────────────────────────────────────────────────
 
 def run(dry_run: bool = False) -> None:
@@ -362,6 +497,14 @@ def run(dry_run: bool = False) -> None:
     print(f"\n[TrendHunter] 完了: {added_count}件追加{'（DryRun）' if dry_run else ''}")
     print("  ※ affiliate_url が空の案件は status=candidate です。")
     print("  ※ A8.net で承認後、portfolio.json の affiliate_url と status を更新してください。")
+
+    # Amazon & Rakuten トレンドキーワードリサーチ
+    print(f"\n[TrendHunter] Amazon商品キーワードリサーチ中...")
+    amazon_kws = _research_amazon_keywords(keywords, dry_run)
+    print(f"\n[TrendHunter] Rakuten商品キーワードリサーチ中...")
+    rakuten_kws = _research_rakuten_keywords(keywords, dry_run)
+    print(f"[TrendHunter] Amazon {len(amazon_kws)}件 / Rakuten {len(rakuten_kws)}件 キーワード更新")
+
     print('='*60)
 
 

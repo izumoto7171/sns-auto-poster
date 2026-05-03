@@ -290,10 +290,24 @@ def generate_products_via_gemini(
         recent = excluded_keywords[:20]
         exclusion_note = f"\n\n【除外】最近紹介済みのため以下と被る商品は出さないこと: {', '.join(recent)}"
 
+    # 週次トレンドハンターが生成したキーワードをヒントとして注入
+    weekly_hint = ""
+    try:
+        weekly_kw_path = Path(__file__).parent.parent / "x_automation" / "weekly_amazon_keywords.json"
+        if weekly_kw_path.exists():
+            wdata = json.loads(weekly_kw_path.read_text(encoding="utf-8"))
+            wkws  = [k["keyword"] for k in wdata.get("keywords", []) if k.get("keyword")]
+            # 除外済みキーワードと重複しないものだけ使う
+            fresh = [k for k in wkws if k not in excluded_keywords]
+            if fresh:
+                weekly_hint = f"\n\n【今週の注目キーワード（優先して取り上げてほしい）】{', '.join(fresh)}"
+    except Exception:
+        pass
+
     prompt = f"""あなたはAmazon Japanのガジェット専門バイヤーです。
 今日は{month}月（{season}）です。
 今月のテーマ: {theme}
-今月のイベント: {', '.join(events)}{exclusion_note}
+今月のイベント: {', '.join(events)}{exclusion_note}{weekly_hint}
 
 上記の文脈で「今のユーザーが抱えそうな悩み」を解決するガジェット・電子機器を{count}件推薦してください。
 ガジェット好きな20〜40代男性をターゲットにした、コスパが良く話題になりやすい商品を選ぶこと。

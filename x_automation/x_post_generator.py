@@ -67,11 +67,9 @@ def _build_feedback_context(insights: dict, platform: str = "x") -> str:
 # 投稿タイプの定義と重み
 # ─────────────────────────────────────────
 POST_TYPES = [
-    {"type": "useful",   "label": "一人暮らし生活術",   "weight": 35},
-    {"type": "progress", "label": "節約進捗ログ",        "weight": 20},
-    {"type": "product",  "label": "Amazon商品紹介",      "weight": 20},
-    {"type": "a8",       "label": "A8アフィリエイト",    "weight": 15},
-    {"type": "rakuten",  "label": "楽天商品紹介",        "weight": 10},
+    {"type": "a8",       "label": "A8アフィリエイト",    "weight": 40},
+    {"type": "product",  "label": "Amazon商品紹介",      "weight": 35},
+    {"type": "rakuten",  "label": "楽天商品紹介",        "weight": 25},
 ]
 
 # ─────────────────────────────────────────
@@ -1357,16 +1355,41 @@ def generate_rakuten_product_post() -> dict:
         from money_agent.rakuten_product_article import fetch_rakuten_products, ARTICLE_CATEGORIES
         import random as _random
 
-        # クールダウン済みカテゴリを除外（週内に同カテゴリが重複しないよう）
-        hist_categories = {e.get("category") for e in _load_rakuten_history()
-                           if (e.get("last_posted_at") or "") >=
-                           (datetime.now() - timedelta(days=_RAKUTEN_COOLDOWN_DAYS)).isoformat()}
-        available_cats = [c for c in ARTICLE_CATEGORIES if c["name"] not in hist_categories]
-        if not available_cats:
-            available_cats = ARTICLE_CATEGORIES  # 全カテゴリ消化済みならリセット
+        # 週次トレンドキーワードを読み込み（あれば50%の確率でキーワード検索を優先）
+        weekly_kw_path = Path(__file__).parent.parent / "x_automation" / "weekly_rakuten_keywords.json"
+        weekly_keyword = None
+        if weekly_kw_path.exists():
+            try:
+                import json as _json_mod
+                wdata = _json_mod.loads(weekly_kw_path.read_text(encoding="utf-8"))
+                terms = [t["keyword"] for t in wdata.get("search_terms", []) if t.get("keyword")]
+                if terms and _random.random() < 0.5:
+                    weekly_keyword = _random.choice(terms)
+            except Exception:
+                pass
 
-        category = _random.choice(available_cats)
-        products = fetch_rakuten_products(category["genre_id"], hits=10)
+        # キーワード検索（週次トレンド）またはジャンル検索（従来）
+        products = []
+        category = {"name": "楽天トレンド", "genre_id": None}
+        if weekly_keyword:
+            try:
+                from crawlers.crawler_rakuten import fetch_products_by_keyword
+                products = fetch_products_by_keyword(weekly_keyword, hits=10)
+                category = {"name": weekly_keyword, "genre_id": None}
+                print(f"[Rakuten] 週次キーワード検索: {weekly_keyword}")
+            except Exception as e:
+                print(f"[Rakuten] キーワード検索失敗 ({e})、ジャンル検索にフォールバック")
+
+        if not products:
+            # クールダウン済みカテゴリを除外（週内に同カテゴリが重複しないよう）
+            hist_categories = {e.get("category") for e in _load_rakuten_history()
+                               if (e.get("last_posted_at") or "") >=
+                               (datetime.now() - timedelta(days=_RAKUTEN_COOLDOWN_DAYS)).isoformat()}
+            available_cats = [c for c in ARTICLE_CATEGORIES if c["name"] not in hist_categories]
+            if not available_cats:
+                available_cats = ARTICLE_CATEGORIES  # 全カテゴリ消化済みならリセット
+            category = _random.choice(available_cats)
+            products = fetch_rakuten_products(category["genre_id"], hits=10)
         if not products:
             return {}
 

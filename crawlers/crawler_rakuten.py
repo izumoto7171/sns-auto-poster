@@ -105,3 +105,69 @@ def fetch_products(genre_id: str, hits: int = 10) -> list:
         print(f"[rakuten] キャッシュ保存失敗: {e}")
 
     return products
+
+
+def fetch_products_by_keyword(keyword: str, hits: int = 10) -> list:
+    """
+    楽天市場 API でキーワード検索する（ジャンルIDなし）。
+    weekly_trend_hunter が生成したキーワードで呼び出す用途。
+    """
+    cache_key = f"kw_{keyword}_{hits}"
+
+    cached = _cache.kv_get(cache_key)
+    if cached is not None:
+        print(f"[rakuten] キャッシュヒット (keyword={keyword})")
+        return cached
+
+    if not RAKUTEN_APP_ID:
+        print("[rakuten] RAKUTEN_APP_ID 未設定（キーワード検索スキップ）")
+        return []
+
+    params: dict = {
+        "applicationId": RAKUTEN_APP_ID,
+        "keyword":       keyword,
+        "sort":          "-reviewCount",
+        "hits":          hits,
+        "imageFlag":     1,
+        "format":        "json",
+    }
+    if RAKUTEN_AFFILIATE_ID:
+        params["affiliateId"] = RAKUTEN_AFFILIATE_ID
+
+    try:
+        res = requests.get(
+            RAKUTEN_SEARCH_URL,
+            params=params,
+            headers={"Origin": RAKUTEN_ORIGIN},
+            timeout=15,
+        )
+        res.raise_for_status()
+        items_raw = res.json().get("Items", [])
+    except Exception as e:
+        print(f"[rakuten] キーワード検索エラー ({keyword}): {e}")
+        return []
+
+    products = []
+    for item_wrap in items_raw:
+        item = item_wrap.get("Item", item_wrap)
+        url  = item.get("affiliateUrl") or item.get("itemUrl", "")
+        products.append({
+            "name":         item.get("itemName", "")[:60],
+            "price":        item.get("itemPrice", 0),
+            "url":          url,
+            "shop":         item.get("shopName", ""),
+            "review_count": item.get("reviewCount", 0),
+            "review_avg":   item.get("reviewAverage", 0.0),
+            "image_url":    (item.get("mediumImageUrls") or [{"imageUrl": ""}])[0].get("imageUrl", ""),
+            "catchcopy":    item.get("catchcopy", ""),
+            "search_keyword": keyword,
+        })
+
+    print(f"[rakuten] {len(products)}件取得 (keyword={keyword})")
+
+    try:
+        _cache.kv_set(cache_key, products)
+    except Exception as e:
+        print(f"[rakuten] キャッシュ保存失敗: {e}")
+
+    return products
