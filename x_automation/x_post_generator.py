@@ -1061,8 +1061,9 @@ def generate_post(force_type: str = None) -> dict:
         result = generate_rakuten_product_post()
         if result:
             return result
-        post_type = "useful"
-        label = "役立つ情報"
+        # 楽天失敗 → productにフォールバック
+        post_type = "product"
+        label = "Amazon商品紹介"
 
     # A8アフィリエイトは専用関数で処理
     if post_type == "a8":

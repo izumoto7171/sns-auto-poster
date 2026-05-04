@@ -34,15 +34,14 @@ HAS_X_KEYS = all([
     os.getenv("X_ACCESS_TOKEN_SECRET"),
 ])
 
-# 今日の投稿タイプ順（戦略: 60/20/10/10）
-# 4投稿の配分パターン（毎日ランダムに変える）
+# アフィリエイト専用パターン（a8 / product=Amazon / rakuten）
 import random
 DAILY_PATTERNS = [
-    ["useful",  "empathy", "useful",  "trivia"],
-    ["useful",  "useful",  "empathy", "product"],
-    ["useful",  "trivia",  "useful",  "empathy"],
-    ["empathy", "useful",  "product", "useful"],
-    ["useful",  "useful",  "trivia",  "empathy"],
+    ["a8",      "product", "a8",      "rakuten"],
+    ["product", "a8",      "rakuten", "a8"],
+    ["a8",      "rakuten", "a8",      "product"],
+    ["rakuten", "a8",      "product", "a8"],
+    ["a8",      "product", "a8",      "rakuten"],
 ]
 
 
