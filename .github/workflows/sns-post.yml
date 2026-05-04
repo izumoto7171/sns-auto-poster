@@ -2,9 +2,10 @@ name: SNS Auto Post
 
 on:
   schedule:
-    # X投稿（JST 7/21時）+ 商品ローテーションを先行実行
-    - cron: '0 22 * * *'   # JST 7:00  ← 朝ピーク
-    - cron: '0 12 * * *'   # JST 21:00 ← 夜の余暇時間
+    - cron: '0 23 * * *'   # JST 8:00  ← 朝ピーク
+    - cron: '0 3 * * *'    # JST 12:00 ← 昼
+    - cron: '0 9 * * *'    # JST 18:00 ← 夕方
+    - cron: '0 13 * * *'   # JST 22:00 ← 夜の余暇時間
   workflow_dispatch:        # 手動実行ボタン
 
 jobs:
