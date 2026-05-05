@@ -127,7 +127,15 @@ def show_log(days: int = 7):
 # 1件投稿
 # ─────────────────────────────────────────
 def post_now(force_type: str = None, x_text: str = None, test_mode: bool = False):
-    post = generate_post(force_type=force_type, x_text=x_text)
+    # 直近7件の投稿テキストをDBから取得して重複防止に使う
+    recent_texts = []
+    try:
+        recent = db.get_posts(platform="bluesky", limit=7)
+        recent_texts = [r.get("text", "") for r in recent if r.get("text")]
+    except Exception:
+        pass
+
+    post = generate_post(force_type=force_type, x_text=x_text, recent_texts=recent_texts)
 
     print(f"\n🦋 投稿タイプ: {post['label']} ({post['chars']}文字)")
     print(f"🕐 投稿時刻: {datetime.now().strftime('%Y/%m/%d %H:%M')}")

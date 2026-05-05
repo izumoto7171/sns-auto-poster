@@ -58,7 +58,7 @@ def _fetch_latest_ai_info(keyword: str) -> dict:
 }}"""
 
         resp = client.models.generate_content(
-            model="gemini-2.0-flash-lite",
+            model="gemini-1.5-flash",
             contents=prompt,
         )
         text = resp.text.strip().lstrip("```json").lstrip("```").rstrip("```").strip()

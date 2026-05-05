@@ -99,7 +99,7 @@ JSON配列で出力（他の文字列不要）:
 {raw_text[:4000]}
 """
         response = client.models.generate_content(
-            model="gemini-2.0-flash-lite",
+            model="gemini-1.5-flash",
             contents=prompt,
         )
         text = response.text.strip()

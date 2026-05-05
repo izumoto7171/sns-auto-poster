@@ -24,7 +24,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from utils.decorators import api_retry
 
 # ── 定数 ────────────────────────────────────────────────
-DEFAULT_MODEL  = "gemini-2.0-flash-lite"
+DEFAULT_MODEL  = "gemini-1.5-flash"
 CACHE_FILE     = Path(__file__).parent / "gemini_cache.json"
 CACHE_TTL_H    = 24   # キャッシュ有効期間（時間）
 MAX_CACHE_SIZE = 500  # エントリ上限（古い順に削除）
@@ -85,7 +85,7 @@ def generate(
     Parameters
     ----------
     prompt       : 送信するプロンプト文字列
-    model        : 使用モデル（デフォルト: gemini-2.0-flash-lite）
+    model        : 使用モデル（デフォルト: gemini-1.5-flash）
     cache_key    : キャッシュキーを手動指定する場合（省略時はプロンプトの MD5）
     use_cache    : True = キャッシュを使用。SNS 投稿など毎回違う内容には False を渡す
     max_retries  : 後方互換のために残す（リトライ設定は utils/decorators.py が管理）

@@ -250,7 +250,7 @@ def test_gemini_api():
 
         client = genai.Client(api_key=api_key)
         resp = client.models.generate_content(
-            model="gemini-2.0-flash-lite",
+            model="gemini-1.5-flash",
             contents="「テスト成功」とだけ返してください",
         )
         print(f"\n✅ Gemini API接続成功！")
