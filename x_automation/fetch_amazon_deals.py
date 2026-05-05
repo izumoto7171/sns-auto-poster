@@ -135,6 +135,7 @@ def sort_by_intent(products: list) -> list:
 
 # 一人暮らし男性向けカテゴリ定義
 CATEGORIES = {
+    "gadget":       {"label": "ガジェット・家電",   "keywords": ["ワイヤレスイヤホン", "スマート家電", "モバイルバッテリー", "USB充電器"], "search_index": "Electronics"},
     "kitchen":      {"label": "キッチン家電",       "keywords": ["電気圧力鍋", "炊飯器", "電子レンジ", "トースター"], "search_index": "Kitchen"},
     "cooking_tools":{"label": "調理器具",           "keywords": ["フライパン", "包丁", "まな板", "シリコンスチーマー"], "search_index": "Kitchen"},
     "cleaning":     {"label": "掃除・生活家電",     "keywords": ["コードレス掃除機", "ロボット掃除機", "食洗機"],     "search_index": "Appliances"},
@@ -298,7 +299,7 @@ def fetch_via_gemini(category: str, count: int) -> list:
 
         client = genai.Client(api_key=api_key)
         resp   = client.models.generate_content(
-            model="gemini-1.5-flash",
+            model="gemini-2.0-flash",
             contents=prompt,
         )
         raw = resp.text.strip()

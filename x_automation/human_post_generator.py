@@ -148,7 +148,7 @@ def generate_posts_with_gemini(
 
     client = genai.Client(api_key=api_key)
     resp = client.models.generate_content(
-        model="gemini-1.5-flash",
+        model="gemini-2.0-flash",
         contents=prompt,
     )
     raw = resp.text.strip()

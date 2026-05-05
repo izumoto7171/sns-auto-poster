@@ -168,7 +168,7 @@ JSONのみ出力してください。説明文は不要。
 
     client = genai.Client(api_key=api_key)
     resp = client.models.generate_content(
-        model="gemini-1.5-flash",
+        model="gemini-2.0-flash",
         contents=prompt,
     )
     raw = resp.text.strip()
