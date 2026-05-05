@@ -1554,22 +1554,25 @@ A8.netのアフィリエイトプログラムをX（Twitter）で自然に紹介
         ]
         tweet_body = random.choice(templates)
 
-    # ── 全体テキスト組み立て ─────────────────────────────────
-    full_text = f"{tweet_body}\n\n{link_url}\n{hashtag_str}"
+    # ── tweet1: リンクなし（スパム判定回避）────────────────────
+    tweet1 = f"{tweet_body}\n\n{hashtag_str}"
 
     # 280単位オーバー時は本文を切り詰め
-    if x_char_count(full_text) > MAX_TWEET_UNITS:
-        suffix    = f"\n\n{link_url}\n{hashtag_str}"
+    if x_char_count(tweet1) > MAX_TWEET_UNITS:
+        suffix    = f"\n\n{hashtag_str}"
         max_body  = MAX_TWEET_UNITS - x_char_count(suffix)
         tweet_body = _truncate_to_x_units(tweet_body, max_body)
-        full_text  = f"{tweet_body}{suffix}"
+        tweet1     = f"{tweet_body}{suffix}"
+
+    # ── tweet2: リンクのみ（リプライ）────────────────────────
+    tweet2 = f"🔗 詳細・申込みはこちら\n{link_url}"
 
     ins_id = program.get("ins_id", "")
 
     # キューから消費 + 履歴に last_posted_at を記録（30日クールダウン）
     if source == "cache":
-        _a8_pop_from_cache(ins_id)   # キューから削除（消費）
-    _a8_mark_as_posted(ins_id)       # 履歴の last_posted_at / posted_count を更新
+        _a8_pop_from_cache(ins_id)
+    _a8_mark_as_posted(ins_id)
 
     print(
         f"[A8Post] 生成完了: {name} "
@@ -1579,11 +1582,11 @@ A8.netのアフィリエイトプログラムをX（Twitter）で自然に紹介
     return {
         "type":    "a8",
         "label":   "A8アフィリエイト",
-        "text":    full_text,
-        "chars":   len(full_text),
+        "text":    tweet1,
+        "chars":   len(tweet1),
         "program": program,
         "source":  source,
-        "thread":  {"tweet1": full_text, "tweet2": ""},
+        "thread":  {"tweet1": tweet1, "tweet2": tweet2},
     }
 
 

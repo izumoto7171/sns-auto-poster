@@ -469,6 +469,31 @@ def post_now(force_type: str = None, test_mode: bool = False) -> bool:
             print("❌ Amazon商品取得完全失敗、投稿スキップ")
             return False
 
+    # A8タイプはスレッド投稿（tweet1=本文リンクなし、tweet2=短縮URL）
+    if post["type"] == "a8" and post.get("thread", {}).get("tweet2"):
+        thread = post["thread"]
+        print(f"A8スレッド投稿: {thread.get('tweet1', '')[:40]}...")
+        if test_mode:
+            print("\n[DRY RUN] A8スレッド投稿プレビュー:")
+            print("── Tweet1（リンクなし）──")
+            print(thread.get("tweet1", ""))
+            print("── Tweet2（リプライ・リンク）──")
+            print(thread.get("tweet2", ""))
+            success = True
+        else:
+            success = post_amazon_thread(thread)
+        save_log({
+            "datetime": datetime.now().isoformat(),
+            "type":     "a8",
+            "label":    "A8アフィリエイト",
+            "chars":    len(thread.get("tweet1", "")),
+            "text":     thread.get("tweet1", ""),
+            "success":  success,
+            "mode":     "dry_run" if test_mode else "live",
+            "has_image": False,
+        })
+        return success
+
     # 楽天タイプはスレッド投稿（tweet1=本文、tweet2=URL）
     if post["type"] == "rakuten" and post.get("thread", {}).get("tweet2"):
         thread = post["thread"]
