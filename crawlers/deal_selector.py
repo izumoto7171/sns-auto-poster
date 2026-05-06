@@ -22,9 +22,9 @@ deal_selector.py — 全アフィリエイトサービスから「今一番熱�
 from __future__ import annotations
 
 import random
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import NamedTuple
+from typing import NamedTuple, Optional
 import sys
 
 _ROOT_DIR = Path(__file__).parent.parent
@@ -38,6 +38,177 @@ class ServiceScore(NamedTuple):
     score:   float     # ベーススコア × 各種倍率
     reason:  str       # ログ出力用の理由
     boosted_ids: list  # A8 の場合: ブースト対象 ins_id のリスト（優先選択に使用）
+
+
+# ── 事前フィルタリング定数 ────────────────────────────────────
+
+# Amazonフィルタ
+AMAZON_MIN_DISCOUNT_RATE = 5      # 割引率が5%未満は除外
+AMAZON_MIN_PRICE         = 500    # 500円未満は除外
+AMAZON_MAX_PRICE         = 50000  # 5万円超は除外（高額商品はSNS向きでない）
+
+# A8フィルタ
+A8_MAX_POSTED_COUNT   = 5    # 同一案件を5回以上投稿済みなら除外
+A8_MIN_SNS_SCORE      = 0    # sns_scoreがこれ未満は除外（0=フィルタなし）
+
+# 楽天フィルタ
+RAKUTEN_MIN_REVIEW_COUNT   = 0     # レビュー件数の最低ライン（0=フィルタなし）
+RAKUTEN_MIN_REVIEW_AVERAGE = 3.5   # 平均評価の最低ライン
+
+# 共通除外キーワード（商品名・ジャンルに含まれたら除外）
+_EXCLUDED_KEYWORDS = [
+    "アダルト", "18禁", "成人", "競馬", "パチンコ", "スロット",
+    "副業詐欺", "必ず稼げる", "簡単に稼ぐ",
+    "タバコ", "煙草", "電子たばこ",
+]
+
+# content_cache の有効期間（日）: この期間内は同一商品でGeminiを呼ばない
+CACHE_REUSE_DAYS = 3
+
+
+def pre_filter_amazon(deal: dict) -> tuple[bool, str]:
+    """
+    AmazonのdealをGemini呼び出し前にフィルタリングする。
+    Returns: (通過=True, 理由)
+    """
+    name  = deal.get("name", deal.get("title", ""))
+    price = deal.get("price", 0)
+    discount_rate = deal.get("discount_rate", 0)
+
+    # 価格範囲チェック（Amazon PA-APIは {"amount": 2480, "currency": "JPY"} 形式で返す場合がある）
+    try:
+        if isinstance(price, dict):
+            price_val = int(price.get("amount", 0))
+        else:
+            price_val = int(str(price).replace(",", "").replace("円", ""))
+    except (ValueError, TypeError):
+        price_val = 0
+
+    if price_val > 0 and price_val < AMAZON_MIN_PRICE:
+        return False, f"価格低すぎ: {price_val}円 < {AMAZON_MIN_PRICE}円"
+    if price_val > AMAZON_MAX_PRICE:
+        return False, f"価格高すぎ: {price_val}円 > {AMAZON_MAX_PRICE}円"
+
+    # 割引率チェック
+    try:
+        dr = float(str(discount_rate).replace("%", ""))
+    except (ValueError, TypeError):
+        dr = 0
+    if 0 < dr < AMAZON_MIN_DISCOUNT_RATE:
+        return False, f"割引率低すぎ: {dr}% < {AMAZON_MIN_DISCOUNT_RATE}%"
+
+    # 除外キーワードチェック
+    for kw in _EXCLUDED_KEYWORDS:
+        if kw in name:
+            return False, f"除外キーワード: '{kw}' in '{name[:30]}'"
+
+    return True, "OK"
+
+
+def pre_filter_a8(deal: dict) -> tuple[bool, str]:
+    """
+    A8案件をGemini呼び出し前にフィルタリングする。
+    Returns: (通過=True, 理由)
+    """
+    name         = deal.get("name", "")
+    posted_count = deal.get("posted_count", 0)
+    sns_score    = deal.get("sns_score", 0)
+
+    # 投稿済み回数チェック
+    if posted_count >= A8_MAX_POSTED_COUNT:
+        return False, f"投稿済み回数超過: {posted_count}回 >= {A8_MAX_POSTED_COUNT}回"
+
+    # SNSスコアチェック（設定がある場合のみ）
+    if A8_MIN_SNS_SCORE > 0 and sns_score < A8_MIN_SNS_SCORE:
+        return False, f"SNSスコア低: {sns_score} < {A8_MIN_SNS_SCORE}"
+
+    # 除外キーワードチェック
+    for kw in _EXCLUDED_KEYWORDS:
+        if kw in name:
+            return False, f"除外キーワード: '{kw}' in '{name[:30]}'"
+
+    return True, "OK"
+
+
+def pre_filter_rakuten(deal: dict) -> tuple[bool, str]:
+    """
+    楽天商品をGemini呼び出し前にフィルタリングする。
+    Returns: (通過=True, 理由)
+    """
+    name           = deal.get("name", deal.get("itemName", ""))
+    review_count   = deal.get("reviewCount",   deal.get("review_count",   0)) or 0
+    review_average = deal.get("reviewAverage", deal.get("review_average", 0)) or 0
+
+    # レビュー数チェック（設定がある場合のみ）
+    if RAKUTEN_MIN_REVIEW_COUNT > 0 and review_count < RAKUTEN_MIN_REVIEW_COUNT:
+        return False, f"レビュー数不足: {review_count} < {RAKUTEN_MIN_REVIEW_COUNT}"
+
+    # 平均評価チェック（レビューがある場合のみ）
+    try:
+        avg = float(review_average)
+    except (ValueError, TypeError):
+        avg = 0.0
+    if review_count > 0 and avg > 0 and avg < RAKUTEN_MIN_REVIEW_AVERAGE:
+        return False, f"評価低すぎ: {avg} < {RAKUTEN_MIN_REVIEW_AVERAGE}"
+
+    # 除外キーワードチェック
+    for kw in _EXCLUDED_KEYWORDS:
+        if kw in name:
+            return False, f"除外キーワード: '{kw}' in '{name[:30]}'"
+
+    return True, "OK"
+
+
+def pre_filter_deal(deal: dict, source: str) -> tuple[bool, str]:
+    """
+    案件ソースに応じた事前フィルタリングを実行する。
+    Returns: (通過=True, 理由)
+    """
+    if source == "amazon":
+        return pre_filter_amazon(deal)
+    elif source == "a8":
+        return pre_filter_a8(deal)
+    elif source == "rakuten":
+        return pre_filter_rakuten(deal)
+    return True, "未知のソース（フィルタなし）"
+
+
+def check_content_cache(product_key: str, post_type: str = "x") -> Optional[str]:
+    """
+    content_cache を確認し、有効なキャッシュがあればテキストを返す。
+    なければ None。Supabase未設定時は None を返す（フォールバック動作）。
+    """
+    try:
+        from db_client import db
+        return db.get_content_cache(product_key, post_type=post_type, max_age_days=CACHE_REUSE_DAYS)
+    except Exception:
+        return None
+
+
+def push_to_queue(deal: dict, source: str, product_key: str, post_type: str = "x") -> bool:
+    """
+    フィルタを通過した案件をpending_tasksキューに追加する。
+    Returns: True=新規追加, False=スキップ（既存/エラー）
+    """
+    try:
+        from db_client import db
+        ok, reason = pre_filter_deal(deal, source)
+        if not ok:
+            print(f"  [Queue] フィルタで除外: {product_key[:40]} — {reason}")
+            return False
+        added = db.push_pending_task(
+            source      = source,
+            product_key = product_key,
+            raw_data    = deal,
+            priority    = 0,
+            post_type   = post_type,
+        )
+        if added:
+            print(f"  [Queue] キュー追加: {product_key[:40]}")
+        return added
+    except Exception as e:
+        print(f"  [Queue] キュー追加失敗: {e}")
+        return False
 
 
 # ── 楽天: 0/5のつく日チェック ────────────────────────────────
@@ -157,12 +328,28 @@ def _amazon_score(today: date) -> ServiceScore:
 # ── 各サービスから実際の案件を取得 ────────────────────────────
 
 def _fetch_rakuten_deal(genre_id: str = "100371") -> dict:
-    """楽天から代表商品を1件取得する"""
+    """楽天から代表商品を1件取得する。取得した商品はキューに投入する。"""
     try:
         from crawlers.crawler_rakuten import fetch_products
         products = fetch_products(genre_id, hits=10)
-        if products:
-            return random.choice(products[:5])  # 上位5件からランダム
+        if not products:
+            return {}
+
+        # 事前フィルタリング → 通過した商品をキューに一括投入
+        for p in products[:5]:
+            ok, reason = pre_filter_rakuten(p)
+            if ok:
+                product_key = p.get("url") or p.get("name", "")[:80]
+                push_to_queue(p, source="rakuten", product_key=product_key)
+            else:
+                print(f"  [DealSelector] 楽天フィルタ除外: {reason}")
+
+        # フィルタ通過 or 全除外の場合でも1件は返す（即時投稿用）
+        for p in products[:5]:
+            ok, _ = pre_filter_rakuten(p)
+            if ok:
+                return p
+        return random.choice(products[:5])  # 全除外時はフォールバック
     except Exception as e:
         print(f"  [DealSelector] 楽天案件取得失敗: {e}")
     return {}
@@ -170,9 +357,8 @@ def _fetch_rakuten_deal(genre_id: str = "100371") -> dict:
 
 def _fetch_a8_deal(programs: list, boosted_ids: list) -> dict:
     """
-    A8 から1プログラムを選択する。
-    boosted_ids があればその中から weighted_choice、
-    なければ全プログラムから weighted_choice。
+    A8 から1プログラムを選択する。フィルタ通過した全候補をキューに投入する。
+    boosted_ids があればその中から weighted_choice、なければ全プログラムから。
     """
     try:
         from crawlers.crawler_a8 import weighted_choice
@@ -183,19 +369,40 @@ def _fetch_a8_deal(programs: list, boosted_ids: list) -> dict:
         )
         if not candidates:
             candidates = programs
-        return weighted_choice(candidates[-20:])
+        pool = candidates[-20:]
+
+        # フィルタ通過した案件をキューに投入
+        for p in pool:
+            ok, reason = pre_filter_a8(p)
+            if ok:
+                push_to_queue(p, source="a8", product_key=p.get("ins_id", p.get("name", ""))[:80])
+            else:
+                print(f"  [DealSelector] A8フィルタ除外: {reason}")
+
+        return weighted_choice(pool)
     except Exception as e:
         print(f"  [DealSelector] A8案件取得失敗: {e}")
     return {}
 
 
 def _fetch_amazon_deal(category: str = "gadget") -> dict:
-    """Amazon から1商品を取得する"""
+    """Amazon から1商品を取得する。取得した商品はキューに一括投入する。"""
     try:
         from crawlers.crawler_amazon import fetch_deals
         products = fetch_deals(category=category, count=5)
-        if products:
-            return products[0]
+        if not products:
+            return {}
+
+        # フィルタ通過した商品をキューに投入
+        for p in products:
+            ok, reason = pre_filter_amazon(p)
+            if ok:
+                product_key = p.get("asin") or p.get("title", "")[:80]
+                push_to_queue(p, source="amazon", product_key=product_key)
+            else:
+                print(f"  [DealSelector] Amazonフィルタ除外: {reason}")
+
+        return products[0]
     except Exception as e:
         print(f"  [DealSelector] Amazon案件取得失敗: {e}")
     return {}

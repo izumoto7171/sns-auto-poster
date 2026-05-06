@@ -9,3 +9,4 @@ requests
 Pillow
 python-amazon-paapi
 tenacity
+supabase
