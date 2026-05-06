@@ -1568,6 +1568,7 @@ A8.netのアフィリエイトプログラムをX（Twitter）で自然に紹介
 - 広告感を抑えつつ「使ってみた」「試した」などリアルな体験談風に書く
 - 「いかがでしたか？」などの定型文は禁止
 - URL・ハッシュタグは不要（別で付加する）
+- 「リンクから」「下のリンク」などURL誘導フレーズは書かない（URLは自動で追加される）
 - 最後は「{cta}」で締める
 
 投稿本文のみ出力。前置き・説明は不要。"""
@@ -1589,31 +1590,28 @@ A8.netのアフィリエイトプログラムをX（Twitter）で自然に紹介
     # ── フォールバック: テンプレート ────────────────────────
     if not tweet_body:
         templates = [
-            f"{name}、使ってみたら思ったより良かった。\n\n{reward}のキャッシュバックもあって、登録して損はない感じ。\n\n気になる人はリンクから確認してみて。",
+            f"{name}、使ってみたら思ったより良かった。\n\n{reward}のキャッシュバックもあって、登録して損はない感じ。",
             f"副業仲間に教えてもらった{name}。\n\n報酬{reward}で、今申し込みで特典あり。\n\nコスパ良すぎて紹介したくなった。",
-            f"{name}を先週から使い始めた。\n\n{reward}のアフィリエイト報酬付きで、紹介できるレベルのサービス。\n\n詳細は下のリンクへ。",
-            f"正直、{name}は登録前は半信半疑だった。\n\n使ってみたら普通に便利で、{reward}もついてくる。\n\n迷ってるなら一度確認してみる価値はある。",
-            f"今月おすすめしたいサービス：{name}。\n\n{reward}の特典があって、今が申し込みのタイミングかも。\n\n詳しくはリンクで。",
-            f"{name}の存在、最近まで知らなかった。\n\n{reward}という条件がついていて、使って損はなかった。\n\n気になった方はどうぞ。",
-            f"友人に「なんで使ってないの？」と言われた{name}。\n\n試したら確かに良くて、{reward}もついてくるとは。\n\n詳細リンクを置いておきます。",
+            f"{name}を先週から使い始めた。\n\n{reward}のアフィリエイト報酬付きで、紹介できるレベルのサービス。",
+            f"正直、{name}は登録前は半信半疑だった。\n\n使ってみたら普通に便利で、{reward}もついてくる。",
+            f"今月おすすめしたいサービス：{name}。\n\n{reward}の特典があって、今が申し込みのタイミングかも。",
+            f"{name}の存在、最近まで知らなかった。\n\n{reward}という条件がついていて、使って損はなかった。",
+            f"友人に「なんで使ってないの？」と言われた{name}。\n\n試したら確かに良くて、{reward}もついてくるとは。",
             f"{name}、知名度の割に使ってる人が少ない気がする。\n\n{reward}という好条件つき。\n\n損得で考えたら登録一択だった。",
-            f"節約・副業を考えてる人に聞いてほしい。\n\n{name}という選択肢、知ってましたか。\n\n{reward}の条件あり。詳細はリンクから。",
-            f"やってみてわかった{name}の本当のメリット。\n\n{reward}というのは最初知らなかった。\n\nリンクで確認してみて。",
+            f"節約・副業を考えてる人に聞いてほしい。\n\n{name}という選択肢、知ってましたか。\n\n{reward}の条件あり。",
+            f"やってみてわかった{name}の本当のメリット。\n\n{reward}というのは最初知らなかった。",
         ]
         tweet_body = random.choice(templates)
 
-    # ── tweet1: リンクなし（スパム判定回避）────────────────────
-    tweet1 = f"{tweet_body}\n\n{hashtag_str}"
+    # ── tweet1: リンク込みで1ツイートにまとめる ──────────────
+    suffix = f"\n{link_url}\n\n{hashtag_str}"
+    tweet1 = f"{tweet_body}{suffix}"
 
     # 280単位オーバー時は本文を切り詰め
     if x_char_count(tweet1) > MAX_TWEET_UNITS:
-        suffix    = f"\n\n{hashtag_str}"
-        max_body  = MAX_TWEET_UNITS - x_char_count(suffix)
+        max_body   = MAX_TWEET_UNITS - x_char_count(suffix)
         tweet_body = _truncate_to_x_units(tweet_body, max_body)
         tweet1     = f"{tweet_body}{suffix}"
-
-    # ── tweet2: リンクのみ（リプライ）────────────────────────
-    tweet2 = f"🔗 詳細・申込みはこちら\n{link_url}"
 
     ins_id = program.get("ins_id", "")
 
@@ -1634,7 +1632,7 @@ A8.netのアフィリエイトプログラムをX（Twitter）で自然に紹介
         "chars":   len(tweet1),
         "program": program,
         "source":  source,
-        "thread":  {"tweet1": tweet1, "tweet2": tweet2},
+        "thread":  {"tweet1": tweet1, "tweet2": ""},
     }
 
 
