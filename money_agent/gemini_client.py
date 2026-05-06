@@ -25,6 +25,8 @@ from utils.decorators import api_retry
 
 # ── 定数 ────────────────────────────────────────────────
 DEFAULT_MODEL  = "gemini-2.0-flash"
+BLOG_MODEL     = "gemini-1.5-flash"       # ブログ記事など重い生成用（クォータバケツを分散）
+X_POST_MODEL   = "gemini-2.0-flash-lite"  # X投稿生成用（軽量・高速）
 CACHE_FILE     = Path(__file__).parent / "gemini_cache.json"
 CACHE_TTL_H    = 24   # キャッシュ有効期間（時間）
 MAX_CACHE_SIZE = 500  # エントリ上限（古い順に削除）

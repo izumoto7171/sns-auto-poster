@@ -1606,79 +1606,10 @@ def generate_a8_program_post() -> dict:
     except Exception:
         _db_a8 = None
 
-    # ── キャッシュミス → Gemini で投稿本文生成（5スタイル自動選択）──
-    selected_style = "フォールバック"
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not tweet_body and api_key:
-        try:
-            from money_agent.gemini_client import generate as gemini_generate
-        except ImportError:
-            gemini_generate = None
-
-        if gemini_generate:
-            # スタイル定義ブロックを組み立て
-            styles_block = ""
-            for sname, sdata in _A8_STYLES.items():
-                styles_block += (
-                    f"【{sname}】\n"
-                    f"説明: {sdata['desc']}\n"
-                    f"向いているジャンル: {', '.join(sdata['best_for'])}\n"
-                    f"例文:\n{sdata['example']}\n\n"
-                )
-
-            prompt = f"""# 役割
-あなたはSNSコピーライターです。A8.netアフィリエイトプログラムをXで自然に紹介する投稿を1つ書いてください。
-
-# プログラム情報
-- サービス名: {name}
-- 報酬・特徴: {reward}
-- ジャンル: {' '.join(genre_tags)}
-
-# 執筆スタイル（5種類から1つを自動選択して使うこと）
-{styles_block}
-# 選択基準
-ジャンルと報酬内容を読み取り、最もエンゲージメントが取れるスタイルを1つ選ぶ。
-例: キャッシュバック系 → ティザー型 / 副業・節約 → 共感型 / 体験しやすいサービス → レビュー型
-
-# 制約（厳守）
-- 本文は 70〜110 文字以内（URLとハッシュタグは除く）
-- 禁止ワード: 「ぜひ」「おすすめ」「チェック」「ぜひ試して」「ご確認ください」
-- 独り言・本音の口コミに見える口調を徹底すること
-- 「リンクから」「下のリンク」などのURL誘導フレーズは書かない（URLは自動付与）
-- スマホで読みやすいよう適度な改行・空白行を入れる
-- URLとハッシュタグは不要（自動で追加される）
-
-# 出力形式（この形式を厳守）
-1行目: 選んだスタイル名（例: 共感・悩み解決型）
-2行目以降: 投稿本文のみ
-
-余計な説明・前置きは一切不要。"""
-
-            raw = (gemini_generate(prompt, use_cache=False) or "").strip()
-            if raw:
-                lines = raw.splitlines()
-                # 1行目がスタイル名か確認して除去
-                if lines and any(s in lines[0] for s in _A8_STYLES):
-                    selected_style = lines[0].strip()
-                    tweet_body = "\n".join(lines[1:]).strip()
-                else:
-                    tweet_body = raw
-            # 生成成功 → content_cache に保存
-            if tweet_body:
-                try:
-                    _db_a8.set_content_cache(
-                        product_key    = _a8_cache_key,
-                        source         = "a8",
-                        post_type      = "x",
-                        generated_text = tweet_body,
-                        metadata       = {
-                            "name":  name,
-                            "ins_id": program.get("ins_id", ""),
-                            "style": selected_style,
-                        },
-                    )
-                except Exception:
-                    pass
+    # ── キャッシュミス → テンプレートへ即フォールバック ──────
+    # Geminiによる生成は batch_processor.py が事前に行いキャッシュ済みにする。
+    # post-x ジョブ実行時は Gemini を一切叩かない（クォータ保護）。
+    selected_style = "テンプレート"
 
     # ── フォールバック: テンプレート（スタイルに対応） ────────
     if not tweet_body:

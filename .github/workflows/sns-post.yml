@@ -116,7 +116,7 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-        run: python3 batch_processor.py --n 8 --post-type x
+        run: python3 batch_processor.py --post-type x
 
   post-x:
     name: X (Twitter) 投稿
