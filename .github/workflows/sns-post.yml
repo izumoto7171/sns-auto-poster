@@ -146,7 +146,7 @@ jobs:
 
       - name: 依存関係インストール
         run: |
-          pip install google-genai python-dotenv tweepy "twikit==1.7.4" Pillow playwright
+          pip install google-genai python-dotenv tweepy "twikit==1.7.4" Pillow playwright supabase
 
       - name: Playwright Chromiumインストール
         run: playwright install chromium --with-deps

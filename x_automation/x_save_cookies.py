@@ -28,19 +28,19 @@ async def manual_login_and_save():
 
         await page.goto("https://x.com/login")
 
-        print("\n⏳ ログイン完了を自動検知中（最大120秒）...")
+        print("\n⏳ ログイン完了を自動検知中（最大300秒）...")
         print("   ブラウザでXにログインしてください！")
 
-        # ホーム画面が表示されるまで待機（最大120秒）
+        # ホーム画面が表示されるまで待機（最大300秒）
         try:
-            await page.wait_for_url("**/home", timeout=120000)
+            await page.wait_for_url("**/home", timeout=300000)
             print("✅ ログイン検知！")
         except Exception:
             # URLで検知できなくても、ツイートボタンで判定
             try:
                 await page.wait_for_selector(
                     '[data-testid="tweetButtonInline"], [data-testid="SideNav_NewTweet_Button"]',
-                    timeout=120000
+                    timeout=300000
                 )
                 print("✅ ログイン検知（ボタン確認）！")
             except Exception:
