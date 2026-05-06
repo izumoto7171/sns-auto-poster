@@ -533,6 +533,228 @@ class DBClient:
             "updated_at": datetime.now().isoformat(),
         }).execute()
 
+    # =========================================================
+    # pending_tasks — Gemini生成待ちキュー
+    # =========================================================
+
+    def push_pending_task(
+        self,
+        source: str,
+        product_key: str,
+        raw_data: dict,
+        priority: int = 0,
+        post_type: str = "x",
+    ) -> bool:
+        """
+        案件をキューに追加する。同一 (source, product_key, post_type) は無視。
+        Returns: True=新規追加, False=既存スキップ
+        """
+        try:
+            _get_supabase().table("pending_tasks").insert({
+                "source":      source,
+                "product_key": product_key,
+                "raw_data":    raw_data,
+                "priority":    priority,
+                "post_type":   post_type,
+                "status":      "pending",
+            }).execute()
+            return True
+        except Exception as e:
+            if "duplicate" in str(e).lower() or "unique" in str(e).lower():
+                return False
+            raise
+
+    def pop_pending_batch(
+        self,
+        n: int = 8,
+        source: Optional[str] = None,
+        post_type: str = "x",
+    ) -> list:
+        """
+        pending 状態のタスクを最大 n 件取り出し、status を 'processing' に更新して返す。
+        priority 降順 → created_at 昇順でフェッチ。
+        """
+        sb = _get_supabase()
+        q = (
+            sb.table("pending_tasks")
+            .select("*")
+            .eq("status", "pending")
+            .eq("post_type", post_type)
+            .order("priority", desc=True)
+            .order("created_at", desc=False)
+            .limit(n)
+        )
+        if source:
+            q = q.eq("source", source)
+        rows = q.execute().data or []
+        if not rows:
+            return []
+        ids = [r["id"] for r in rows]
+        sb.table("pending_tasks").update({
+            "status": "processing",
+        }).in_("id", ids).execute()
+        return rows
+
+    def mark_task_done(self, task_id: int) -> None:
+        """タスクを完了済みにマークする。"""
+        _get_supabase().table("pending_tasks").update({
+            "status":       "done",
+            "processed_at": datetime.now().isoformat(),
+        }).eq("id", task_id).execute()
+
+    def mark_task_failed(self, task_id: int, error_msg: str) -> None:
+        """タスクを失敗としてマークする。error_msg は 500 文字に切り捨て。"""
+        _get_supabase().table("pending_tasks").update({
+            "status":       "failed",
+            "processed_at": datetime.now().isoformat(),
+            "error_msg":    error_msg[:500],
+        }).eq("id", task_id).execute()
+
+    def count_pending_tasks(self, post_type: str = "x") -> int:
+        """pending 状態のタスク件数を返す。"""
+        rows = (
+            _get_supabase()
+            .table("pending_tasks")
+            .select("id", count="exact")
+            .eq("status", "pending")
+            .eq("post_type", post_type)
+            .execute()
+        )
+        return rows.count or 0
+
+    # =========================================================
+    # content_cache — Gemini生成済み投稿文の再利用キャッシュ
+    # =========================================================
+
+    CONTENT_CACHE_TTL_DAYS = 3  # キャッシュ有効期間（日）
+
+    def get_content_cache(
+        self,
+        product_key: str,
+        post_type: str = "x",
+        max_age_days: Optional[int] = None,
+    ) -> Optional[str]:
+        """
+        キャッシュから生成済みテキストを返す。なければ None。
+        max_age_days 以上古いエントリは無効とみなす。
+        """
+        if max_age_days is None:
+            max_age_days = self.CONTENT_CACHE_TTL_DAYS
+        cutoff = (datetime.now() - timedelta(days=max_age_days)).isoformat()
+        rows = (
+            _get_supabase()
+            .table("content_cache")
+            .select("id, generated_text")
+            .eq("product_key", product_key)
+            .eq("post_type", post_type)
+            .gte("created_at", cutoff)
+            .limit(1)
+            .execute()
+            .data
+        ) or []
+        if not rows:
+            return None
+        # 使用回数 + 最終使用日時を更新
+        _get_supabase().table("content_cache").update({
+            "last_used_at": datetime.now().isoformat(),
+            "use_count":    rows[0].get("use_count", 0) + 1,
+        }).eq("id", rows[0]["id"]).execute()
+        return rows[0]["generated_text"]
+
+    def set_content_cache(
+        self,
+        product_key: str,
+        source: str,
+        post_type: str,
+        generated_text: str,
+        metadata: Optional[dict] = None,
+    ) -> None:
+        """
+        生成済みテキストをキャッシュに保存する。
+        同一 (product_key, post_type) は上書き（upsert）。
+        """
+        _get_supabase().table("content_cache").upsert({
+            "product_key":    product_key,
+            "source":         source,
+            "post_type":      post_type,
+            "generated_text": generated_text,
+            "metadata":       metadata or {},
+            "created_at":     datetime.now().isoformat(),
+            "last_used_at":   None,
+            "use_count":      0,
+        }).execute()
+
+    def cleanup_content_cache(self, max_age_days: int = 7) -> int:
+        """
+        max_age_days より古い・使用回数 0 のキャッシュを削除する。
+        Returns: 削除件数
+        """
+        cutoff = (datetime.now() - timedelta(days=max_age_days)).isoformat()
+        result = (
+            _get_supabase()
+            .table("content_cache")
+            .delete()
+            .lt("created_at", cutoff)
+            .eq("use_count", 0)
+            .execute()
+        )
+        deleted = len(result.data) if result.data else 0
+        return deleted
+
+    # ── success_metrics ──────────────────────────────────────────
+
+    def get_success_metrics(self) -> list:
+        """success_metrics テーブルの全レコードを返す"""
+        rows = (
+            _get_supabase()
+            .table("success_metrics")
+            .select("category, weight_bonus, click_count, impression_count, updated_at")
+            .execute()
+            .data
+        )
+        return rows or []
+
+    def get_success_metrics_dict(self) -> dict:
+        """category → weight_bonus の辞書を返す（priority 計算用）"""
+        rows = self.get_success_metrics()
+        return {r["category"]: r["weight_bonus"] for r in rows}
+
+    def upsert_success_metric(
+        self,
+        category: str,
+        weight_bonus: int,
+        click_delta: int = 0,
+        impression_delta: int = 0,
+    ) -> None:
+        """
+        success_metrics を upsert する。
+        既存レコードがあれば click_count / impression_count を加算する。
+        """
+        sb = _get_supabase()
+        existing = (
+            sb.table("success_metrics")
+            .select("click_count, impression_count")
+            .eq("category", category)
+            .execute()
+            .data
+        )
+        if existing:
+            old = existing[0]
+            sb.table("success_metrics").update({
+                "weight_bonus":     weight_bonus,
+                "click_count":      old["click_count"] + click_delta,
+                "impression_count": old["impression_count"] + impression_delta,
+                "updated_at":       datetime.utcnow().isoformat(),
+            }).eq("category", category).execute()
+        else:
+            sb.table("success_metrics").insert({
+                "category":         category,
+                "weight_bonus":     weight_bonus,
+                "click_count":      click_delta,
+                "impression_count": impression_delta,
+                "updated_at":       datetime.utcnow().isoformat(),
+            }).execute()
+
 
 # ─────────────────────────────────────────
 # モジュールレベル シングルトン（各スクリプトから `from db_client import db` で使う）

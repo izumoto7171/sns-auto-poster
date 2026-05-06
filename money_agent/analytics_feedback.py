@@ -332,7 +332,130 @@ def run_analytics_feedback() -> dict:
     save_insights(current)
     print("[Analytics] insights保存完了")
 
+    # success_metrics をフィードバックデータで自動更新
+    metrics_updated = update_success_metrics(history)
+    if metrics_updated:
+        current["success_metrics_updated"] = metrics_updated
+
     return current
+
+
+# ============================================================
+# success_metrics 自動更新（フィードバックループ）
+# ============================================================
+
+# 投稿テキストからカテゴリを推定するキーワードマッピング
+_TEXT_TO_CATEGORY: list[tuple[list[str], str]] = [
+    (["副業", "在宅ワーク", "フリーランス", "在宅"],   "side_hustle"),
+    (["確定申告", "節税", "経費"],                      "tax"),
+    (["会計", "帳簿", "クラウド会計"],                  "accounting"),
+    (["NISA", "新NISA", "積立"],                        "nisa"),
+    (["投資", "資産運用", "iDeCo"],                     "investment_savings"),
+    (["ブログ", "アフィリエイト", "ドメイン"],          "blog"),
+    (["節約", "コスパ", "食費", "光熱費"],              "lifestyle"),
+    (["生産性", "効率", "時短"],                        "productivity"),
+    (["AI", "ChatGPT", "Gemini"],                       "ai_tools"),
+    (["ガジェット", "スマホ", "イヤホン"],              "gadget"),
+    (["家電", "掃除", "洗濯"],                          "cleaning"),
+    (["料理", "キッチン", "フライパン"],                "cooking_tools"),
+    (["日用品", "洗剤", "シャンプー"],                  "daily_goods"),
+]
+
+# weight_bonus の上限・変動幅
+_MAX_BONUS    = 8
+_BONUS_STEP   = 2   # 高成績ジャンルへの加点
+_PENALTY_STEP = 1   # 低成績ジャンルへの減点
+
+
+def _infer_category(text: str) -> str:
+    """投稿テキストからカテゴリを推定する"""
+    for kws, cat in _TEXT_TO_CATEGORY:
+        if any(kw in text for kw in kws):
+            return cat
+    return "lifestyle"  # デフォルト
+
+
+def update_success_metrics(records: list) -> dict:
+    """
+    過去7日間のパフォーマンスデータから高CTRジャンルを特定し、
+    success_metrics テーブルの weight_bonus を自動更新する。
+
+    高スコア（上位30%）ジャンル: weight_bonus +2
+    低スコア（下位30%）ジャンル: weight_bonus -1（最低0）
+
+    Returns: {category: new_weight_bonus} の辞書
+    """
+    if not records:
+        print("[Analytics/Metrics] データなし。スキップ。")
+        return {}
+
+    from datetime import datetime, timedelta
+
+    # 7日以内のレコードのみ対象
+    cutoff = (datetime.now() - timedelta(days=7)).isoformat()
+    recent = [r for r in records if r.get("collected_at", "9999") >= cutoff]
+    if len(recent) < 3:
+        print(f"[Analytics/Metrics] 直近7日のデータが少ない（{len(recent)}件）。スキップ。")
+        return {}
+
+    # カテゴリ別スコア集計
+    cat_scores: dict[str, list[float]] = {}
+    for r in recent:
+        cat   = _infer_category(r.get("text", ""))
+        score = float(r.get("score", 0))
+        cat_scores.setdefault(cat, []).append(score)
+
+    # カテゴリ別平均スコアを計算
+    cat_avg: dict[str, float] = {
+        cat: sum(scores) / len(scores)
+        for cat, scores in cat_scores.items()
+        if scores
+    }
+
+    if not cat_avg:
+        return {}
+
+    avg_values  = sorted(cat_avg.values())
+    n           = len(avg_values)
+    low_thresh  = avg_values[max(0, int(n * 0.3) - 1)]
+    high_thresh = avg_values[min(n - 1, int(n * 0.7))]
+
+    print(f"[Analytics/Metrics] カテゴリ数: {len(cat_avg)} / 低閾値: {low_thresh:.1f} / 高閾値: {high_thresh:.1f}")
+
+    # 現在の weight_bonus を取得
+    try:
+        current_metrics = db.get_success_metrics_dict()
+    except Exception as e:
+        print(f"[Analytics/Metrics] DB読み込み失敗: {e}")
+        return {}
+
+    updated: dict[str, int] = {}
+    for cat, avg in cat_avg.items():
+        current_bonus = current_metrics.get(cat, 0)
+
+        if avg >= high_thresh:
+            new_bonus = min(current_bonus + _BONUS_STEP, _MAX_BONUS)
+            action    = f"+{_BONUS_STEP} (高パフォーマンス)"
+        elif avg <= low_thresh:
+            new_bonus = max(current_bonus - _PENALTY_STEP, 0)
+            action    = f"-{_PENALTY_STEP} (低パフォーマンス)"
+        else:
+            continue  # 中間帯は変更しない
+
+        try:
+            db.upsert_success_metric(
+                category     = cat,
+                weight_bonus = new_bonus,
+                click_delta  = 0,
+                impression_delta = 0,
+            )
+            print(f"  [{cat}] {current_bonus} → {new_bonus} ({action}, avg={avg:.1f})")
+            updated[cat] = new_bonus
+        except Exception as e:
+            print(f"  [{cat}] 更新失敗: {e}")
+
+    print(f"[Analytics/Metrics] {len(updated)}カテゴリを更新")
+    return updated
 
 
 if __name__ == "__main__":

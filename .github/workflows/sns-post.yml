@@ -50,13 +50,81 @@ jobs:
             git commit -m "chore: Amazon商品データ自動更新 $(date +'%Y-%m-%d')"
           git push || true
 
+  # ============================================================
+  # 📈 トレンドリズナー（トレンドKW → 商品選別 → pending_tasks 投入）
+  # update-amazon-products と並列で実行（独立ジョブ）
+  # ============================================================
+  run-trend-reasoner:
+    name: 📈 トレンド商品選別
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'schedule'
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Python セットアップ
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 依存関係インストール
+        run: pip install requests supabase pytrends
+
+      - name: トレンド商品選別 → pending_tasks 投入（アフィリ + x_info）
+        env:
+          RAKUTEN_APP_ID:       ${{ secrets.RAKUTEN_APP_ID }}
+          RAKUTEN_ACCESS_KEY:   ${{ secrets.RAKUTEN_ACCESS_KEY }}
+          RAKUTEN_AFFILIATE_ID: ${{ secrets.RAKUTEN_AFFILIATE_ID }}
+          RAKUTEN_ORIGIN:       ${{ secrets.RAKUTEN_ORIGIN }}
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          python3 -m crawlers.trend_reasoner --top 3 --post-type x
+          python3 -m crawlers.trend_reasoner --top 3 --post-type x_info
+
+  # ============================================================
+  # 🤖 バッチプロセッサ（キュー → Gemini 一括生成 → content_cache）
+  # trend_reasoner と update-amazon-products が終わってから実行
+  # ============================================================
+  run-batch-processor:
+    name: 🤖 バッチ生成（Gemini 一括）
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    needs: [update-amazon-products, run-trend-reasoner]
+    if: |
+      always() && (
+        github.event_name == 'workflow_dispatch' ||
+        github.event_name == 'schedule'
+      )
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Python セットアップ
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 依存関係インストール
+        run: pip install google-genai supabase
+
+      - name: キュー処理（最大8件を1回のGeminiコールで生成）
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python3 batch_processor.py --n 8 --post-type x
+
   post-x:
     name: X (Twitter) 投稿
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: write
-    needs: update-amazon-products
+    needs: [update-amazon-products, run-batch-processor]
     if: |
       always() && (
         github.event_name == 'workflow_dispatch' ||
@@ -100,9 +168,27 @@ jobs:
           RAKUTEN_AFFILIATE_ID: ${{ secrets.RAKUTEN_AFFILIATE_ID }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          HATENA_ID: ${{ secrets.HATENA_ID }}
+          HATENA_BLOG_ID: ${{ secrets.HATENA_BLOG_ID }}
+          HATENA_API_KEY: ${{ secrets.HATENA_API_KEY }}
         run: |
           cd x_automation
           python3 x_poster.py live
+
+      - name: 有益ツイート投稿（x_info タイプ・アフィリリンクなし）
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+          X_USERNAME: ${{ secrets.X_USERNAME }}
+          X_COOKIES: ${{ secrets.X_COOKIES }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          cd x_automation
+          python3 x_poster.py live --type x_info
 
       - name: クールダウン履歴をコミット & プッシュ
         if: always()

@@ -9,12 +9,16 @@ import json
 import time
 import tempfile
 from datetime import datetime
+from typing import Optional
 from x_post_generator import generate_post, get_today_schedule, generate_value_thread
 
 # Supabase クライアント・リトライユーティリティ（プロジェクトルートから import）
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from db_client import db
 from retry_utils import with_retry
+
+# 直近の投稿で取得した tweet_id（ブログ連動リプライ用）
+_last_tweet_id: Optional[str] = None
 
 
 # ─────────────────────────────────────────
@@ -145,6 +149,8 @@ def post_with_tweepy(text: str, image_path: str = "") -> bool:
         resp     = client.create_tweet(**kwargs)
         tweet_id = resp.data["id"]
         print(f"投稿成功！ Tweet ID: {tweet_id}")
+        global _last_tweet_id
+        _last_tweet_id = str(tweet_id)
         return True
 
     except ImportError:
@@ -192,6 +198,8 @@ def post_with_twikit(text: str, image_path: str = "") -> bool:
         tweet = client.create_tweet(text=text, media_ids=media_ids if media_ids else None)
         print(f"投稿成功！ Tweet ID: {tweet.id}")
         print(f"   URL: https://x.com/{os.getenv('X_USERNAME', 'user')}/status/{tweet.id}")
+        global _last_tweet_id
+        _last_tweet_id = str(tweet.id)
         return True
 
     except ImportError:
@@ -396,6 +404,94 @@ def dry_run(text: str, image_path: str = "") -> bool:
 
 
 # ─────────────────────────────────────────
+# ブログ連動パイプライン起動
+# ─────────────────────────────────────────
+def _post_x_info_from_queue() -> bool:
+    """
+    pending_tasks から x_info タスクを1件ポップして投稿する。
+    Gemini で有益ツイートを生成し、tweepy → twikit でポスト。
+    """
+    from x_post_generator import generate_info_post
+
+    tasks = db.pop_pending_batch(n=1, post_type="x_info")
+    if not tasks:
+        print("[X-Info] キューにタスクなし。スキップ。")
+        return False
+
+    task    = tasks[0]
+    task_id = task["id"]
+    raw     = task.get("raw_data", {})
+    keyword = raw.get("keyword", "節約")
+
+    try:
+        result = generate_info_post(task)
+        text   = result["text"]
+        label  = result["label"]
+        chars  = result["chars"]
+        print(f"\n[X-Info] {label} ({chars}文字)")
+        print("─" * 45)
+        print(text)
+        print()
+
+        image_path = _generate_card_file(text, "useful")
+        success    = post_with_tweepy(text, image_path)
+        if not success:
+            success = post_with_twikit(text, image_path)
+        if not success:
+            success = post_with_browser(text)
+
+        if image_path and os.path.exists(image_path):
+            try:
+                os.remove(image_path)
+            except Exception:
+                pass
+
+        if success:
+            db.mark_task_done(task_id)
+        else:
+            db.mark_task_failed(task_id, "全投稿手段が失敗")
+
+        save_log({
+            "datetime":  datetime.now().isoformat(),
+            "type":      "x_info",
+            "label":     label,
+            "chars":     chars,
+            "text":      text,
+            "success":   success,
+            "mode":      "live",
+            "has_image": bool(image_path),
+        })
+        return success
+    except Exception as e:
+        db.mark_task_failed(task_id, str(e))
+        print(f"❌ x_info 投稿エラー: {e}")
+        return False
+
+
+def _trigger_blog_pipeline(tweet_id: str, keyword: str, post_type: str = "a8") -> None:
+    """
+    A8 / 高優先度投稿の成功後にブログ記事生成 → はてな公開 → Xリプライを行う。
+    reply_funnel_linker.py を subprocess として非同期で起動する。
+    """
+    import subprocess
+    script = os.path.join(os.path.dirname(__file__), "..", "reply_funnel_linker.py")
+    if not os.path.exists(script):
+        print("⚠️ reply_funnel_linker.py が見つかりません。ブログ連動をスキップ。")
+        return
+    cmd = [
+        sys.executable, script,
+        "--tweet-id",  tweet_id,
+        "--keyword",   keyword,
+        "--post-type", post_type,
+    ]
+    try:
+        print(f"[BlogPipeline] 起動: tweet_id={tweet_id} keyword={keyword}")
+        subprocess.Popen(cmd, cwd=os.path.dirname(__file__))
+    except Exception as e:
+        print(f"⚠️ BlogPipeline 起動失敗: {e}")
+
+
+# ─────────────────────────────────────────
 # メイン投稿関数
 # ─────────────────────────────────────────
 def post_now(force_type: str = None, test_mode: bool = False) -> bool:
@@ -492,6 +588,13 @@ def post_now(force_type: str = None, test_mode: bool = False) -> bool:
             "mode":     "dry_run" if test_mode else "live",
             "has_image": False,
         })
+        # A8投稿成功 → ブログ連動パイプライン起動
+        if success and not test_mode and _last_tweet_id:
+            _trigger_blog_pipeline(
+                tweet_id  = _last_tweet_id,
+                keyword   = post.get("keyword", post.get("label", "副業")),
+                post_type = "a8",
+            )
         return success
 
     # 楽天タイプはスレッド投稿（tweet1=本文、tweet2=URL）
@@ -648,7 +751,12 @@ if __name__ == "__main__":
                     k, v = line.split("=", 1)
                     os.environ.setdefault(k.strip(), v.strip())
 
-    cmd = sys.argv[1] if len(sys.argv) > 1 else "test"
+    cmd       = sys.argv[1] if len(sys.argv) > 1 else "test"
+    # --type x_info などのオプションを簡易パース
+    force_post_type: str | None = None
+    for i, arg in enumerate(sys.argv[2:], start=2):
+        if arg == "--type" and i + 1 < len(sys.argv):
+            force_post_type = sys.argv[i + 1]
 
     if cmd == "test":
         print("テストモード（各タイプ1件ずつ生成）\n")
@@ -663,7 +771,10 @@ if __name__ == "__main__":
         post_now(test_mode=True)
 
     elif cmd == "live":
-        post_now(test_mode=False)
+        if force_post_type == "x_info":
+            _post_x_info_from_queue()
+        else:
+            post_now(test_mode=False)
 
     elif cmd == "schedule":
         run_today_schedule(test_mode=True)

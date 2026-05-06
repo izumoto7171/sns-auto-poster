@@ -1405,9 +1405,24 @@ def generate_rakuten_product_post() -> dict:
         avg     = product["review_avg"]
         url     = product["url"]
 
-        # Geminiで紹介文生成（なければテンプレ）
+        # キャッシュキー: URLまたは商品名（URLが最も安定）
+        _rakuten_cache_key = product.get("url") or product.get("name", "")[:60]
+
+        # content_cache を確認（3日以内の生成済みテキストを再利用）
+        tweet1 = ""
+        try:
+            sys.path.insert(0, str(Path(__file__).parent.parent))
+            from db_client import db as _db
+            _cached = _db.get_content_cache(_rakuten_cache_key, post_type="x")
+            if _cached:
+                tweet1 = _cached
+                print(f"  [Rakuten] content_cache ヒット: {_rakuten_cache_key[:40]}")
+        except Exception:
+            pass
+
+        # キャッシュミス → Geminiで生成
         api_key = os.getenv("GEMINI_API_KEY")
-        if api_key:
+        if not tweet1 and api_key:
             try:
                 from money_agent.gemini_client import generate as gemini_generate
                 prompt = f"""楽天市場の商品をXで紹介する投稿を作成してください。
@@ -1427,10 +1442,20 @@ def generate_rakuten_product_post() -> dict:
                 import json as _json, re as _re
                 m = _re.search(r'\{.*\}', result or '', _re.DOTALL)
                 tweet1 = _json.loads(m.group()).get("tweet1", "") if m else ""
+                # 生成成功 → content_cache に保存
+                if tweet1:
+                    try:
+                        _db.set_content_cache(
+                            product_key    = _rakuten_cache_key,
+                            source         = "rakuten",
+                            post_type      = "x",
+                            generated_text = tweet1,
+                            metadata       = {"name": name, "url": url, "price": price},
+                        )
+                    except Exception:
+                        pass
             except Exception:
                 tweet1 = ""
-        else:
-            tweet1 = ""
 
         if not tweet1:
             tweet1 = f"{category['name']}で{reviews}件レビューの人気商品🛒 {price}円でこのクオリティはコスパ◎"
@@ -1502,10 +1527,21 @@ def generate_a8_program_post() -> dict:
     except Exception:
         pass
 
-    # ── Gemini で投稿本文生成 ────────────────────────────────
+    # ── キャッシュ確認 → ヒットなら Gemini をスキップ ──────────
     tweet_body = ""
+    _a8_cache_key = program.get("ins_id", name)[:80]
+    try:
+        from db_client import db as _db_a8
+        _cached_a8 = _db_a8.get_content_cache(_a8_cache_key, post_type="x")
+        if _cached_a8:
+            tweet_body = _cached_a8
+            print(f"  [A8Post] content_cache ヒット: {_a8_cache_key[:40]}")
+    except Exception:
+        _db_a8 = None
+
+    # ── キャッシュミス → Gemini で投稿本文生成 ────────────────
     api_key = os.getenv("GEMINI_API_KEY")
-    if api_key:
+    if not tweet_body and api_key:
         try:
             from money_agent.gemini_client import generate as gemini_generate
         except ImportError:
@@ -1537,6 +1573,18 @@ A8.netのアフィリエイトプログラムをX（Twitter）で自然に紹介
 投稿本文のみ出力。前置き・説明は不要。"""
 
             tweet_body = (gemini_generate(prompt, use_cache=False) or "").strip()
+            # 生成成功 → content_cache に保存
+            if tweet_body:
+                try:
+                    _db_a8.set_content_cache(
+                        product_key    = _a8_cache_key,
+                        source         = "a8",
+                        post_type      = "x",
+                        generated_text = tweet_body,
+                        metadata       = {"name": name, "ins_id": program.get("ins_id", "")},
+                    )
+                except Exception:
+                    pass
 
     # ── フォールバック: テンプレート ────────────────────────
     if not tweet_body:
@@ -1588,6 +1636,101 @@ A8.netのアフィリエイトプログラムをX（Twitter）で自然に紹介
         "source":  source,
         "thread":  {"tweet1": tweet1, "tweet2": tweet2},
     }
+
+
+def generate_info_post(task: dict) -> dict:
+    """
+    pending_tasks から取得した x_info タスクを元に、
+    アフィリリンクなしの「有益ツイート / 共感ツイート」を生成する。
+
+    Args:
+        task: pending_tasks レコード。raw_data に keyword / info_type / topic / themes を含む。
+
+    Returns:
+        {"text": str, "chars": int, "type": "x_info", "label": str, "source": "gemini" or "template"}
+    """
+    raw         = task.get("raw_data", {})
+    keyword     = raw.get("keyword", "節約")
+    info_type   = raw.get("info_type", "tip")   # "tip" or "empathy"
+    topic       = raw.get("topic", f"{keyword}の豆知識")
+    themes      = raw.get("themes", [])
+
+    label = "有益ツイート" if info_type == "tip" else "共感ツイート"
+
+    # ── Gemini で生成 ─────────────────────────────────────────
+    try:
+        from money_agent.gemini_client import generate as gemini_generate
+
+        if info_type == "tip":
+            persona_guide = (
+                "あなたは「節約・副業・在宅ワーク」に詳しい親切な先輩アドバイザーです。\n"
+                "ユーザーの実生活に役立つ知識を、押し付けがましくなく自然な口語で伝えます。\n"
+                "アフィリエイトリンクや商品名は一切含めません。"
+            )
+            prompt = f"""# 役割
+{persona_guide}
+
+# タスク
+「{topic}」について、一人暮らしの20代男性向けに「知って得する豆知識ツイート」を1件書いてください。
+
+# 条件
+- 140文字以内（厳守）
+- アフィリエイトリンク・商品名・#PR は絶対に入れない
+- 具体的な数字（月○円、○%、○分など）を1つ以上入れる
+- 「へえ、そうなんだ」と思わせる意外性か、すぐ試せる実用性を持たせる
+- ハッシュタグは1〜2個だけ（#{keyword} など自然なもの）
+- 完結した1ツイートとして書く（スレッドにしない）
+
+# 出力形式
+本文のみ出力（説明・前置きなし）"""
+        else:
+            persona_guide = (
+                "あなたは「一人暮らし・節約・副業」に共感できる同世代の友人です。\n"
+                "自分の経験として語るような自然な口調で、読者の「あるある」を引き出します。\n"
+                "アフィリエイトや商品紹介は一切しません。"
+            )
+            prompt = f"""# 役割
+{persona_guide}
+
+# タスク
+「{topic}」をテーマに、一人暮らしの20代男性が「わかる…」と共感するツイートを1件書いてください。
+
+# 条件
+- 140文字以内（厳守）
+- アフィリエイトリンク・商品名・#PR は絶対に入れない
+- 「あるある」「共感」「悩み」のどれか1つにフォーカスする
+- 読者が「いいね」か「保存」したくなる終わり方にする
+- ハッシュタグは1〜2個だけ（自然なもの）
+- 完結した1ツイートとして書く（スレッドにしない）
+
+# 出力形式
+本文のみ出力（説明・前置きなし）"""
+
+        text = gemini_generate(prompt, use_cache=False)
+        if text and len(text.strip()) > 10:
+            text = text.strip()
+            chars = x_char_count(text)
+            # 140文字超えなら切り詰め
+            if chars > MAX_TWEET_UNITS:
+                text = _truncate_to_x_units(text, MAX_TWEET_UNITS)
+                chars = x_char_count(text)
+            return {"text": text, "chars": chars, "type": "x_info", "label": label, "source": "gemini"}
+    except Exception as e:
+        print(f"  [InfoPost/Gemini] 生成失敗: {e}")
+
+    # ── テンプレートフォールバック ────────────────────────────
+    _TEMPLATES_TIP = [
+        f"一人暮らしの節約で一番効果が高かったのは食費管理。\n\n週1まとめ買い・鶏むね肉常備・ふるさと納税を組み合わせたら月2万円台に収まった。\n\nやることを絞るだけで続く。\n\n#{keyword}",
+        f"{keyword}を始めて気づいたこと。\n\n「完璧にやろう」とすると続かない。まず1つだけ変えてみる方が3ヶ月後の差は大きい。\n\n小さく始める人が結果的に大きく変わる。\n\n#{keyword}",
+    ]
+    _TEMPLATES_EMPATHY = [
+        f"{keyword}って始めようと思うたびに「タイミングを待っている」自分がいる。\n\nでも振り返ると「あの時始めてたら」という後悔ばかり。\n\n今日が一番若い日。\n\n#{keyword}",
+        f"一人暮らしあるある：月末になって「なんでお金ないんだろ」ってなる。\n\nでも家計簿つけてみたら答えがすぐ出た。\n\nコンビニとUber Eatsだった。\n\n#{keyword}",
+    ]
+    templates = _TEMPLATES_TIP if info_type == "tip" else _TEMPLATES_EMPATHY
+    text  = random.choice(templates)
+    chars = x_char_count(text)
+    return {"text": text, "chars": chars, "type": "x_info", "label": label, "source": "template"}
 
 
 def get_today_schedule() -> list:
