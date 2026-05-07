@@ -24,8 +24,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from utils.decorators import api_retry
 
 # ── 定数 ────────────────────────────────────────────────
-DEFAULT_MODEL  = "gemini-2.0-flash"
-BLOG_MODEL     = "gemini-1.5-flash"       # ブログ記事など重い生成用（クォータバケツを分散）
+DEFAULT_MODEL  = "gemini-2.0-flash-lite"   # 無料枠バケットを flash と分散させるため lite を標準化
+BLOG_MODEL     = "gemini-2.0-flash-lite"   # ブログ記事（クォータ節約）
 X_POST_MODEL   = "gemini-2.0-flash-lite"  # X投稿生成用（軽量・高速）
 CACHE_FILE     = Path(__file__).parent / "gemini_cache.json"
 CACHE_TTL_H    = 24   # キャッシュ有効期間（時間）
@@ -87,7 +87,7 @@ def generate(
     Parameters
     ----------
     prompt       : 送信するプロンプト文字列
-    model        : 使用モデル（デフォルト: gemini-2.0-flash）
+    model        : 使用モデル（デフォルト: gemini-2.0-flash-lite）
     cache_key    : キャッシュキーを手動指定する場合（省略時はプロンプトの MD5）
     use_cache    : True = キャッシュを使用。SNS 投稿など毎回違う内容には False を渡す
     max_retries  : 後方互換のために残す（リトライ設定は utils/decorators.py が管理）

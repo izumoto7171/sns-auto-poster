@@ -212,7 +212,7 @@ GEMINI_API_KEY=あなたのAPIキー
 from google import genai
 client = genai.Client(api_key="your_key")
 response = client.models.generate_content(
-    model="gemini-2.0-flash",
+    model="gemini-2.0-flash-lite",
     contents="副業初心者向けにAIツールの活用法を800字で書いて"
 )
 print(response.text)

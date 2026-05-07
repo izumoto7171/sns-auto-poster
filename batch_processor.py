@@ -34,8 +34,8 @@ sys.path.insert(0, str(_ROOT))
 from db_client import db
 
 # ── 定数 ──────────────────────────────────────────────────────
-BATCH_SIZE_PER_CALL = 5    # 1回のGeminiコールで処理する件数上限
-MAX_BATCHES         = 4    # 1回の実行で最大バッチ数（4×5=20件/実行）
+BATCH_SIZE_PER_CALL = 10   # 1回のGeminiコールで処理する件数上限（API呼び出し回数を半減）
+MAX_BATCHES         = 4    # 1回の実行で最大バッチ数（4×10=40件/実行）
 BATCH_SLEEP_SEC     = 20   # バッチ間スリープ秒数（RPM制限回避）
 PRIORITY_THRESHOLD  = 5    # これ以上はGemini生成、未満はテンプレート
 MIN_TEXT_LEN        = 50   # 生成テキストの最小文字数
@@ -55,8 +55,16 @@ _A8_STYLES_BRIEF = """
 
 # ── バッチプロンプトテンプレート ──────────────────────────────
 _SYSTEM_PROMPT_BASE = """あなたはSNSコピーライターです。
-商品・サービスリストについてX（Twitter）用の投稿文を一括生成してください。
+以下に最大10件の案件データを与えます。それぞれに最適なスタイルを1つ選び、X（Twitter）用の投稿文を生成してください。
 
+【スタイル選択（各案件に最適なものを1つ）】
+- 共感: 読者の悩みから始め「わかる…」から商品へ繋ぐ
+- 体験: 「半信半疑→想像以上」から箇条書きで具体的メリット3点
+- 比較: 他との違い・耐久性・使いやすさで説得（「結局〇〇に戻った」系）
+- ストーリー: 失敗の過去→商品との出会い→変化のナラティブ
+- ティザー: 「知らないと損」など強い一言から始め、詳細をリンクへ誘導
+
+{a8_style_block}
 【共通制約】
 - 各投稿: 70〜110文字以内（ハッシュタグ・URL除く）
 - 禁止ワード: 「ぜひ」「おすすめ」「チェック」「ご確認ください」「いかがでしたか」
@@ -65,7 +73,6 @@ _SYSTEM_PROMPT_BASE = """あなたはSNSコピーライターです。
 - URLとハッシュタグは含めない（別途追加する）
 - 「リンクから」などのURL誘導フレーズも書かない
 
-{a8_style_block}
 【出力形式】必ずJSON配列のみ（コードブロック・説明不要）:
 [
   {{"index": 0, "text": "投稿文..."}},
@@ -288,10 +295,20 @@ def run_batches(
             raw_response = _call_gemini_batch(prompt)
 
             if not raw_response:
+                # バッチ全体失敗 → 全タスクをテンプレートで救済
                 for task in high_prio:
-                    db.mark_task_failed(task["id"], "Geminiレスポンスなし")
-                    total_failed += 1
-                    print(f"  [fail] Gemini失敗: {task['product_key'][:40]}")
+                    fallback = _generate_template_text(task)
+                    db.set_content_cache(
+                        product_key    = task["product_key"],
+                        source         = task["source"],
+                        post_type      = post_type,
+                        generated_text = fallback,
+                        metadata       = {"method": "template_fallback_batch", "priority": task.get("priority", 0)},
+                    )
+                    db.mark_task_done(task["id"])
+                    total_cached   += 1
+                    total_template += 1
+                    print(f"  [fallback] バッチ失敗→テンプレ保存: {task['product_key'][:40]}")
             else:
                 texts = _parse_batch_response(raw_response, len(high_prio))
                 for i, (task, text) in enumerate(zip(high_prio, texts)):

@@ -150,7 +150,7 @@ def run(state: dict) -> dict:
 }}"""
 
             resp = client.models.generate_content(
-                model="gemini-2.0-flash",
+                model="gemini-2.0-flash-lite",
                 contents=prompt,
             )
             text = resp.text.strip().lstrip("```json").lstrip("```").rstrip("```").strip()
