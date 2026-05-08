@@ -147,14 +147,14 @@ def select_for_post() -> tuple[dict, str]:
     X投稿用に案件を1件選択する。
 
     同じプログラムは A8_COOLDOWN_DAYS 日間再投稿しない。
-    クールダウン中の全件は「最も古く投稿されたもの」を選んで再利用する。
+    全件クールダウン中は {} / "empty" を返す（呼び出し元で Amazon/楽天に切り替える）。
 
     Returns
     -------
     (program, source)
       source == "cache"   : キューから選択（投稿後に pop_from_cache() を呼ぶこと）
-      source == "history" : 履歴フォールバック（キューは空のまま）
-      source == "empty"   : キューも履歴も空（program は {}）
+      source == "history" : 履歴から選択（クールダウン明け・再投稿）
+      source == "empty"   : 全件クールダウン中 or キュー・履歴ともに空
     """
     cutoff = _cooldown_cutoff()
 
@@ -162,23 +162,23 @@ def select_for_post() -> tuple[dict, str]:
     queue = _cache.list_load()
     if queue:
         available = [p for p in queue if (p.get("last_posted_at") or "") < cutoff]
-        pool = available if available else queue  # 全件クールダウン中なら全件から選ぶ
-        selected = weighted_choice(pool[-20:])
-        print(f"  [A8Post] キューから選択: {selected.get('name','')} (残 {len(queue)} 件, 利用可 {len(available)} 件)")
-        return selected, "cache"
+        if available:
+            selected = weighted_choice(available[-20:])
+            print(f"  [A8Post] キューから選択: {selected.get('name','')} (残 {len(queue)} 件, 利用可 {len(available)} 件)")
+            return selected, "cache"
+        # キューが全件クールダウン中 → 履歴へフォールオーバー
 
-    # 2. キューが空 → 履歴からクールダウン除外で選択
+    # 2. キューが空 or 全件クールダウン → 履歴からクールダウン除外で選択
     hist = _history.list_load()
     if hist:
         available = [p for p in hist if (p.get("last_posted_at") or "") < cutoff]
         if available:
             selected = weighted_choice(available)
             print(f"  [A8Post] 履歴から選択: {selected.get('name','')} (利用可 {len(available)}/{len(hist)} 件)")
-        else:
-            # 全件クールダウン中 → 最も古く投稿されたものを選ぶ
-            selected = min(hist, key=lambda p: p.get("last_posted_at") or "")
-            print(f"  [A8Post] 全件クールダウン中 → 最古投稿を再利用: {selected.get('name','')}")
-        return selected, "history"
+            return selected, "history"
+        # 履歴も全件クールダウン中 → 投稿しない
+        print(f"  [A8Post] 全件クールダウン中（{len(hist)}件）→ Amazon/楽天フォールバックへ")
+        return {}, "empty"
 
     print("  [A8Post] キューも履歴も空 → A8投稿スキップ")
     return {}, "empty"

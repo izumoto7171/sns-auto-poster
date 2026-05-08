@@ -228,7 +228,7 @@ def post_with_browser(text: str) -> bool:
 # Amazonスレッド投稿（tweet1 → reply tweet2 → reply tweet3）
 # ─────────────────────────────────────────
 def post_amazon_thread(thread: dict) -> bool:
-    """Amazonアフィリエイトスレッドを3ツイートで投稿する（tweepy → twikit フォールバック）"""
+    """Amazonアフィリエイトスレッドを3ツイートで投稿する（twikit → browser）"""
     tweet1 = thread.get("tweet1", "")
     tweet2 = thread.get("tweet2", "")
     tweet3 = thread.get("tweet3", "")
@@ -236,51 +236,7 @@ def post_amazon_thread(thread: dict) -> bool:
         print("❌ スレッドのtweet1が空")
         return False
 
-    # tweepy でスレッド投稿
-    try:
-        import tweepy
-
-        api_key       = os.getenv("X_API_KEY")
-        api_secret    = os.getenv("X_API_SECRET")
-        access_token  = os.getenv("X_ACCESS_TOKEN")
-        access_secret = os.getenv("X_ACCESS_TOKEN_SECRET")
-
-        if all([api_key, api_secret, access_token, access_secret]):
-            client = tweepy.Client(
-                consumer_key=api_key,
-                consumer_secret=api_secret,
-                access_token=access_token,
-                access_token_secret=access_secret,
-            )
-            # tweet1: 重複投稿防止のためリトライなし（1回のみ）
-            resp1 = client.create_tweet(text=tweet1)
-            id1   = resp1.data["id"]
-            print(f"Tweet1投稿成功: {id1}")
-
-            if tweet2:
-                @with_retry(api="x", context="tweet2", log_on_giveup=True)
-                def _post_tweet2():
-                    return client.create_tweet(text=tweet2, in_reply_to_tweet_id=id1)
-                resp2 = _post_tweet2()
-                id2   = resp2.data["id"] if resp2 else id1
-                if resp2:
-                    print(f"Tweet2投稿成功: {id2}")
-            else:
-                id2 = id1
-
-            if tweet3:
-                @with_retry(api="x", context="tweet3", log_on_giveup=True)
-                def _post_tweet3():
-                    return client.create_tweet(text=tweet3, in_reply_to_tweet_id=id2)
-                resp3 = _post_tweet3()
-                if resp3:
-                    print(f"Tweet3投稿成功（アフィリンク）: {resp3.data['id']}")
-
-            return True
-    except Exception as e:
-        print(f"⚠️ tweepy スレッド投稿失敗: {e}")
-
-    # twikit でフォールバック
+    # twikit でスレッド投稿（メインエンジン）
     try:
         import asyncio
         from twikit import Client
@@ -347,11 +303,9 @@ def post_value_thread(post_type: str = "useful") -> bool:
         print("⚠️ スレッドのtweet1が空")
         return False
 
-    # tweet1を通常投稿（tweepy → twikit → browser）
+    # tweet1を通常投稿（twikit → browser）
     image_path = _generate_card_file(tweet1, post_type)
-    success1 = post_with_tweepy(tweet1, image_path)
-    if not success1:
-        success1 = post_with_twikit(tweet1, image_path)
+    success1 = post_with_twikit(tweet1, image_path)
     if not success1:
         success1 = post_with_browser(tweet1)
 
@@ -434,9 +388,7 @@ def _post_x_info_from_queue() -> bool:
         print()
 
         image_path = _generate_card_file(text, "useful")
-        success    = post_with_tweepy(text, image_path)
-        if not success:
-            success = post_with_twikit(text, image_path)
+        success    = post_with_twikit(text, image_path)
         if not success:
             success = post_with_browser(text)
 
@@ -644,14 +596,11 @@ def post_now(force_type: str = None, test_mode: bool = False) -> bool:
     # 画像カード生成（テストモードでも生成して確認）
     image_path = _generate_card_file(text, post["type"])
 
-    # 投稿実行（tweepy → twikit → browser の順でフォールバック）
+    # 投稿実行（twikit → browser の順でフォールバック）
     if test_mode:
         success = dry_run(text, image_path)
     else:
-        success = post_with_tweepy(text, image_path)
-        if not success:
-            print("⚠️ tweepy失敗、twikitで再試行...")
-            success = post_with_twikit(text, image_path)
+        success = post_with_twikit(text, image_path)
         if not success:
             print("⚠️ twikit失敗、ブラウザで再試行（画像なし）...")
             success = post_with_browser(text)

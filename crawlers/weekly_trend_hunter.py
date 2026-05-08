@@ -38,7 +38,8 @@ CACHE_PATH     = ROOT_DIR / "money_agent" / "a8_programs_cache.json"
 HISTORY_PATH   = ROOT_DIR / "money_agent" / "a8_programs_history.json"
 
 SNS_SCORE_THRESHOLD = 6   # このスコア以上をポートフォリオ候補にする
-MAX_NEW_PROGRAMS    = 5   # 1回の実行で追加する上限件数
+MAX_NEW_PROGRAMS    = 15  # 1回の実行で追加する上限件数（多ジャンル対応）
+MIN_CACHE_TARGET    = 30  # a8_programs_history.json の目標最低件数
 
 # ── 月別季節キーワード（pytrends 失敗時のフォールバック） ──────────────
 _MONTHLY_KEYWORDS: dict[int, list[str]] = {
@@ -170,19 +171,27 @@ def _evaluate_and_suggest(keywords: list[str], existing_names: set[str]) -> list
 【既にポートフォリオに登録済み（重複不要）】
 {existing_list}
 
-【要件】
-- SNSでバズりやすく、クリック率が高い案件を優先する
-- フリーランス・副業・投資・節税などの金融系に強い案件が理想
+【多ジャンル化の要件（特定ジャンルに偏らないこと）】
+以下のジャンルからバランスよく選んでください（1ジャンルにつき最大3件まで）:
+- 金融・副業: クラウド会計、証券口座、クレジットカード、副業ツール
+- VOD・エンタメ: 動画配信サービス（Netflix、U-NEXT、Hulu等）、電子書籍
+- 美容・健康: スキンケア、サプリメント、フィットネス、ダイエット食品
+- ガジェット・家電: スマホアクセサリー、モバイルバッテリー、スマートホーム
+- 生活サービス: 食材宅配、家事代行、引越し、ウォーターサーバー
+- 学習・スキルアップ: オンライン英会話、プログラミングスクール、資格通信
+
+【共通要件】
 - A8.net / afb / バリューコマース など日本の主要 ASP で扱われている実在のプログラム
-- 報酬単価が高い（1件1,000円以上目安）か、CVRが高い（認知度が高いブランド）もの
+- 報酬単価が高い（1件500円以上）か、CVRが高い（認知度が高いブランド）もの
+- SNSで自然に紹介でき、ターゲット（20〜40代・一人暮らし）に刺さる案件
 
 以下の JSON 配列を返してください（コードブロック不要、配列だけ）:
 [
   {{
     "name": "サービス名（正式名称）",
     "company": "運営会社名",
-    "category": "accounting|investment|insurance|tools|lifestyle|other のどれか",
-    "themes": ["side_hustle", "tax", "freelance", "nisa", "investment_savings", "productivity", "ai_tools", "blog", "startup", "lifestyle" から複数],
+    "category": "accounting|investment|insurance|tools|lifestyle|beauty|entertainment|gadget|education|food|other のどれか",
+    "themes": ["side_hustle", "tax", "freelance", "nisa", "investment_savings", "productivity", "ai_tools", "blog", "startup", "lifestyle", "beauty", "entertainment", "gadget", "education" から複数],
     "reward": "推定報酬（例: 1,500円/件）",
     "description": "30文字以内の説明",
     "hashtags": ["#タグ1", "#タグ2", "#タグ3"],
@@ -192,7 +201,7 @@ def _evaluate_and_suggest(keywords: list[str], existing_names: set[str]) -> list
   }}
 ]
 
-{MAX_NEW_PROGRAMS}件まで提案してください。sns_score が高い順で返してください。"""
+{MAX_NEW_PROGRAMS}件まで提案してください。ジャンルが多様になるよう意識し、sns_score が高い順で返してください。"""
 
     raw = gemini_generate(prompt, use_cache=False)
     if not raw:
@@ -472,12 +481,27 @@ def run(dry_run: bool = False) -> None:
     existing_names  = {p["name"] for p in portfolio_data.get("programs", [])}
     print(f"[TrendHunter] 既存ポートフォリオ: {len(existing_names)}件")
 
+    # 現在の履歴件数を確認（母数が少ない場合は積極追加モード）
+    try:
+        current_history = json.loads(HISTORY_PATH.read_text(encoding="utf-8"))
+        current_cache_count = len(current_history)
+    except Exception:
+        current_cache_count = 0
+    print(f"[TrendHunter] 現在のA8履歴件数: {current_cache_count}/{MIN_CACHE_TARGET}件")
+
     # トレンドキーワード取得
     keywords = _get_trend_keywords()
     print(f"[TrendHunter] 使用キーワード: {keywords[:5]}")
 
-    # Gemini で候補生成
-    candidates = _evaluate_and_suggest(keywords, existing_names)
+    # Gemini で候補生成（履歴が少ない場合は積極モードのキーワードも追加）
+    search_keywords = keywords
+    if current_cache_count < MIN_CACHE_TARGET:
+        # 多ジャンルカバーのための補完キーワードを追加
+        supplement = ["VOD 動画配信", "美容 スキンケア", "ガジェット 家電", "食材宅配 生活", "英会話 学習"]
+        search_keywords = list(set(keywords + supplement))
+        print(f"[TrendHunter] 履歴不足（{current_cache_count}件）→ 補完キーワード追加: {supplement}")
+
+    candidates = _evaluate_and_suggest(search_keywords, existing_names)
     if not candidates:
         print("[TrendHunter] 候補なし → 終了")
         return

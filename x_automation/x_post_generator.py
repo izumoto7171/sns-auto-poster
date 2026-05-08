@@ -1551,24 +1551,34 @@ def _a8_increment_posted(ins_id: str) -> None:
     _a8_increment_posted_fn(ins_id)
 
 
+# ペルソナ注入（history再投稿時にGeminiに渡してスタイルの多様性を確保）
+_A8_PERSONAS = [
+    "節約オタクの20代男性。コスパを数字で語るのが好きで、感情より事実を優先する口調。",
+    "副業歴3年のフリーランサー。失敗談から入り、最終的に解決策を見せるストーリー型。",
+    "ガジェット好きの会社員。スペックより「使い勝手の変化」にフォーカスする体験重視型。",
+    "節約ブロガー。比較・本音型で、「実は〇〇より△△の方が良かった」という切り口が得意。",
+    "在宅ワーカーの30代女性視点。共感から始め、「わかる…」と思わせてから解決策へ誘導する。",
+]
+
+
 def generate_a8_program_post() -> dict:
     """
     A8.net 承認済みプログラムの X投稿を生成する（永久機関版）。
 
     【選択ロジック】
-    1. a8_programs_cache.json（キュー）に在庫あり
-       → weighted_choice で1件選択 → 投稿後にキューから削除
-    2. キューが空
-       → a8_programs_history.json（全履歴）からランダム選択
-       → キューが補充されるまで A8投稿が止まらない
+    1. キューに在庫あり（source=cache）→ content_cache → テンプレートの順
+    2. 履歴から選択（source=history）→ Gemini+ペルソナで毎回違う文体を強制生成
+    3. 全件クールダウン中（source=empty）→ Amazon/楽天フォールバックを呼ぶ
 
-    ・ハッシュタグ: 保存時に Gemini が抽出済み
-    ・リンク: hatena_url 優先、なければ affiliate_url
-    ・景品表示法対応: 必ず #PR を付与
-
-    Returns: generate_post() と同じ形式 dict、失敗時は空 dict
+    Returns: generate_post() と同じ形式 dict、空 dict はフォールバック要求
     """
     program, source = _a8_select_for_post()
+
+    # 全件クールダウン中 → 呼び出し元でAmazon/楽天に切り替える
+    if source == "empty":
+        print("  [A8Post] 全件クールダウン → generate_amazon_product_post へ委譲")
+        return {}
+
     if not program:
         return {}
 
@@ -1594,38 +1604,63 @@ def generate_a8_program_post() -> dict:
     except Exception:
         pass
 
-    # ── キャッシュ確認 → ヒットなら Gemini をスキップ ──────────
-    tweet_body = ""
-    _a8_cache_key = program.get("ins_id", name)[:80]
-    try:
-        from db_client import db as _db_a8
-        _cached_a8 = _db_a8.get_content_cache(_a8_cache_key, post_type="x")
-        if _cached_a8:
-            tweet_body = _cached_a8
-            print(f"  [A8Post] content_cache ヒット: {_a8_cache_key[:40]}")
-    except Exception:
-        _db_a8 = None
-
-    # ── キャッシュミス → テンプレートへ即フォールバック ──────
-    # Geminiによる生成は batch_processor.py が事前に行いキャッシュ済みにする。
-    # post-x ジョブ実行時は Gemini を一切叩かない（クォータ保護）。
+    # ── 生成ロジック ────────────────────────────────────────────
+    tweet_body     = ""
     selected_style = "テンプレート"
+    _a8_cache_key  = program.get("ins_id", name)[:80]
 
-    # ── フォールバック: テンプレート（スタイルに対応） ────────
+    # history（クールダウン明け再投稿）→ Gemini+ペルソナで新鮮な文体を強制生成
+    if source == "history":
+        persona = random.choice(_A8_PERSONAS)
+        style_name, style_guide = random.choice(list(_A8_STYLES.items()))
+        try:
+            from money_agent.gemini_client import generate as _gem_gen
+            _persona_prompt = f"""あなたは次のキャラクターとして X（Twitter）投稿を書いてください。
+キャラクター: {persona}
+
+以下のアフィリエイト案件について、【{style_name}】スタイルで投稿文を生成してください。
+サービス名: {name}
+報酬・特典: {reward}
+
+【{style_name}の書き方】
+{style_guide}
+
+【制約】
+- 70〜110文字以内（URLとハッシュタグは除く）
+- 禁止: 「ぜひ」「おすすめ」「チェック」
+- 独り言・本音の口コミに見える口調
+- URLとハッシュタグは書かない
+- 本文のみ出力（説明不要）"""
+            _result = _gem_gen(_persona_prompt, use_cache=False, temperature=0.95)
+            if _result and len(_result.strip()) >= 30:
+                tweet_body     = _result.strip()[:200]
+                selected_style = f"Gemini/{style_name}"
+                print(f"  [A8Post] Geminiペルソナ生成: style={style_name}")
+        except Exception as _e:
+            print(f"  [A8Post] Gemini失敗 → テンプレへ: {_e}")
+
+    # cache source → content_cache チェック（batch_processorが事前生成）
+    if not tweet_body and source == "cache":
+        try:
+            from db_client import db as _db_a8
+            _cached_a8 = _db_a8.get_content_cache(_a8_cache_key, post_type="x")
+            if _cached_a8:
+                tweet_body     = _cached_a8
+                selected_style = "content_cache"
+                print(f"  [A8Post] content_cache ヒット: {_a8_cache_key[:40]}")
+        except Exception:
+            pass
+
+    # ── フォールバック: テンプレート ────────────────────────────
     if not tweet_body:
         templates = [
-            # 共感・悩み解決型
             f"毎月の固定費、気づいたら増えてた。\n\n見直してみたら{name}が思いのほか使えた。\n{reward}もついてきて、登録して正解だった。",
-            # 体験レビュー型
             f"半信半疑で登録した{name}。\n・手続きが簡単\n・{reward}の特典あり\n・続けやすい\nもっと早く知りたかった。",
-            # 比較・本音型
             f"似たサービスも試したけど、結局{name}に戻った。\n使い勝手と{reward}という条件が決め手。",
-            # ストーリー・変化型
             f"副業を始めようと思っても何から手を付けるかわからなかった。\n{name}を知ってから少し動けるようになった気がする。\n{reward}の条件も悪くない。",
-            # ティザー・ベネフィット型
             f"これ、知らないと損かもしれない。\n{name}、{reward}の特典がついてくる。",
         ]
-        tweet_body = random.choice(templates)
+        tweet_body     = random.choice(templates)
         selected_style = "テンプレート"
 
     # ── tweet1: リンク込みで1ツイートにまとめる ──────────────
