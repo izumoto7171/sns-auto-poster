@@ -28,6 +28,9 @@ import argparse
 from datetime import datetime, date
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from utils.notifier import notify as _discord_notify
+
 # ─────────────────────────────────────────
 # パス定義
 # ─────────────────────────────────────────
@@ -403,6 +406,11 @@ def main() -> None:
     thread = generate_thread(product)
     if not thread:
         print("⚠️  Gemini生成失敗 → フォールバックテンプレートで投稿")
+        _discord_notify(
+            "scripts/x_poster.py",
+            "Gemini停止中：テンプレートで代用します",
+            f"商品: {product.get('title', '')[:80]}",
+        )
         thread = build_fallback_thread(product)
 
     # バリデーション
@@ -444,6 +452,11 @@ def main() -> None:
         save_post_log(log)
         print("✅ 投稿完了・ログ記録済み")
     else:
+        _discord_notify(
+            "scripts/x_poster.py",
+            "X投稿：全手段が失敗（投稿スキップ）",
+            f"商品: {product.get('title', '')[:80]} / tweepy/twikit/x_automation すべて失敗",
+        )
         print("❌ 投稿失敗")
         sys.exit(1)
 

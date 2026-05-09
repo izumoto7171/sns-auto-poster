@@ -16,6 +16,7 @@ from x_post_generator import generate_post, get_today_schedule, generate_value_t
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from db_client import db
 from retry_utils import with_retry
+from utils.notifier import notify as _discord_notify
 
 # 直近の投稿で取得した tweet_id（ブログ連動リプライ用）
 _last_tweet_id: Optional[str] = None
@@ -402,6 +403,11 @@ def _post_x_info_from_queue() -> bool:
             db.mark_task_done(task_id)
         else:
             db.mark_task_failed(task_id, "全投稿手段が失敗")
+            _discord_notify(
+                "x_automation/x_poster.py",
+                "X投稿(x_info)：全手段が失敗（投稿スキップ）",
+                f"keyword={keyword} twikit/Playwright すべて失敗",
+            )
 
         save_log({
             "datetime":  datetime.now().isoformat(),
@@ -604,6 +610,12 @@ def post_now(force_type: str = None, test_mode: bool = False) -> bool:
         if not success:
             print("⚠️ twikit失敗、ブラウザで再試行（画像なし）...")
             success = post_with_browser(text)
+        if not success:
+            _discord_notify(
+                "x_automation/x_poster.py",
+                "X投稿：全手段が失敗（投稿スキップ）",
+                f"type={post['type']} label={post['label']} tweepy/twikit/Playwright すべて失敗",
+            )
 
     # 一時ファイル削除
     if image_path and os.path.exists(image_path):

@@ -16,6 +16,7 @@ A8.net 新着承認プログラム 完全自動処理
   python3 money_agent/a8_approved_auto.py dry-run  # 投稿なし（確認用）
 """
 
+import asyncio
 import os
 import sys
 import json
@@ -40,6 +41,7 @@ load_env()
 # Supabase クライアント
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from db_client import db
+from utils.notifier import notify as _discord_notify
 
 # crawlers パッケージ（A8キャッシュ管理）
 from crawlers.crawler_a8 import save_program as _save_to_x_cache_new
@@ -54,6 +56,10 @@ MAX_PER_RUN  = 5  # 1回の実行で処理する最大件数
 BASE_URL     = "https://pub.a8.net"
 LOGIN_URL    = f"{BASE_URL}/a8v2/media/loginAction.do"
 NEW_LIST_URL = f"{BASE_URL}/a8v2/media/partnerProgramListAction.do?act=search&viewPage=new"
+LINK_URL     = f"{BASE_URL}/a8v2/media/linkAction.do"
+
+# Playwright Cookie ファイル（*_cookies.json は .gitignore 済み）
+A8_COOKIES_FILE = Path(__file__).parent.parent / "a8_cookies.json"
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
@@ -161,6 +167,11 @@ def a8_login(max_retries: int = 3, timeout: int = 30):
                 return session
             else:
                 print("[A8] ログイン失敗（IDまたはパスワードが違う可能性）")
+                _discord_notify(
+                    "money_agent/a8_approved_auto.py",
+                    "A8.net ログイン失敗（ID/パスワード不一致の可能性）",
+                    "A8_MEDIA_ID / A8_PASSWORD を確認してください",
+                )
                 return None
 
         except Exception as e:
@@ -172,6 +183,11 @@ def a8_login(max_retries: int = 3, timeout: int = 30):
                 err_msg = str(e)
                 print(f"[A8] ログインエラー（リトライ上限）: {err_msg}")
                 _log_error("login", "a8_login", err_msg)
+                _discord_notify(
+                    "money_agent/a8_approved_auto.py",
+                    "A8.net ログイン失敗（リトライ上限到達）",
+                    err_msg,
+                )
                 return None
 
     return None
@@ -348,6 +364,207 @@ def fetch_best_link(session, ins_id: str) -> str:
 
 
 # ============================================================
+# Playwright版 アフィリエイトリンク取得（Cookie永続・仕様変更に強い）
+# ============================================================
+
+async def _pw_load_cookies(context) -> bool:
+    """保存済み Cookie を Playwright コンテキストに読み込む"""
+    if not A8_COOKIES_FILE.exists():
+        return False
+    try:
+        cookies = json.loads(A8_COOKIES_FILE.read_text())
+        await context.add_cookies(cookies)
+        return True
+    except Exception as e:
+        print(f"[PW] Cookie 読み込み失敗: {e}")
+        return False
+
+
+async def _pw_save_cookies(context) -> None:
+    """現在の Cookie をファイルに保存する"""
+    try:
+        cookies = await context.cookies()
+        A8_COOKIES_FILE.write_text(json.dumps(cookies, ensure_ascii=False, indent=2))
+    except Exception as e:
+        print(f"[PW] Cookie 保存失敗: {e}")
+
+
+async def _pw_ensure_logged_in(page, context) -> bool:
+    """
+    Cookie で自動ログインを試みる。
+    セッション切れなら headful でログインフォームを表示し、
+    ユーザーがログインするまで待機する。
+    """
+    await page.goto(BASE_URL, timeout=20000)
+    await page.wait_for_load_state("domcontentloaded", timeout=10000)
+
+    if await page.locator("text=ログアウト").count() > 0:
+        return True  # Cookie で認証済み
+
+    # Cookie が無効 → フォームで自動ログイン
+    media_id = os.environ.get("A8_MEDIA_ID", "")
+    password  = os.environ.get("A8_PASSWORD", "")
+
+    if media_id and password:
+        try:
+            await page.goto(LOGIN_URL, timeout=20000)
+            await page.wait_for_load_state("domcontentloaded", timeout=10000)
+
+            # get_by_label / get_by_role を優先、見つからなければ name 属性でフォールバック
+            login_field = page.get_by_label(re.compile(r"(ID|ログインID|メールアドレス)", re.I))
+            if await login_field.count() == 0:
+                login_field = page.locator("input[name='login']")
+            await login_field.fill(media_id)
+
+            pass_field = page.get_by_label(re.compile(r"パスワード", re.I))
+            if await pass_field.count() == 0:
+                pass_field = page.locator("input[name='passwd'], input[type='password']").first
+            await pass_field.fill(password)
+
+            submit = page.get_by_role("button", name=re.compile(r"ログイン|login", re.I))
+            if await submit.count() == 0:
+                submit = page.locator("input[type='submit']").first
+            await submit.click()
+
+            await page.wait_for_load_state("domcontentloaded", timeout=15000)
+
+            if await page.locator("text=ログアウト").count() > 0:
+                print("[PW] フォームログイン成功")
+                await _pw_save_cookies(context)
+                return True
+        except Exception as e:
+            print(f"[PW] フォームログインエラー: {e}")
+
+    print("[PW] 自動ログイン失敗。手動ログインをスキップして続行します。")
+    _discord_notify(
+        "money_agent/a8_approved_auto.py",
+        "A8.net Playwright 自動ログイン失敗（Cookie期限切れ＋フォーム失敗）",
+        "a8_cookies.json を再取得するか A8_MEDIA_ID / A8_PASSWORD を確認してください",
+    )
+    return False
+
+
+async def _fetch_best_link_async(ins_id: str) -> str:
+    """
+    Playwright でリンクページを開き EPC 最高のテキストリンク URL を返す。
+
+    セレクター戦略:
+      1. get_by_role / get_by_text 等の意味的セレクタを優先
+      2. 取れなければテキスト解析（requests 版と同じロジック）でフォールバック
+    """
+    from playwright.async_api import async_playwright
+
+    async with async_playwright() as pw:
+        browser = await pw.chromium.launch(headless=True)
+        context = await browser.new_context(
+            user_agent=(
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/124.0.0.0 Safari/537.36"
+            ),
+            locale="ja-JP",
+        )
+
+        await _pw_load_cookies(context)
+        page = await context.new_page()
+
+        try:
+            # ログイン確認（Cookie が切れていれば自動再ログイン）
+            await _pw_ensure_logged_in(page, context)
+
+            url = f"{LINK_URL}?insId={ins_id}"
+            await page.goto(url, timeout=20000)
+            await page.wait_for_load_state("domcontentloaded", timeout=10000)
+
+            # ── 戦略1: テキストリンク行を DOM から直接取得 ──────────
+            # A8の広告リンクは <a href="https://px.a8.net/..."> に入っている
+            link_locators = page.locator("a[href^='https://px.a8.net']")
+            count         = await link_locators.count()
+
+            best_url = ""
+            best_epc = -1.0
+
+            for idx in range(count):
+                try:
+                    loc  = link_locators.nth(idx)
+                    href = await loc.get_attribute("href") or ""
+                    if not href:
+                        continue
+
+                    # 近傍テキストから EPC を探す
+                    parent = loc
+                    nearby_text = ""
+                    for _ in range(5):
+                        parent_el = await parent.evaluate_handle("el => el.parentElement")
+                        if not parent_el:
+                            break
+                        parent    = page.locator(":root").locator("xpath=//body").first
+                        nearby_text = await parent_el.inner_text() if parent_el else ""
+                        if "EPC" in nearby_text or "テキスト" in nearby_text:
+                            break
+
+                    epc_val = 0.0
+                    epc_m   = re.search(r"EPC\s+([\d.]+)", nearby_text)
+                    if epc_m:
+                        try:
+                            epc_val = float(epc_m.group(1))
+                        except ValueError:
+                            pass
+
+                    is_text = "テキスト" in nearby_text or "メール" in nearby_text
+                    if is_text and epc_val > best_epc:
+                        best_epc = epc_val
+                        best_url = href
+                except Exception:
+                    continue
+
+            # ── 戦略2: EPC が取れなければ最初の px.a8.net リンクを使用 ──
+            if not best_url and count > 0:
+                best_url = await link_locators.first.get_attribute("href") or ""
+
+            # ── 戦略3: テキスト解析フォールバック（requests 版と同じ） ──
+            if not best_url:
+                text  = await page.content()
+                lines = [l.strip() for l in text.split("\n") if l.strip()]
+                for i, line in enumerate(lines):
+                    if line.startswith("https://px.a8.net"):
+                        context_lines = lines[max(0, i - 10):i]
+                        for ctx in reversed(context_lines):
+                            m = re.match(r"^([\d.]+)$", ctx)
+                            if m:
+                                try:
+                                    epc_val = float(m.group(1))
+                                    if epc_val > best_epc:
+                                        best_epc = epc_val
+                                        best_url = line
+                                except ValueError:
+                                    pass
+                                break
+                        if not best_url:
+                            best_url = line
+                        break
+
+            await _pw_save_cookies(context)
+            print(f"[PW] {ins_id} → EPC:{best_epc}  {best_url[:60]}")
+            return best_url
+
+        except Exception as e:
+            print(f"[PW] リンク取得エラー ({ins_id}): {e}")
+            return ""
+        finally:
+            await browser.close()
+
+
+def fetch_best_link_playwright(ins_id: str) -> str:
+    """
+    Playwright 版のアフィリエイトリンク取得。
+    同期関数として呼び出せるよう asyncio.run() でラップ。
+    Cookie を自動保存・再利用するため、2回目以降はログイン不要。
+    """
+    return asyncio.run(_fetch_best_link_async(ins_id))
+
+
+# ============================================================
 # Gemini で記事生成（gemini_client 経由 → tenacity リトライ付き）
 # ============================================================
 def generate_article(program: dict):
@@ -457,8 +674,11 @@ def run(dry_run: bool = False):
         print(f"\n--- {prog_name} (EPC:{program.get('epc',0)}, 報酬:{program.get('reward','')}) ---")
 
         try:
-            # ① ベストリンク取得
-            affiliate_url = fetch_best_link(session, ins_id)
+            # ① ベストリンク取得（Playwright → 失敗時は requests にフォールバック）
+            affiliate_url = fetch_best_link_playwright(ins_id)
+            if not affiliate_url:
+                print("  [PW] 失敗 → requests にフォールバック")
+                affiliate_url = fetch_best_link(session, ins_id)
             if not affiliate_url:
                 print("  アフィリエイトリンク取得失敗。スキップ。")
                 _log_error(ins_id, "fetch_best_link", "リンク未取得")

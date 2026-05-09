@@ -98,6 +98,20 @@ def _log_to_db(api: str, context: str, error: str) -> None:
         print(f"  [Retry] DBログ記録失敗: {e}")
 
 
+def _notify_discord(api: str, context: str, error: str) -> None:
+    """Gemini など重要APIの全リトライ失敗時に Discord へ通知する"""
+    try:
+        sys.path.insert(0, str(Path(__file__).parent.parent))
+        from utils.notifier import notify
+        notify(
+            f"utils/decorators.py ({api})",
+            f"Gemini停止中：テンプレートで代用します" if api == "gemini" else f"{api} 全リトライ失敗",
+            f"context={context[:100]} / error={error[:200]}",
+        )
+    except Exception as e:
+        print(f"  [Retry] Discord通知失敗: {e}")
+
+
 # ── デコレータ本体 ────────────────────────────────────────────
 def api_retry(
     api: str = "default",
@@ -143,6 +157,7 @@ def api_retry(
         )
         if log_on_giveup:
             _log_to_db(api, label, err_msg)
+            _notify_discord(api, label, err_msg)
 
     def decorator(func: Callable) -> Callable:
         # tenacity retry でラップ
@@ -173,6 +188,7 @@ def api_retry(
                 )
                 if log_on_giveup:
                     _log_to_db(api, label, err_msg)
+                    _notify_discord(api, label, err_msg)
                 return None
             except Exception as exc:
                 # リトライ対象外エラー（即失敗）
