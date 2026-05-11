@@ -46,7 +46,7 @@ load_env()
 HATENA_ID      = os.environ.get("HATENA_ID", "")
 HATENA_BLOG_ID = os.environ.get("HATENA_BLOG_ID", "")
 HATENA_API_KEY = os.environ.get("HATENA_API_KEY", "")
-GENERATED_FILE = Path(__file__).parent / "ranking_generated.json"
+GENERATED_FILE = Path(__file__).parent / "data" / "ranking_generated.json"
 
 # ============================================================
 # ジャンル定義（SEOキーワード・対象サービス・アフィリエイト情報）

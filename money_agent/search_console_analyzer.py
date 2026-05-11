@@ -19,7 +19,7 @@ from datetime import datetime
 
 BASE_DIR = Path(__file__).parent
 SC_DIR = BASE_DIR / "search_console"
-ANALYSIS_FILE = BASE_DIR / "search_console_analysis.json"
+ANALYSIS_FILE = BASE_DIR / "data" / "search_console_analysis.json"
 
 SC_DIR.mkdir(exist_ok=True)
 

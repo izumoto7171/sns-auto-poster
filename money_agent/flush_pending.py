@@ -44,9 +44,9 @@ def _load_env():
 
 _load_env()
 
-PENDING_DIR = Path(__file__).parent / "pending"
+PENDING_DIR = Path(__file__).parent / "data" / "pending"
 POSTED_DIR = Path(__file__).parent / "posted"
-STATE_FILE = Path(__file__).parent / "agent_state.json"
+STATE_FILE = Path(__file__).parent / "data" / "agent_state.json"
 
 MAX_FLUSH = 2  # デフォルト最大件数
 

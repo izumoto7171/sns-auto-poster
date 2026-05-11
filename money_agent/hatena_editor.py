@@ -26,8 +26,8 @@ from xml.etree import ElementTree as ET
 import requests
 
 BASE_DIR        = Path(__file__).parent
-ANALYSIS_FILE   = BASE_DIR / "search_console_analysis.json"
-EDIT_LOG_FILE   = BASE_DIR / "hatena_edit_log.json"
+ANALYSIS_FILE   = BASE_DIR / "data" / "search_console_analysis.json"
+EDIT_LOG_FILE   = BASE_DIR / "data" / "hatena_edit_log.json"
 
 HATENA_ID      = os.environ.get("HATENA_ID", "")
 HATENA_BLOG_ID = os.environ.get("HATENA_BLOG_ID", "")

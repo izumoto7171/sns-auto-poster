@@ -95,7 +95,7 @@ def _load_affiliate_urls() -> dict:
     提携URLが更新されたときに、このファイルだけ書き換えればOK
     """
     import os
-    config_file = os.path.join(os.path.dirname(__file__), "config", "affiliate_links.json")
+    config_file = os.path.join(os.path.dirname(__file__), "data", "affiliate_links.json")
     try:
         import json
         with open(config_file, encoding="utf-8") as f:

@@ -113,7 +113,7 @@ def run_money_agent(dry_run: bool = False, force_category: str = None) -> dict:
     print("\n📊 STEP 1: キーワード選定...")
 
     # 使用済みキーワードを読み込み
-    used_kw_file = os.path.join(os.path.dirname(__file__), "used_keywords.json")
+    used_kw_file = os.path.join(os.path.dirname(__file__), "data", "used_keywords.json")
     used_keywords = []
     if os.path.exists(used_kw_file):
         with open(used_kw_file) as f:

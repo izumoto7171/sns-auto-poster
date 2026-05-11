@@ -112,7 +112,7 @@ def _load_sc_top_keywords(max_kw: int = 5) -> list[str]:
     search_console_analysis.json からクリック数上位のクエリを取得。
     記事生成時のプロンプトに差し込んで、検索需要のある表現を使わせる。
     """
-    sc_path = Path(__file__).parent / "search_console_analysis.json"
+    sc_path = Path(__file__).parent / "data" / "search_console_analysis.json"
     if not sc_path.exists():
         return []
     try:

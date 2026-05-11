@@ -18,7 +18,7 @@ from datetime import datetime
 BASE_DIR = Path(__file__).parent.parent
 ROOT_DIR = BASE_DIR.parent
 
-SNS_DRAFTS_DIR = BASE_DIR / "sns_drafts"
+SNS_DRAFTS_DIR = BASE_DIR / "data" / "sns_drafts"
 SNS_DRAFTS_DIR.mkdir(exist_ok=True)
 
 

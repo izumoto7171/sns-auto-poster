@@ -317,7 +317,7 @@ def generate_comparison_article(tool_articles: list = None) -> dict:
     # pending記事の自動読み込み
     if tool_articles is None:
         tool_articles = []
-        pending_dir = BASE_DIR / "pending"
+        pending_dir = BASE_DIR / "data" / "pending"
         for f in sorted(pending_dir.glob("*.json")):
             try:
                 data = json.loads(f.read_text(encoding="utf-8"))

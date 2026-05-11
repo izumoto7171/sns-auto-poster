@@ -80,7 +80,7 @@ def _load_search_console_data() -> dict:
         return sc_run()
     except Exception:
         pass
-    sc_file = BASE_DIR / "search_console_analysis.json"
+    sc_file = BASE_DIR / "data" / "search_console_analysis.json"
     if sc_file.exists():
         try:
             return json.loads(sc_file.read_text(encoding="utf-8"))

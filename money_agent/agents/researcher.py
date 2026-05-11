@@ -10,7 +10,7 @@ BASE_DIR = Path(__file__).parent.parent
 
 
 def _load_used_keywords() -> list:
-    f = BASE_DIR / "used_keywords.json"
+    f = BASE_DIR / "data" / "used_keywords.json"
     if f.exists():
         try:
             return json.loads(f.read_text(encoding="utf-8"))

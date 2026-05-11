@@ -260,7 +260,7 @@ def run(state: dict) -> dict:
     }
 
     # JSON にキャッシュ保存（analyst.py / CEO がファイル参照する場合のため）
-    output_file = BASE_DIR / "data_analysis.json"
+    output_file = BASE_DIR / "data" / "data_analysis.json"
     output_file.write_text(
         json.dumps(result, ensure_ascii=False, indent=2),
         encoding="utf-8",

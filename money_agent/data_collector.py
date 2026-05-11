@@ -34,7 +34,7 @@ def load_env():
 
 load_env()
 
-DYNAMIC_KW_FILE = Path(__file__).parent / "dynamic_keywords.json"
+DYNAMIC_KW_FILE = Path(__file__).parent / "data" / "dynamic_keywords.json"
 
 
 async def _fetch_with_requests(url: str) -> str:

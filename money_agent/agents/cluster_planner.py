@@ -209,7 +209,7 @@ def run(state: dict = None) -> dict:
     plan = generate_cluster_plan()
 
     # 保存
-    output_file = BASE_DIR / "cluster_plan.json"
+    output_file = BASE_DIR / "data" / "cluster_plan.json"
     output_file.write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8")
 
     next_c = plan["next_cluster"]

@@ -22,7 +22,7 @@ HATENA_BLOG_DOMAIN = os.environ.get("HATENA_BLOG_DOMAIN", "")
 HATENA_SITEMAP_URL = f"https://{HATENA_BLOG_DOMAIN}/sitemap.xml"
 INDEXING_ENDPOINT  = "https://indexing.googleapis.com/v3/urlNotifications:publish"
 GOOGLE_PING_URL    = "https://www.google.com/ping"
-LOG_FILE           = Path(__file__).parent / "indexing_log.json"
+LOG_FILE           = Path(__file__).parent / "data" / "indexing_log.json"
 SITEMAP_FILE       = Path(__file__).parent / "sitemap.xml"
 
 

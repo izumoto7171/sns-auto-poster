@@ -170,7 +170,7 @@ def run(state: dict) -> dict:
     }
 
     # 結果保存
-    output_file = BASE_DIR / "market_research.json"
+    output_file = BASE_DIR / "data" / "market_research.json"
     output_file.write_text(
         json.dumps(result, ensure_ascii=False, indent=2),
         encoding="utf-8",

@@ -24,7 +24,7 @@ import urllib.parse
 from pathlib import Path
 
 ROOT_DIR       = Path(__file__).parent.parent
-PORTFOLIO_PATH = ROOT_DIR / "money_agent" / "config" / "program_portfolio.json"
+PORTFOLIO_PATH = Path(__file__).parent / "data" / "program_portfolio.json"
 COOKIES_FILE   = ROOT_DIR / "a8_cookies.json"
 
 A8_PUB_BASE        = "https://pub.a8.net"

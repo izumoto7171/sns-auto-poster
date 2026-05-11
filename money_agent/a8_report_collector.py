@@ -44,8 +44,8 @@ load_env()
 # ============================================================
 # 定数
 # ============================================================
-REPORT_FILE = Path(__file__).parent / "a8_report.json"
-SEEN_MAIL_FILE = Path(__file__).parent / "seen_a8_mails.json"
+REPORT_FILE = Path(__file__).parent / "data" / "a8_report.json"
+SEEN_MAIL_FILE = Path(__file__).parent / "data" / "seen_a8_mails.json"
 
 # Gmail IMAP設定（Google Workspaceまたはアプリパスワード必須）
 IMAP_HOST = os.environ.get("IMAP_HOST", "imap.gmail.com")

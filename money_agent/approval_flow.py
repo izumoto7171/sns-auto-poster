@@ -19,9 +19,9 @@ from pathlib import Path
 from datetime import datetime
 
 BASE_DIR = Path(__file__).parent
-PENDING_DIR = BASE_DIR / "pending"
-APPROVED_FILE = BASE_DIR / "approved.json"
-REJECTED_FILE = BASE_DIR / "rejected.json"
+PENDING_DIR = BASE_DIR / "data" / "pending"
+APPROVED_FILE = BASE_DIR / "data" / "approved.json"
+REJECTED_FILE = BASE_DIR / "data" / "rejected.json"
 
 PENDING_DIR.mkdir(exist_ok=True)
 

@@ -28,7 +28,7 @@ from difflib import SequenceMatcher
 from pathlib import Path
 
 ROOT_DIR       = Path(__file__).parent.parent
-PORTFOLIO_PATH = ROOT_DIR / "money_agent" / "config" / "program_portfolio.json"
+PORTFOLIO_PATH = Path(__file__).parent / "data" / "program_portfolio.json"
 
 sys.path.insert(0, str(ROOT_DIR / "money_agent"))
 sys.path.insert(0, str(ROOT_DIR))

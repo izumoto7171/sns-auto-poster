@@ -17,7 +17,7 @@ import json
 import sys
 from pathlib import Path
 
-CONFIG_FILE = Path(__file__).parent / "affiliate_links.json"
+CONFIG_FILE = Path(__file__).parent / "data" / "affiliate_links.json"
 
 
 def load() -> dict:

@@ -101,7 +101,7 @@ ARTICLE_CATEGORIES = [
 ]
 
 DRAFTS_DIR  = Path(__file__).parent / "hatena_drafts"
-LOG_PATH    = Path(__file__).parent / "rakuten_article_log.json"
+LOG_PATH    = Path(__file__).parent / "data" / "rakuten_article_log.json"
 
 
 # ============================================================

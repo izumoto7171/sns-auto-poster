@@ -23,7 +23,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
-PORTFOLIO_FILE = Path(__file__).parent / "config" / "program_portfolio.json"
+PORTFOLIO_FILE = Path(__file__).parent / "data" / "program_portfolio.json"
 
 # 同一案件を再利用するまでの最短日数
 COOLDOWN_DAYS = 3
