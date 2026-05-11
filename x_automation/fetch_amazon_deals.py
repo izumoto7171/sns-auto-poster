@@ -36,11 +36,165 @@ from db_client import db
 
 ASSOCIATE_TAG = os.getenv("AMAZON_ASSOCIATE_TAG", "smartearn22-22")
 
+# バリデーション結果キャッシュ（ASIN → last_validated_at）
+_VALIDATION_CACHE_PATH = BASE_DIR / "validation_cache.json"
+_VALIDATION_TTL_HOURS  = 24
+
+
+def _load_validation_cache() -> dict:
+    """バリデーションキャッシュを読み込む。失敗時は空dictを返す。"""
+    try:
+        if _VALIDATION_CACHE_PATH.exists():
+            return json.loads(_VALIDATION_CACHE_PATH.read_text(encoding="utf-8"))
+    except Exception as e:
+        print(f"  ⚠️  バリデーションキャッシュ読み込み失敗（無視して続行）: {e}")
+    return {}
+
+
+def _save_validation_cache(cache: dict) -> None:
+    """バリデーションキャッシュを保存する。失敗時は警告のみ。"""
+    try:
+        _VALIDATION_CACHE_PATH.write_text(
+            json.dumps(cache, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+    except Exception as e:
+        print(f"  ⚠️  バリデーションキャッシュ書き込み失敗（無視して続行）: {e}")
+
+
+def _is_validation_fresh(asin: str, cache: dict) -> bool:
+    """指定ASINが TTL 以内に検証済みか確認する。"""
+    if not asin or asin not in cache:
+        return False
+    try:
+        last = datetime.fromisoformat(cache[asin])
+        return datetime.now() - last < timedelta(hours=_VALIDATION_TTL_HOURS)
+    except Exception:
+        return False
+
+
+def _mark_validated(asin: str, cache: dict) -> None:
+    """ASINの検証日時をキャッシュに記録する（dict を in-place 更新）。"""
+    if asin:
+        cache[asin] = datetime.now().isoformat()
+
 
 def _make_search_url(keyword: str) -> str:
     """Amazon検索URL生成（PA-API不使用・アフィリエイトタグ付き）"""
     from urllib.parse import quote
     return f"https://www.amazon.co.jp/s?k={quote(keyword)}&tag={ASSOCIATE_TAG}"
+
+
+def _resolve_asin(keyword: str) -> str:
+    """
+    Amazon検索結果から最初の商品のASINを取得する。
+    取得できた場合は商品直リンクURLを返し、失敗時は検索URLを返す。
+    """
+    import re
+    import urllib.request
+    from urllib.parse import quote
+
+    search_url = f"https://www.amazon.co.jp/s?k={quote(keyword)}"
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36"
+        ),
+        "Accept-Language": "ja-JP,ja;q=0.9",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    }
+    try:
+        req = urllib.request.Request(search_url, headers=headers)
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            html = resp.read().decode("utf-8", errors="ignore")
+
+        # data-asin 属性から10桁のASINを取得（広告除く：最初の非空ASINを使用）
+        asins = re.findall(r'data-asin="([A-Z0-9]{10})"', html)
+        for asin in asins:
+            if asin:
+                return f"https://www.amazon.co.jp/dp/{asin}?tag={ASSOCIATE_TAG}"
+    except Exception as e:
+        print(f"  ⚠️  ASIN解決失敗 ({keyword[:20]}): {e}")
+
+    # 失敗時は検索URLにフォールバック
+    return _make_search_url(keyword)
+
+
+_ERROR_TITLES = (
+    "ページが見つかりません",
+    "page not found",
+    "sorry, we just need to make sure",
+    "robot check",
+    "access denied",
+    "404",
+)
+
+def _validate_amazon_url(url: str) -> tuple[bool, str]:
+    """
+    Amazon商品URLが実際にアクセス可能か確認する。
+
+    Amazon は HEAD を 405 で拒否するため GET + stream を使用し、
+    レスポンスの先頭 4KB だけ読んでタイトルを確認する。
+
+    Returns:
+        (is_valid: bool, asin: str)
+        - is_valid: True=有効, False=無効（スキップ対象）
+        - asin: URLから抽出した ASIN（再解決用）
+    """
+    import re
+
+    if not url:
+        return False, ""
+
+    # 検索URLは常に有効（ASINなしのfallback）
+    if "/s?" in url:
+        return True, ""
+
+    # ASINを抽出
+    m = re.search(r"/dp/([A-Z0-9]{10})", url)
+    asin = m.group(1) if m else ""
+
+    try:
+        import requests
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/124.0.0.0 Safari/537.36"
+            ),
+            "Accept-Language": "ja-JP,ja;q=0.9",
+            # 圧縮を無効にして生のHTMLを受け取る
+            "Accept-Encoding": "identity",
+        }
+        resp = requests.get(
+            url, headers=headers, allow_redirects=True, timeout=8, stream=True
+        )
+
+        # 503/429 はbot判定によるブロックで商品は存在する可能性が高い → 通す
+        if resp.status_code in (503, 429):
+            resp.close()
+            return True, asin
+
+        # 明確な404はスキップ
+        if resp.status_code == 404:
+            resp.close()
+            return False, asin
+
+        # 先頭8KBだけ読んでタイトルを確認（全body取得を避ける）
+        chunk = next(resp.iter_content(chunk_size=8192), b"").decode("utf-8", errors="ignore")
+        resp.close()
+
+        title_m = re.search(r"<title>(.*?)</title>", chunk, re.IGNORECASE)
+        title = title_m.group(1).lower() if title_m else ""
+
+        if any(t in title for t in _ERROR_TITLES):
+            return False, asin
+
+        return True, asin
+
+    except Exception:
+        # タイムアウト等は通す（投稿機会損失を防ぐ）
+        return True, asin
 
 
 # ─────────────────────────────────────────
@@ -177,6 +331,7 @@ def fetch_via_paapi(category: str, count: int) -> list:
                     "Offers.Listings.SavingBasis",
                     "Offers.Summaries.OfferCount",
                     "Images.Primary.Large",
+                    "DetailPageURL",  # アフィリエイトタグ付き公式URL（ShortUrl相当）
                 ],
                 min_saving_percent=10,  # 10%以上割引のみ
             )
@@ -215,6 +370,11 @@ def fetch_via_paapi(category: str, count: int) -> list:
                     if item.item_info and item.item_info.features:
                         features = item.item_info.features.display_values[:3]
 
+                    # PA-API の DetailPageURL を優先（アフィリエイトタグ込みの公式URL）
+                    # 取得できない場合は /dp/ASIN 形式で構築
+                    detail_url = getattr(item, "detail_page_url", None)
+                    amazon_url = detail_url if detail_url else f"https://www.amazon.co.jp/dp/{asin}?tag={ASSOCIATE_TAG}"
+
                     products.append({
                         "asin":          asin,
                         "title":         title,
@@ -224,7 +384,7 @@ def fetch_via_paapi(category: str, count: int) -> list:
                         "keyword":       keyword,
                         "features":      features,
                         "image_url":     image_url,
-                        "amazon_url":    f"https://www.amazon.co.jp/dp/{asin}?tag={ASSOCIATE_TAG}",
+                        "amazon_url":    amazon_url,
                         "source":        "pa-api",
                         "fetched_at":    datetime.now().isoformat(),
                     })
@@ -318,6 +478,13 @@ def fetch_via_gemini(category: str, count: int) -> list:
             price   = item.get("price_yen", 0)
             orig    = item.get("original_price_yen", price)
 
+            # ASINを解決して商品直リンクを生成（失敗時は検索URLにフォールバック）
+            if keyword:
+                print(f"  🔍 ASIN解決中: {keyword[:30]}...")
+                amazon_url = _resolve_asin(keyword)
+            else:
+                amazon_url = ""
+
             products.append({
                 "search_keyword":  keyword,
                 "title":           item.get("title", ""),
@@ -336,7 +503,7 @@ def fetch_via_gemini(category: str, count: int) -> list:
                 "features":      item.get("features", []),
                 "why_viral":     item.get("why_viral", ""),
                 "story_hook":    item.get("story_hook", ""),
-                "amazon_url":    _make_search_url(keyword) if keyword else "",
+                "amazon_url":    amazon_url,
                 "source":        "gemini-generated",
                 "fetched_at":    datetime.now().isoformat(),
             })
@@ -594,6 +761,69 @@ def fetch_deals(category: str = "gadget", count: int = 5, force_refresh: bool = 
         except Exception as e:
             print(f"  ⚠️  コンテキストブーストスキップ: {e}")
 
+        # URLバリデーション: 404・エラーページにリダイレクトされる商品を除外
+        # キャッシュヒット（24時間以内）の商品はHTTPリクエストをスキップする
+        print("  🔗 URLバリデーション中...")
+        val_cache   = _load_validation_cache()
+        valid_products = []
+
+        try:
+            from utils.notifier import notify_info as _notify_info
+        except Exception:
+            _notify_info = None
+
+        import re as _re
+
+        for p in products:
+            url  = p.get("amazon_url", "")
+            m    = _re.search(r"/dp/([A-Z0-9]{10})", url)
+            asin = m.group(1) if m else ""
+
+            # ── キャッシュヒット: 24時間以内に検証済みならスキップ ──
+            if _is_validation_fresh(asin, val_cache):
+                print(f"  ⚡ キャッシュHIT（検証スキップ）: {p.get('title', '')[:30]}")
+                valid_products.append(p)
+                continue
+
+            # ── 実際にHTTPで検証 ──
+            is_valid, asin = _validate_amazon_url(url)
+            if is_valid:
+                _mark_validated(asin, val_cache)
+                valid_products.append(p)
+                continue
+
+            # ── 無効URLの場合: search_keyword で再解決を試みる ──
+            old_asin = asin
+            keyword  = p.get("search_keyword") or p.get("keyword") or p.get("title", "")
+            if keyword:
+                print(f"  🔄 URL再解決中: {p.get('title', '')[:30]}")
+                new_url          = _resolve_asin(keyword)
+                re_valid, new_asin = _validate_amazon_url(new_url)
+                if re_valid:
+                    p = {**p, "amazon_url": new_url}
+                    _mark_validated(new_asin, val_cache)
+                    valid_products.append(p)
+                    msg = f"🔗 Amazonリンク自動修復成功：ASIN {old_asin} -> {new_asin} に更新して投稿を継続します。"
+                    print(f"  ✅ 再解決成功: {new_url[:60]}")
+                    if _notify_info:
+                        try:
+                            _notify_info(
+                                "x_automation/fetch_amazon_deals.py",
+                                msg,
+                                f"商品: {p.get('title', '')[:60]}",
+                            )
+                        except Exception as e:
+                            print(f"  ⚠️  Discord通知失敗（無視して続行）: {e}")
+                    continue
+
+            print(f"  ⚠️  URLスキップ（商品ページなし）: {p.get('title', '')[:30]} → {url[:60]}")
+
+        skipped = len(products) - len(valid_products)
+        if skipped:
+            print(f"  ℹ️  {skipped}件スキップ、{len(valid_products)}件有効")
+        products = valid_products
+        _save_validation_cache(val_cache)
+
         # 既存キャッシュとマージして保存（asin がない商品は search_keyword で比較）
         existing = load_cache()
         existing_keys = {p.get("asin") or p.get("search_keyword", "") for p in existing}
@@ -602,7 +832,7 @@ def fetch_deals(category: str = "gadget", count: int = 5, force_refresh: bool = 
             if (p.get("asin") or p.get("search_keyword", "")) not in existing_keys
         ]
         save_cache(existing + new_products)
-        print(f"✅ {len(products)}件取得完了（コンテキスト補正済みスコア順）")
+        print(f"✅ {len(products)}件取得完了（URLバリデーション済み・コンテキスト補正済みスコア順）")
 
     return products
 
