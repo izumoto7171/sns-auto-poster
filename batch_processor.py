@@ -40,7 +40,7 @@ BATCH_SLEEP_SEC     = 20   # バッチ間スリープ秒数（RPM制限回避）
 PRIORITY_THRESHOLD  = 5    # これ以上はGemini生成、未満はテンプレート
 MIN_TEXT_LEN        = 50   # 生成テキストの最小文字数
 MAX_TEXT_LEN        = 200  # X投稿の最大文字数（ハッシュタグ除く）
-GEMINI_MODEL        = "gemini-2.0-flash-lite"  # X投稿用（軽量・高速）
+GEMINI_MODEL        = "gemini-1.5-flash"  # 2.0-flash-liteは無料枠limit:0のため変更
 CACHE_TTL_DAYS      = 3    # content_cache の有効期間
 
 # ── A8用5スタイル定義（batch_processor 側でも保持）────────────

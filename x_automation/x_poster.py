@@ -42,10 +42,13 @@ def _save_log_local(entry: dict):
     """ローカルJSONにもログを書く（Supabase不要・dedup用）"""
     now = datetime.now().isoformat()
     record = {
+        "posted_at": now,   # 日付フィルタ用（posted_at で統一）
         "datetime":  now,
+        "platform":  "x",
         "type":      entry.get("type", ""),
         "label":     entry.get("label", ""),
         "chars":     entry.get("chars", 0),
+        "content":   entry.get("text", ""),
         "text":      entry.get("text", ""),
         "success":   entry.get("success", False),
         "mode":      entry.get("mode", "live"),
@@ -166,7 +169,9 @@ def post_with_tweepy(text: str, image_path: str = "") -> bool:
 # twikit（非公式・無料）
 # ─────────────────────────────────────────
 def post_with_twikit(text: str, image_path: str = "") -> bool:
-    """twikit経由でXに投稿（公式APIキー不要・無料）"""
+    """twikit経由でXに投稿 — code 344 (daily limit) が頻発するため常時スキップ"""
+    print("⏭️  twikit をスキップ（daily limit 344 回避）→ ブラウザへ")
+    return False
     try:
         from twikit import Client
 
@@ -229,7 +234,7 @@ def post_with_browser(text: str) -> bool:
 # Amazonスレッド投稿（tweet1 → reply tweet2 → reply tweet3）
 # ─────────────────────────────────────────
 def post_amazon_thread(thread: dict) -> bool:
-    """Amazonアフィリエイトスレッドを3ツイートで投稿する（twikit → browser）"""
+    """Amazonアフィリエイトスレッドを3ツイートで投稿する（browser直行）"""
     tweet1 = thread.get("tweet1", "")
     tweet2 = thread.get("tweet2", "")
     tweet3 = thread.get("tweet3", "")
@@ -237,45 +242,8 @@ def post_amazon_thread(thread: dict) -> bool:
         print("❌ スレッドのtweet1が空")
         return False
 
-    # twikit でスレッド投稿（メインエンジン）
-    try:
-        import asyncio
-        from twikit import Client
-
-        cookies_path = os.path.join(os.path.dirname(__file__), "x_cookies.json")
-        env_cookies = os.getenv("X_COOKIES", "")
-        if env_cookies and not os.path.exists(cookies_path):
-            with open(cookies_path, "w") as f:
-                f.write(env_cookies)
-
-        if not os.path.exists(cookies_path):
-            print("⚠️ x_cookies.json なし")
-            return False
-
-        c = Client("ja")
-        c.load_cookies(cookies_path)
-
-        t1 = c.create_tweet(text=tweet1)
-        print(f"Tweet1(twikit)成功: {t1.id}")
-        # tweet1 成功後は例外が出ても再投稿しない
-        reply_id = str(t1.id)
-        try:
-            if tweet2:
-                t2 = c.create_tweet(text=tweet2, reply_to=reply_id)
-                reply_id = str(t2.id)
-                print(f"Tweet2(twikit)成功: {t2.id}")
-            if tweet3:
-                t3 = c.create_tweet(text=tweet3, reply_to=reply_id)
-                print(f"Tweet3(twikit)成功: {t3.id}")
-        except Exception as e2:
-            print(f"⚠️ twikit tweet2/3エラー（tweet1は投稿済み）: {e2}")
-        return True  # tweet1 が投稿できていれば成功とみなす
-
-    except Exception as e:
-        print(f"❌ twikit スレッド投稿エラー（tweet1未投稿）: {e}")
-
-    # ブラウザフォールバック（Playwright・3ツイートスレッド対応）
-    print("⚠️ ブラウザフォールバック（Playwright スレッド投稿）...")
+    # Playwright ブラウザで直接投稿（twikit は code 344 頻発のためスキップ）
+    print("🌐 ブラウザ（Playwright）でスレッド投稿...")
     try:
         from x_browser_poster import post_thread_sync
         tweets = [t for t in [tweet1, tweet2, tweet3] if t]
@@ -319,26 +287,8 @@ def post_value_thread(post_type: str = "useful") -> bool:
     if not success1 or not tweet2:
         return success1
 
-    # tweet2をリプライとして投稿（twikit 経由）
-    # tweepyはリプライIDが必要なため twikit を優先
-    try:
-        from twikit import Client
-        cookies_path = os.path.join(os.path.dirname(__file__), "x_cookies.json")
-        env_cookies = os.getenv("X_COOKIES", "")
-        if env_cookies and not os.path.exists(cookies_path):
-            with open(cookies_path, "w") as f:
-                f.write(env_cookies)
-
-        if os.path.exists(cookies_path):
-            # tweet1のIDを取得するため、post_log から最新エントリを参照
-            # twikit は create_tweet の戻り値から ID を取得できないため
-            # tweet2はベストエフォートで投稿（失敗してもtweet1は残る）
-            c = Client("ja")
-            c.load_cookies(cookies_path)
-            c.create_tweet(text=tweet2)
-            print("✅ スレッドtweet2投稿成功（リプライ）")
-    except Exception as e:
-        print(f"⚠️ tweet2リプライ失敗（tweet1は投稿済み）: {e}")
+    # tweet2はtwikit daily limit 344 のためスキップ（tweet1のみ投稿）
+    print("⏭️  tweet2リプライをスキップ（twikit daily limit 回避）")
 
     return True
 
