@@ -121,7 +121,7 @@ jobs:
   post-x:
     name: X (Twitter) 投稿
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 18
     permissions:
       contents: write
     needs: [update-amazon-products, run-batch-processor]
@@ -141,14 +141,19 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
-      - name: 日本語フォントインストール（画像カード用）
-        run: sudo apt-get install -y fonts-noto-cjk
-
       - name: 依存関係インストール
         run: |
-          pip install google-genai python-dotenv tweepy "twikit==1.7.4" Pillow playwright supabase
+          pip install google-genai python-dotenv tweepy Pillow playwright supabase
 
-      - name: Playwright Chromiumインストール
+      - name: Playwrightブラウザキャッシュ
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('**/requirements*.txt') }}
+          restore-keys: |
+            playwright-chromium-${{ runner.os }}-
+
+      - name: Chromiumインストール（キャッシュミス時のみ）
         run: playwright install chromium --with-deps
 
       - name: X投稿（tweepy → twikit → browser フォールバック）
