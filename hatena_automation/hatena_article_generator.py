@@ -1547,7 +1547,7 @@ def generate_with_gemini(theme: dict, api_key: str) -> dict:
         print(f"  記事タイプ: {article_type}")
 
         resp = client.models.generate_content(
-            model="gemini-2.0-flash-lite",
+            model="gemini-1.5-flash",
             contents=prompt,
         )
         text  = resp.text.strip()

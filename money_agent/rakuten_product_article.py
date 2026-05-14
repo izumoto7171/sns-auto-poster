@@ -116,15 +116,11 @@ def fetch_rakuten_products(genre_id: str, hits: int = 10) -> list:
 # Geminiで記事生成
 # ============================================================
 def generate_ranking_article(category: dict, products: list) -> str:
-    """商品リストからSEOランキング記事を生成する。"""
+    """商品リストからSEOランキング記事を生成する。gemini_client経由でリトライ付き。"""
     if not GEMINI_API_KEY:
         print("[gemini] GEMINI_API_KEY 未設定 → モック記事を返す")
         return _mock_article(category, products)
 
-    from google import genai
-    from google.genai import types
-
-    client = genai.Client(api_key=GEMINI_API_KEY)
     year = datetime.now().year
 
     products_text = "\n".join(
@@ -156,15 +152,11 @@ def generate_ranking_article(category: dict, products: list) -> str:
 """
 
     try:
-        response = client.models.generate_content(
-            model="gemini-2.0-flash-lite",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.7,
-                max_output_tokens=3000,
-            ),
-        )
-        article = response.text.strip()
+        from money_agent.gemini_client import generate as gemini_generate
+        article = gemini_generate(prompt, use_cache=False, temperature=0.7)
+        if not article:
+            print("[gemini] 全リトライ消耗 → モック記事にフォールバック")
+            return _mock_article(category, products)
         # コードブロックで囲まれていたら除去
         if article.startswith("```"):
             lines = article.split("\n")

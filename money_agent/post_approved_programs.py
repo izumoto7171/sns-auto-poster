@@ -150,7 +150,7 @@ def generate_article(program: dict, max_retries: int = 5):
     for attempt in range(max_retries):
         try:
             resp = client.models.generate_content(
-                model="gemini-2.0-flash-lite",
+                model="gemini-1.5-flash",
                 contents=prompt,
             )
             text = resp.text.strip()

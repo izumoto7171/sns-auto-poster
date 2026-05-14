@@ -99,7 +99,7 @@ def analyze_trends_with_gemini() -> list:
 """
 
     # モデルを順番に試す
-    models_to_try = ["gemini-2.0-flash-lite", "gemini-2.0-flash-lite", "gemini-2.0-flash-lite"]
+    models_to_try = ["gemini-1.5-flash", "gemini-1.5-flash", "gemini-1.5-flash"]
     raw = ""
     for model_name in models_to_try:
         try:

@@ -87,7 +87,7 @@ def generate(
     Parameters
     ----------
     prompt       : 送信するプロンプト文字列
-    model        : 使用モデル（デフォルト: gemini-2.0-flash-lite）
+    model        : 使用モデル（デフォルト: gemini-1.5-flash）
     cache_key    : キャッシュキーを手動指定する場合（省略時はプロンプトの MD5）
     use_cache    : True = キャッシュを使用。SNS 投稿など毎回違う内容には False を渡す
     max_retries  : 後方互換のために残す（リトライ設定は utils/decorators.py が管理）
