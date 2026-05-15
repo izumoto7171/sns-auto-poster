@@ -100,21 +100,23 @@ def mark_single(program_id: str) -> None:
         print(f"[PostApproved] 処理済みDB書き込み失敗 ({program_id}): {e}")
 
 
+_URL_PLACEHOLDER = "AFFILIATE_URL_PLACEHOLDER"
+
+
 def generate_article(program: dict, max_retries: int = 5):
-    """Gemini APIで記事生成。レートリミット時は指数バックオフでリトライ。"""
-    api_key = os.environ.get("GEMINI_API_KEY", "")
-    if not api_key:
-        print("[Gemini] GEMINI_API_KEY未設定")
-        return None
-
+    """Gemini APIで記事生成。gemini_client 経由（tenacityリトライ付き）。"""
     try:
-        from google import genai
-        client = genai.Client(api_key=api_key)
+        sys.path.insert(0, str(Path(__file__).parent))
+        from gemini_client import generate as gemini_generate, strip_code_block
     except ImportError:
-        print("[Gemini] google-genai未インストール: pip install google-genai")
+        print("[Gemini] gemini_client 未インポート")
         return None
 
+    affiliate_url = program['affiliate_url']
     year = datetime.now().year
+
+    # URLはプロンプトに含めず、生成後にPython側でプレースホルダーを置換する
+    # （GeminiがURLを書き換えるバグを防ぐ）
     prompt = f"""あなたはアフィリエイトブログの専門ライターです。
 以下のサービスを紹介するSEO最適化記事を書いてください。
 
@@ -124,7 +126,6 @@ def generate_article(program: dict, max_retries: int = 5):
 - ジャンル: {program['genre']}
 - 報酬: {program['reward']}
 - 概要: {program['description']}
-- アフィリエイトURL: {program['affiliate_url']}
 
 【記事要件】
 - 文字数: 2000〜3000文字
@@ -134,7 +135,7 @@ def generate_article(program: dict, max_retries: int = 5):
 - 自然な口調で読みやすく
 - 見出しはMarkdown（## / ###）を使用
 - 記事末尾に必ずアフィリエイトリンクのCTAを入れる
-  形式: <a href="{program['affiliate_url']}" rel="nofollow">▶ {program['name']}の公式サイトで詳細を確認する</a>
+  形式: <a href="{_URL_PLACEHOLDER}" rel="nofollow">▶ {program['name']}の公式サイトで詳細を確認する</a>
 - コードブロックなし、JSONのみで返す
 
 以下のJSON形式で返してください:
@@ -146,42 +147,23 @@ def generate_article(program: dict, max_retries: int = 5):
   "body": "本文（Markdown + アフィリエイトリンク含む）"
 }}"""
 
-    wait = 35  # 初回リトライ待機秒数
-    for attempt in range(max_retries):
-        try:
-            resp = client.models.generate_content(
-                model="gemini-1.5-flash",
-                contents=prompt,
-            )
-            text = resp.text.strip()
-            # コードブロック除去
-            if text.startswith("```"):
-                text = text.split("```", 2)[1]
-                if text.startswith("json"):
-                    text = text[4:]
-                text = text.rsplit("```", 1)[0]
+    raw = gemini_generate(prompt, use_cache=False)
+    if not raw:
+        print(f"[Gemini] 記事生成失敗（全リトライ消耗）: {program['name']}")
+        return None
 
-            article = json.loads(text.strip())
-            article["program_id"] = program["id"]
-            article["program_name"] = program["name"]
-            article["generated_at"] = datetime.now().isoformat()
-            return article
-
-        except Exception as e:
-            err_str = str(e)
-            if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
-                if attempt < max_retries - 1:
-                    print(f"[Gemini] レートリミット。{wait}秒後にリトライ ({attempt+1}/{max_retries})...")
-                    time.sleep(wait)
-                    wait = min(wait * 2, 120)  # 指数バックオフ、最大120秒
-                else:
-                    print(f"[Gemini] リトライ上限到達: {err_str[:200]}")
-                    return None
-            else:
-                print(f"[Gemini] 記事生成エラー: {err_str[:300]}")
-                return None
-
-    return None
+    try:
+        text = strip_code_block(raw)
+        article = json.loads(text.strip())
+        # プレースホルダーを実URLに置換（Geminiにはリンク文字列を触らせない）
+        article["body"] = article.get("body", "").replace(_URL_PLACEHOLDER, affiliate_url)
+        article["program_id"]   = program["id"]
+        article["program_name"] = program["name"]
+        article["generated_at"] = datetime.now().isoformat()
+        return article
+    except Exception as e:
+        print(f"[Gemini] JSONパースエラー ({program['name']}): {e}")
+        return None
 
 
 def run(dry_run: bool = False, force: bool = False):

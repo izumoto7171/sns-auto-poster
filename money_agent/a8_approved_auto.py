@@ -580,12 +580,16 @@ def generate_article(program: dict):
         print("[Gemini] gemini_client 未インポート")
         return None
 
+    _URL_PLACEHOLDER = "AFFILIATE_URL_PLACEHOLDER"
+
     year          = datetime.now().year
     name          = program.get("name", "")
     company       = program.get("company", "")
     reward        = program.get("reward", "")
     affiliate_url = program.get("affiliate_url", "")
 
+    # URLはプロンプトに含めず、生成後にPython側でプレースホルダーを置換する
+    # （GeminiがURLを書き換えるバグを防ぐ）
     prompt = f"""あなたはアフィリエイトブログの専門ライターです。
 以下のサービスを紹介するSEO最適化記事を書いてください。
 
@@ -593,7 +597,6 @@ def generate_article(program: dict):
 - サービス名: {name}
 - 提供会社: {company}
 - 報酬: {reward}
-- アフィリエイトURL: {affiliate_url}
 
 【記事要件】
 - 文字数: 2000〜3000文字
@@ -602,7 +605,7 @@ def generate_article(program: dict):
 - タイトルはSEOキーワードを含む（例:「【{year}年最新】{name}の評判は？メリット・デメリットを徹底解説」）
 - 自然な口調、見出しはMarkdown（## / ###）
 - 記事末尾にCTAを入れる:
-  <a href="{affiliate_url}" rel="nofollow">▶ {name}の公式サイトで詳細を確認する</a>
+  <a href="{_URL_PLACEHOLDER}" rel="nofollow">▶ {name}の公式サイトで詳細を確認する</a>
 - コードブロックなし、JSONのみで返す
 
 以下のJSON形式で返してください:
@@ -622,6 +625,8 @@ def generate_article(program: dict):
     try:
         text = strip_code_block(raw)
         article = json.loads(text)
+        # プレースホルダーを実URLに置換（Geminiにはリンク文字列を触らせない）
+        article["body"] = article.get("body", "").replace(_URL_PLACEHOLDER, affiliate_url)
         article["program_id"]   = program["ins_id"]
         article["program_name"] = name
         article["generated_at"] = datetime.now().isoformat()
