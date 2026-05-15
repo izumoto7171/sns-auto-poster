@@ -1492,7 +1492,10 @@ def generate_rakuten_product_post() -> dict:
         if not tweet1 and api_key:
             try:
                 from money_agent.gemini_client import generate as gemini_generate
-                prompt = f"""楽天市場の商品をXで紹介する投稿を作成してください。
+                _rakuten_persona = _random.choice(_A8_PERSONAS)
+                _rakuten_question = _random.choice(_ENGAGEMENT_QUESTIONS)
+                prompt = f"""あなたは次のキャラクターとして楽天市場の商品をXで紹介する投稿を作成してください。
+キャラクター: {_rakuten_persona}
 
 商品名: {product['name'][:50]}
 価格: {price}円
@@ -1500,12 +1503,14 @@ def generate_rakuten_product_post() -> dict:
 レビュー数: {reviews}件 / 評価: {avg}点
 
 【ルール】
-- 1ツイート目: 100文字以内。商品の魅力を体験談風に（「〜してみた」「〜だった」形式）
-- アフィリエイト感を出さず、リアルな一言レビューとして書く
+- tweet1: 90文字以内。商品の魅力を体験談風に（「〜してみた」「〜だった」形式）
+- アフィリエイト感を出さず、誠実なリアルレビューとして書く
+- 禁止: 「絶対」「必ず」「騙されたと思って」などの煽り表現
+- 末尾に自然な問いかけを1つ入れる（例: 「{_rakuten_question}」）
 - 絵文字1〜2個まで
 - ハッシュタグなし（別で付ける）
 - JSON形式のみ: {{"tweet1": "..."}}"""
-                result = gemini_generate(prompt, temperature=0.8)
+                result = gemini_generate(prompt, temperature=0.85)
                 import json as _json, re as _re
                 m = _re.search(r'\{.*\}', result or '', _re.DOTALL)
                 tweet1 = _json.loads(m.group()).get("tweet1", "") if m else ""
@@ -1525,7 +1530,8 @@ def generate_rakuten_product_post() -> dict:
                 tweet1 = ""
 
         if not tweet1:
-            tweet1 = f"{category['name']}で{reviews}件レビューの人気商品🛒 {price}円でこのクオリティはコスパ◎"
+            _fallback_q = _random.choice(_ENGAGEMENT_QUESTIONS)
+            tweet1 = f"{category['name']}で{reviews}件レビューの人気商品🛒 {price}円でこのクオリティはコスパ◎\n\n{_fallback_q}"
 
         tweet2 = f"▶ {name}\n{url}\n\n#楽天市場 #{category['name'].replace('・', '')} #楽天アフィリエイト"
 
@@ -1551,13 +1557,31 @@ def _a8_increment_posted(ins_id: str) -> None:
     _a8_increment_posted_fn(ins_id)
 
 
-# ペルソナ注入（history再投稿時にGeminiに渡してスタイルの多様性を確保）
+# ペルソナ注入（Geminiに渡して文体の多様性を確保）
 _A8_PERSONAS = [
     "節約オタクの20代男性。コスパを数字で語るのが好きで、感情より事実を優先する口調。",
     "副業歴3年のフリーランサー。失敗談から入り、最終的に解決策を見せるストーリー型。",
     "ガジェット好きの会社員。スペックより「使い勝手の変化」にフォーカスする体験重視型。",
     "節約ブロガー。比較・本音型で、「実は〇〇より△△の方が良かった」という切り口が得意。",
     "在宅ワーカーの30代女性視点。共感から始め、「わかる…」と思わせてから解決策へ誘導する。",
+    "ミニマリストの20代。「物を減らして豊かに」が信条。余計な表現を省いた短文スタイル。",
+    "3人家族の主婦。家計管理の実体験から「本当に役立ったもの」だけを正直に紹介するスタイル。",
+    "IT系フリーランスの専門家。冷静に「使った結果」を数値やビフォーアフターで示す論理派。",
+    "浪費を卒業した30代男性。「昔の自分みたいな人に届いてほしい」という伝え方が特徴。",
+]
+
+# Fav/Reply誘発用の問いかけ・締めフレーズ（自然に末尾に添えるだけで反応率が上がる）
+_ENGAGEMENT_QUESTIONS = [
+    "同じの使ってる人いますか？",
+    "これ、知ってた？",
+    "どっち派？",
+    "他に似たもの知ってたら教えてほしい",
+    "使ったことある人、感想聞かせてほしい",
+    "もっと早く知りたかったやつ",
+    "これ使ってる人と繋がりたい",
+    "同じ悩み持ってる人に届いてほしい",
+    "あなたの節約ルーティン、教えてください",
+    "他にオススメあったら返信で教えて",
 ]
 
 
@@ -1609,8 +1633,8 @@ def generate_a8_program_post() -> dict:
     selected_style = "テンプレート"
     _a8_cache_key  = program.get("ins_id", name)[:80]
 
-    # history（クールダウン明け再投稿）→ Gemini+ペルソナで新鮮な文体を強制生成
-    if source == "history":
+    # history / cache ともにGemini+ペルソナで毎回新鮮な文体を生成
+    if source in ("history", "cache"):
         persona = random.choice(_A8_PERSONAS)
         style_name, style_guide = random.choice(list(_A8_STYLES.items()))
         try:
@@ -1627,19 +1651,20 @@ def generate_a8_program_post() -> dict:
 
 【制約】
 - 70〜110文字以内（URLとハッシュタグは除く）
-- 禁止: 「ぜひ」「おすすめ」「チェック」
-- 独り言・本音の口コミに見える口調
+- 禁止: 「ぜひ」「おすすめ」「チェック」「絶対」「必ず」「騙されたと思って」
+- 独り言・本音の口コミに見える誠実な口調（体験談型）
+- 誇張・煽りを避け、正直な感想として書く
 - URLとハッシュタグは書かない
 - 本文のみ出力（説明不要）"""
             _result = _gem_gen(_persona_prompt, use_cache=False, temperature=0.95)
             if _result and len(_result.strip()) >= 30:
                 tweet_body     = _result.strip()[:200]
                 selected_style = f"Gemini/{style_name}"
-                print(f"  [A8Post] Geminiペルソナ生成: style={style_name}")
+                print(f"  [A8Post] Geminiペルソナ生成: style={style_name}, persona={persona[:20]}")
         except Exception as _e:
             print(f"  [A8Post] Gemini失敗 → テンプレへ: {_e}")
 
-    # cache source → content_cache チェック（batch_processorが事前生成）
+    # content_cache フォールバック（Gemini失敗時のみ）
     if not tweet_body and source == "cache":
         try:
             from db_client import db as _db_a8
@@ -1663,15 +1688,17 @@ def generate_a8_program_post() -> dict:
         tweet_body     = random.choice(templates)
         selected_style = "テンプレート"
 
-    # ── tweet1: リンク込みで1ツイートにまとめる ──────────────
-    suffix = f"\n{link_url}\n\n{hashtag_str}"
-    tweet1 = f"{tweet_body}{suffix}"
-
-    # 280単位オーバー時は本文を切り詰め
+    # ── スレッド構成 ──────────────────────────────────────────
+    # tweet1: 本文のみ（URL含まず）→ 滞在時間を稼ぐ
+    # tweet2: URL + ハッシュタグ + 問いかけ（Reply誘発）
+    question = random.choice(_ENGAGEMENT_QUESTIONS)
+    tweet1 = tweet_body
     if x_char_count(tweet1) > MAX_TWEET_UNITS:
-        max_body   = MAX_TWEET_UNITS - x_char_count(suffix)
-        tweet_body = _truncate_to_x_units(tweet_body, max_body)
-        tweet1     = f"{tweet_body}{suffix}"
+        tweet1 = _truncate_to_x_units(tweet1, MAX_TWEET_UNITS)
+
+    tweet2_body = f"{question}\n\n{link_url}\n\n{hashtag_str}"
+    if x_char_count(tweet2_body) > MAX_TWEET_UNITS:
+        tweet2_body = f"{link_url}\n\n{hashtag_str}"
 
     ins_id = program.get("ins_id", "")
 
@@ -1692,7 +1719,7 @@ def generate_a8_program_post() -> dict:
         "chars":   len(tweet1),
         "program": program,
         "source":  source,
-        "thread":  {"tweet1": tweet1, "tweet2": ""},
+        "thread":  {"tweet1": tweet1, "tweet2": tweet2_body},
     }
 
 
