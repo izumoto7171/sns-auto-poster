@@ -39,11 +39,11 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 _ROOT_DIR    = Path(__file__).parent.parent
-_CACHE_PATH  = _ROOT_DIR / "money_agent" / "a8_programs_cache.json"
-_HISTORY_PATH = _ROOT_DIR / "money_agent" / "a8_programs_history.json"
+_CACHE_PATH  = _ROOT_DIR / "money_agent" / "data" / "a8_programs_cache.json"
+_HISTORY_PATH = _ROOT_DIR / "money_agent" / "data" / "a8_programs_history.json"
 _CACHE_MAX      = 30   # キューの最大件数（古いものは履歴に残してキューから溢れる）
 _HISTORY_MAX    = 500  # 履歴の上限（半永久的に保持）
-A8_COOLDOWN_DAYS = 30  # 同じプログラムを再投稿しない日数
+A8_COOLDOWN_DAYS = 14  # 同じプログラムを再投稿しない日数（30→14日に短縮）
 
 sys.path.insert(0, str(_ROOT_DIR))
 from crawlers.cache_manager import CacheManager
