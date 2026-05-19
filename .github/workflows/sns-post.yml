@@ -209,6 +209,8 @@ jobs:
             money_agent/data/a8_programs_cache.json || true
           git diff --staged --quiet && exit 0
           git commit -m "chore: X投稿ログ更新 $(date +'%Y-%m-%d %H:%M')"
+          # コミット後の未ステージ変更（Playwrightの一時ファイル等）を破棄してrebaseを通す
+          git restore . || git checkout -- .
           # 他のジョブが先にpushしていた場合はrebaseしてretry
           git pull --rebase origin main && git push || \
           git pull --rebase origin main && git push
