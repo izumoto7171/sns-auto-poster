@@ -29,12 +29,14 @@ jobs:
           cache: 'pip'
 
       - name: 依存関係インストール
-        run: pip install google-genai requests
+        run: pip install google-genai requests supabase
 
       - name: Amazon商品データ更新
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           AMAZON_ASSOCIATE_TAG: ${{ secrets.AMAZON_ASSOCIATE_TAG }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
           cd x_automation
           python3 product_rotator.py
@@ -43,11 +45,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add x_automation/amazon_deals.json \
-                  x_automation/product_history.json \
-                  x_automation/static_products.json || true
+          git add x_automation/product_history.json || true
           git diff --staged --quiet || \
-            git commit -m "chore: Amazon商品データ自動更新 $(date +'%Y-%m-%d')"
+            git commit -m "chore: Amazon商品履歴更新 $(date +'%Y-%m-%d')"
           git push || true
 
   # ============================================================

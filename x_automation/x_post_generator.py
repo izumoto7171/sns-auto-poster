@@ -1240,7 +1240,7 @@ X（Twitter）スレッドの1ツイート目（リンクなし・バズ狙い�
 
 
 _AMAZON_PRODUCT_HISTORY_PATH = Path(__file__).parent / "product_history.json"
-_AMAZON_COOLDOWN_DAYS = 30
+_AMAZON_COOLDOWN_DAYS = 14
 
 
 def _load_amazon_product_history() -> list:
@@ -1327,8 +1327,8 @@ def generate_amazon_product_post(force_refresh: bool = False) -> dict:
         # クールダウン済み商品を除外
         products = _filter_amazon_cooldown(products)
 
-        # intent_score 上位2件から重み付きランダム選択（1位を優遇）
-        top = products[:2]
+        # 上位5件から重み付きランダム選択（特定商品への固着を防ぐ）
+        top = products[:5]
         scores = [p.get("intent_score", 50) for p in top]
         product = random.choices(top, weights=scores, k=1)[0]
 
