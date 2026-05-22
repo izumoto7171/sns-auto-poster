@@ -730,7 +730,20 @@ def fetch_deals(category: str = "gadget", count: int = 5, force_refresh: bool = 
     if not force_refresh:
         cached = load_cache()
         if cached:
-            filtered = [p for p in cached if p.get("category") == CATEGORIES[category]["label"]]
+            cat_label = CATEGORIES[category]["label"]
+            # product_rotator.py が保存する category 名は "ガジェット" など短縮形になるため
+            # 完全一致に加えて「前方一致」も許容する（例: "ガジェット" in "ガジェット・家電"）
+            filtered = [
+                p for p in cached
+                if (
+                    p.get("category") == cat_label
+                    or p.get("category", "").startswith(cat_label.split("・")[0])
+                    or cat_label.startswith(p.get("category", "X_NO_MATCH"))
+                )
+            ]
+            if not filtered:
+                # カテゴリフィルタで0件 → キャッシュ全件を使う（カテゴリ不問）
+                filtered = cached
             if len(filtered) >= count:
                 print(f"📦 キャッシュ使用 ({category}: {len(filtered)}件)")
                 return filtered[:count]

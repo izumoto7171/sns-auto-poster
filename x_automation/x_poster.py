@@ -247,10 +247,14 @@ def post_amazon_thread(thread: dict) -> bool:
     try:
         from x_browser_poster import post_thread_sync
         tweets = [t for t in [tweet1, tweet2, tweet3] if t]
+        # tweet3 にURLが含まれているか事前チェック（アフィリエイト欠落防止）
+        if tweets and "http" not in (tweets[-1] if len(tweets) >= 3 else ""):
+            print(f"⚠️ tweet3 にURLが含まれていません。内容: {(tweets[-1] if tweets else '')[:80]}")
         return post_thread_sync(tweets)
     except Exception as e:
-        print(f"⚠️ スレッド投稿失敗 → tweet1のみフォールバック: {e}")
-        return post_with_browser(tweet1)
+        print(f"⚠️ スレッド投稿（Playwright）失敗: {e}")
+        # tweet1のみのフォールバックはアフィリエイトURLが失われるため行わない
+        return False
 
 
 # ─────────────────────────────────────────

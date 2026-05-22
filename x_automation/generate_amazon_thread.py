@@ -275,6 +275,16 @@ def generate_thread(product: dict, optimized_instruction: str = None) -> dict:
         optimized_instruction = generate_optimized_instruction()
 
     amazon_url = product.get("amazon_url", "")
+
+    # amazon_url が空の場合は search_keyword から検索URLを再生成（フェイ��セーフ）
+    if not amazon_url:
+        from urllib.parse import quote
+        keyword = product.get("search_keyword") or product.get("title", "")
+        associate_tag = os.getenv("AMAZON_ASSOCIATE_TAG", "smartearn22-22")
+        if keyword:
+            amazon_url = f"https://www.amazon.co.jp/s?k={quote(keyword)}&tag={associate_tag}"
+            print(f"  [generate_thread] amazon_url が空のため検索URLを生成: {amazon_url[:60]}")
+
     # X投稿向け計測パラメータ付与（sub1=x_YYYYMMDD）
     try:
         import sys as _sys_gt

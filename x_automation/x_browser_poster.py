@@ -39,12 +39,14 @@ window.chrome = { runtime: {} };
 """
 
 # GitHub Actionsのヘッドレス環境向けに余裕を持たせた待機時間（ms）
-# ローカルでは速すぎても問題ないが、遅すぎると実害がないので統一する
-HEADLESS_WAIT_MS = 1200   # 各操作後の基本タメ
-PAGE_LOAD_MS     = 3500   # ページロード後の描画待ち
-PROFILE_LOAD_MS  = 4000   # プロフィールページ（タイムライン描画が重い）
-AFTER_POST_MS    = 4000   # 投稿後に反映されるまで待つ時間
-TYPE_DELAY_MS    = 30     # keyboard.typeの1文字あたりの遅延（ms）
+# CI環境（X_CI=true or CI=true）では待機時間を長くする
+import os as _os_wait
+_IS_CI = _os_wait.getenv("CI") == "true" or _os_wait.getenv("X_CI") == "true"
+HEADLESS_WAIT_MS = 2000 if _IS_CI else 1200   # 各操作後の基本タメ
+PAGE_LOAD_MS     = 5000 if _IS_CI else 3500   # ページロード後の描画待ち
+PROFILE_LOAD_MS  = 7000 if _IS_CI else 4000   # プロフィールページ（タイムライン描画が重い）
+AFTER_POST_MS    = 8000 if _IS_CI else 4000   # 投稿後に反映されるまで待つ時間（CI：X APIの反映遅延考慮）
+TYPE_DELAY_MS    = 30                          # keyboard.typeの1文字あたりの遅延（ms）
 
 
 # ─────────────────────────────────────────────────────────
@@ -313,7 +315,12 @@ async def post_thread_async(tweets: list, headless: bool = True) -> bool:
             # ── Tweet 1 の URL 取得 ─────────────────────
             tweet1_url = await _get_latest_tweet_url(page, username)
             if not tweet1_url:
-                print("⚠️ Tweet1 URLが取得できず、Tweet2/3をスキップ")
+                # CI環境では反映遅延で失敗することがある → もう一度待機してリトライ
+                print("  ⚠️ Tweet1 URL取得失敗 → 5秒待機してリトライ...")
+                await page.wait_for_timeout(5000)
+                tweet1_url = await _get_latest_tweet_url(page, username)
+            if not tweet1_url:
+                print("⚠️ Tweet1 URLが取得できず、Tweet2/3をスキップ（tweet1のみ投稿済み）")
                 await browser.close()
                 return True  # tweet1は成功
 
@@ -329,7 +336,11 @@ async def post_thread_async(tweets: list, headless: bool = True) -> bool:
             await page.wait_for_timeout(AFTER_POST_MS)
             tweet2_url = await _get_latest_tweet_url(page, username)
             if not tweet2_url:
-                print("⚠️ Tweet2 URLが取得できず、Tweet3をスキップ")
+                print("  ⚠️ Tweet2 URL取得失敗 → 5秒待機してリトライ...")
+                await page.wait_for_timeout(5000)
+                tweet2_url = await _get_latest_tweet_url(page, username)
+            if not tweet2_url:
+                print("⚠️ Tweet2 URLが取得できず、Tweet3をスキップ（tweet1/2のみ投稿済み）")
                 await browser.close()
                 return True  # tweet1/2は成功
 
