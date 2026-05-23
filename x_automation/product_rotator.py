@@ -43,7 +43,7 @@ from db_client import db
 
 ASSOCIATE_TAG    = os.getenv("AMAZON_ASSOCIATE_TAG", "smartearn22-22")
 HISTORY_DAYS     = 14    # 過去何日分の履歴を除外するか
-PRODUCTS_PER_DAY = 5     # 毎日生成する商品数
+PRODUCTS_PER_DAY = 10    # 毎日生成する商品数（ローリングプール拡充のため10件に増加）
 
 
 # ─────────────────────────────────────────

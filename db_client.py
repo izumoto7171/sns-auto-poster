@@ -18,8 +18,12 @@ Supabase 共通クライアント
 
 import os
 import json
+import random
 from datetime import datetime, timedelta
 from typing import Optional
+
+# 商品プールの最大保持件数（ローリングプール）
+_AMAZON_POOL_MAX = 30
 
 # ─────────────────────────────────────────
 # モジュールレベル シングルトン
@@ -127,8 +131,10 @@ class DBClient:
 
     def get_amazon_deals(self, max_age_hours: float = 6.0) -> list:
         """
-        is_active=True の商品を intent_score 降順で返す。
-        fetched_at が max_age_hours 以上古ければ空リストを返す（再生成トリガー）。
+        is_active=True の商品をプールから返す。
+        - 新しい商品（max_age_hours 以内）が存在する場合: そのバッチから加重ランダムで返す
+        - 全商品が古い場合: 空リストを返して再生成をトリガー
+        - ローリングプールにより、毎回異なる商品が選ばれやすくなる
         旧コードの load_cache() に相当。
         """
         rows = (
@@ -136,7 +142,7 @@ class DBClient:
             .table("amazon_products")
             .select("data, intent_score, context_boost, fetched_at")
             .eq("is_active", True)
-            .order("intent_score", desc=True)
+            .order("fetched_at", desc=True)  # 新しい順に取得
             .execute()
             .data
         ) or []
@@ -144,39 +150,53 @@ class DBClient:
         if not rows:
             return []
 
-        # 鮮度チェック（最初の行の fetched_at を基準にする）
-        fetched_at_str = rows[0].get("fetched_at", "")
-        if fetched_at_str:
+        # 最新バッチの鮮度チェック（最も新しい行の fetched_at を基準にする）
+        newest_fetched_at_str = rows[0].get("fetched_at", "")
+        if newest_fetched_at_str:
             try:
-                fetched_at = datetime.fromisoformat(fetched_at_str.replace("Z", "+00:00"))
-                # タイムゾーン非対応 datetime でも比較できるよう offset を除去
-                fetched_at = fetched_at.replace(tzinfo=None)
-                age_hours = (datetime.now() - fetched_at).total_seconds() / 3600
+                newest_fetched_at = datetime.fromisoformat(newest_fetched_at_str.replace("Z", "+00:00"))
+                newest_fetched_at = newest_fetched_at.replace(tzinfo=None)
+                age_hours = (datetime.now() - newest_fetched_at).total_seconds() / 3600
                 if age_hours >= max_age_hours:
-                    return []
+                    return []  # 最新バッチも古い → 再生成トリガー
             except Exception:
                 pass
 
-        # data JSONB を展開して返す（旧 JSON の dict リストと互換）
+        # data JSONB を展開（旧 JSON の dict リストと互換）
         result = []
         for r in rows:
             product = r.get("data") or {}
             if isinstance(product, str):
                 product = json.loads(product)
-            # DB に保存されたスコアで上書き
             product["intent_score"]  = r.get("intent_score",  product.get("intent_score",  50))
             product["context_boost"] = r.get("context_boost", product.get("context_boost", 0))
             result.append(product)
+
+        # 加重ランダムシャッフル: intent_score が高いほど先頭に来やすいが、毎回順序が変わる
+        # weights = score + 10（最低重みを保証）
+        if len(result) > 1:
+            weights = [max(p.get("intent_score", 50), 10) for p in result]
+            shuffled = []
+            pool = list(zip(weights, result))
+            while pool:
+                w_list = [w for w, _ in pool]
+                idx = random.choices(range(len(pool)), weights=w_list, k=1)[0]
+                _, product = pool.pop(idx)
+                shuffled.append(product)
+            result = shuffled
+
         return result
 
     def save_amazon_deals(self, products: list) -> None:
         """
-        既存の is_active 行を無効化し、新商品を INSERT する。
+        ローリングプール方式で商品を追加する。
+        - 既存の全件削除はしない（最大 _AMAZON_POOL_MAX 件を保持）
+        - 新商品を INSERT し、プールが上限を超えたら最古の is_active 行を無効化
         旧コードの save_cache() / DEALS_JSON.write_text() に相当。
         """
         sb = _get_supabase()
-        # 既存を無効化
-        sb.table("amazon_products").update({"is_active": False}).eq("is_active", True).execute()
+        now_iso = datetime.now().isoformat()
+
         # 新商品を INSERT
         for p in products:
             sb.table("amazon_products").insert({
@@ -184,8 +204,25 @@ class DBClient:
                 "intent_score":  p.get("intent_score",  50),
                 "context_boost": p.get("context_boost", 0),
                 "is_active":     True,
-                "fetched_at":    p.get("fetched_at", datetime.now().isoformat()),
+                "fetched_at":    p.get("fetched_at", now_iso),
             }).execute()
+
+        # プール件数が上限を超えたら最古のものを無効化
+        active_rows = (
+            sb.table("amazon_products")
+            .select("id, fetched_at")
+            .eq("is_active", True)
+            .order("fetched_at", desc=False)  # 古い順
+            .execute()
+            .data
+        ) or []
+
+        overflow = len(active_rows) - _AMAZON_POOL_MAX
+        if overflow > 0:
+            old_ids = [r["id"] for r in active_rows[:overflow]]
+            for oid in old_ids:
+                sb.table("amazon_products").update({"is_active": False}).eq("id", oid).execute()
+            print(f"  [Pool] 古い商品 {overflow}件 を無効化（プール上限={_AMAZON_POOL_MAX}）")
 
     def get_last_amazon_deal_age_hours(self) -> Optional[float]:
         """

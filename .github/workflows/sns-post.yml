@@ -41,6 +41,25 @@ jobs:
           cd x_automation
           python3 product_rotator.py
 
+      - name: 商品プール件数確認
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          python3 - <<'EOF'
+          import os, sys
+          sys.path.insert(0, '.')
+          from db_client import _get_supabase
+          sb = _get_supabase()
+          r_all  = sb.table('amazon_products').select('id', count='exact').execute()
+          r_act  = sb.table('amazon_products').select('id', count='exact').eq('is_active', True).execute()
+          r_st   = sb.table('static_products').select('id', count='exact').eq('is_active', True).execute()
+          print(f"[Pool] amazon_products: 総={r_all.count}件 / active={r_act.count}件")
+          print(f"[Pool] static_products: active={r_st.count}件")
+          if r_act.count and r_act.count < 10:
+              print(f"[警告] プールが10件未満 ({r_act.count}件) — product_rotator.pyの実行を確認してください")
+          EOF
+
       - name: 更新データをコミット & プッシュ
         run: |
           git config user.name "github-actions[bot]"
