@@ -1099,6 +1099,18 @@ def generate_with_gemini(post_type: str, label: str) -> str:
         "progress": "節約・生活改善の『現在進行形の記録』。上記の実際の数字を使って、試行錯誤の過程をリアルに書く。",
     }
 
+    # product タイプには PAS 法の指示を追加注入する
+    pas_block = ""
+    if post_type == "product":
+        pas_block = """
+# コピーライティング手法（productタイプ: 必須適用）
+PAS法（Problem → Agitation → Solution）を投稿文の構造として使うこと:
+  P（Problem）   : 読者の具体的な悩みや不便を1〜2行で提示する
+  A（Agitation） : その悩みを放置した場合のリスク・後悔を1行で描写する
+  S（Solution）  : 商品・グッズのベネフィット（使うとどう変わるか）を1行で提示する
+加えて: 数字（価格・割引率・時間・個数・ランキングなど）を必ず1つ入れること。
+"""
+
     prompt = f"""# 役割
 あなたはSNSマーケティングとコピーライティングの専門家です。
 X（Twitter）でクリック率（CTR）が高く、かつ「人間味」のある投稿文を1つ作成してください。
@@ -1111,18 +1123,19 @@ X（Twitter）でクリック率（CTR）が高く、かつ「人間味」のあ
 # 選択されたスタイルのガイドライン（必ず適用）
 【{style_name}スタイル】
 {style_guide}
-
+{pas_block}
 {feedback_context}
 
 # 制約条件（厳守）
 - 文字数は100文字〜140文字以内（ハッシュタグ除く）
 - 改行を活用して縦読みしやすくする
-- 「いかがでしたか？」などの定型文は一切禁止
+- 「いかがでしたか？」「ぜひ」などの定型文は一切禁止
 - 語尾・言い回しを毎回崩して自然な口調にする
 - 広告・宣伝っぽい表現は使わない
 - URLは不要（別で追加する）
 - ハッシュタグは不要（別で追加する）
 - 最後は「{cta}」で締める
+- 対話的なトーン（フォロワーと会話するような温度感）を維持する
 
 # 構造
 1行目：強烈なフック（{style_name}スタイルの書き出し）
@@ -1270,7 +1283,29 @@ _AMAZON_PRODUCT_HISTORY_PATH = Path(__file__).parent / "product_history.json"
 _AMAZON_COOLDOWN_DAYS = 14
 
 
+_AMAZON_HISTORY_CACHE_KEY = "amazon_product_post_history"
+
+
 def _load_amazon_product_history() -> list:
+    """
+    Amazon商品投稿履歴を読み込む。
+    Supabase（content_cache）→ ローカルファイルの順で試みる。
+    """
+    # Supabase から読み込み（GitHub Actions間でも永続化）
+    try:
+        cached = db.get_content_cache(
+            _AMAZON_HISTORY_CACHE_KEY,
+            post_type   = "amazon_history",
+            max_age_days = 90,  # 履歴は90日間保持
+        )
+        if cached:
+            data = json.loads(cached) if isinstance(cached, str) else cached
+            if isinstance(data, list):
+                return data
+    except Exception:
+        pass
+
+    # フォールバック: ローカルファイル
     try:
         data = json.loads(_AMAZON_PRODUCT_HISTORY_PATH.read_text(encoding="utf-8"))
         if isinstance(data, dict):
@@ -1283,6 +1318,22 @@ def _load_amazon_product_history() -> list:
 
 
 def _save_amazon_product_history(entries: list) -> None:
+    """
+    Amazon商品投稿履歴を Supabase + ローカルファイルの両方に保存。
+    どちらかが失敗してももう一方でクールダウンが効く。
+    """
+    # Supabase に保存（GitHub Actions間での永続化）
+    try:
+        db.set_content_cache(
+            product_key    = _AMAZON_HISTORY_CACHE_KEY,
+            source         = "amazon_post_history",
+            post_type      = "amazon_history",
+            generated_text = json.dumps(entries, ensure_ascii=False),
+        )
+    except Exception as e:
+        print(f"  [AmazonPost] Supabase履歴保存失敗: {e}")
+
+    # ローカルファイルにも保存（フォールバック用）
     try:
         _AMAZON_PRODUCT_HISTORY_PATH.write_text(
             json.dumps({"entries": entries}, ensure_ascii=False, indent=2),
@@ -1529,11 +1580,18 @@ def generate_rakuten_product_post() -> dict:
 カテゴリ: {category['name']}
 レビュー数: {reviews}件 / 評価: {avg}点
 
+【コピーライティング手法: PAS法（必須適用）】
+P（Problem）   : この商品カテゴリで読者が抱える悩みや不便を1〜2行で具体的に提示する
+A（Agitation） : 解決しないままだとどうなるか、リスクや後悔を1行で描写する
+S（Solution）  : この商品を使うとどう変わるか、ベネフィットを1行で提示する
+数字ルール     : 価格({price}円)・レビュー数({reviews}件)・評価({avg}点)のいずれかを文中に入れる
+
 【ルール】
-- tweet1: 90文字以内。商品の魅力を体験談風に（「〜してみた」「〜だった」形式）
+- tweet1: 100〜130文字以内。PAS法+体験談風の口調（「〜してみた」「〜だった」形式）
 - アフィリエイト感を出さず、誠実なリアルレビューとして書く
-- 禁止: 「絶対」「必ず」「騙されたと思って」などの煽り表現
-- 末尾に自然な問いかけを1つ入れる（例: 「{_rakuten_question}」）
+- 禁止: 「絶対」「必ず」「騙されたと思って」「ぜひ」「おすすめ」などの煽り表現
+- 末尾に対話的な問いかけを1つ入れる（例: 「{_rakuten_question}」）
+- フォロワーが返信・いいねしたくなる温度感（対話型トーン）にする
 - 絵文字1〜2個まで
 - ハッシュタグなし（別で付ける）
 - JSON形式のみ: {{"tweet1": "..."}}"""
@@ -1666,6 +1724,7 @@ def generate_a8_program_post() -> dict:
         style_name, style_guide = random.choice(list(_A8_STYLES.items()))
         try:
             from money_agent.gemini_client import generate as _gem_gen
+            _a8_question = random.choice(_ENGAGEMENT_QUESTIONS)
             _persona_prompt = f"""あなたは次のキャラクターとして X（Twitter）投稿を書いてください。
 キャラクター: {persona}
 
@@ -1676,12 +1735,22 @@ def generate_a8_program_post() -> dict:
 【{style_name}の書き方】
 {style_guide}
 
+【コピーライティング手法: PAS法（必須適用）】
+P（Problem）   : 読者が抱える悩みや不便を具体的に1〜2行で提示する
+A（Agitation） : その悩みを放置した場合のリスク・後悔を1行で描写する
+S（Solution）  : サービスのベネフィット（使うとどう変わるか）を1行で提示する
+数字ルール     : 報酬額・割引率・節約できる金額・使用日数など数字を必ず1つ入れる
+
+【末尾の対話要素】
+投稿の最後に「{_a8_question}」を自然に組み込み、フォロワーが返信したくなる雰囲気を作る。
+
 【制約】
-- 70〜110文字以内（URLとハッシュタグは除く）
+- 80〜120文字以内（URLとハッシュタグは除く）
 - 禁止: 「ぜひ」「おすすめ」「チェック」「絶対」「必ず」「騙されたと思って」
 - 独り言・本音の口コミに見える誠実な口調（体験談型）
 - 誇張・煽りを避け、正直な感想として書く
 - URLとハッシュタグは書かない
+- 対話的なトーン（フォロワーに語りかけるような温度感）を維持する
 - 本文のみ出力（説明不要）"""
             _result = _gem_gen(_persona_prompt, use_cache=False, temperature=0.95)
             if _result and len(_result.strip()) >= 30:
