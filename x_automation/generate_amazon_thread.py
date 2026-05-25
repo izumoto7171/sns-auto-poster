@@ -53,6 +53,125 @@ MIN_INTERVAL_MINUTES = 30
 DISCLOSURE_REQUIRED = "#PR"
 ASSOCIATE_DISCLOSURE = "※Amazonアソシエイトに参加しています"
 
+# ─────────────────────────────────────────
+# PAS法 × 数字強制 × 返信誘発 — プロンプト共通定数
+# ─────────────────────────────────────────
+
+# Tweet1 に適用する PAS 構造の指示ブロック
+_PAS_INSTRUCTION = """
+【Tweet1 構造: PAS法（厳守）】
+P（Problem）   : 読者の具体的な悩み・不便を1〜2文で提示する
+A（Agitation） : その悩みを放置した場合のリスク・後悔を1文で描写する
+S（Solution）  : 商品のベネフィット（「使うとこうなれる」変化）を1文で提示する
+
+── 追加ルール（すべて厳守）──
+・上記3要素を「友人へのLINE」のような自然なナラティブで書く
+・箇条書き（■ ・ ● → ① など記号）は絶対禁止 — すべて流れる文章にすること
+・スペック数値は必ず日常言語に変換する:
+    × 5000mAh            →  ○ スマホを1.5回フル充電できる
+    × MagSafe対応        →  ○ iPhoneの背面にペタッとくっつく。コードいらず
+    × IPX7防水           →  ○ シャワー中に使っても問題なかった
+    × ノイズキャンセリング→  ○ 電車の中でほぼ外の音が聞こえなくなる
+    × USB-C急速充電      →  ○ 30分でほぼ半分まで回復した
+・感情の起伏を1文入れる: 「正直ここまで効くとは思ってなかった」「もっと早く買えばよかった」「思ってたより全然変わった」
+・数字を必ず1つ入れる（割引率・価格・使用日数・時間など）
+・リンクを一切含めない（絶対厳守）
+・ハッシュタグなし
+・140文字以内""".strip()
+
+# Tweet2 に適用する深掘り指示
+_DEEP_DIVE_INSTRUCTION = """
+【Tweet2 構造: 使用体験の深掘り（箇条書き絶対禁止）】
+・「なぜこの商品が良いのか」を実際の使用シーンで語る
+・「〜だったのが、〜になった」という before/after 形式で書く
+・他の選択肢と比べた優位点を自然な文章で示す（「〇〇円安い」「バッテリーが○時間長い」など）
+・箇条書き（■ ・ ● → ① など）は絶対禁止 — すべて文章で書くこと
+・スペックを日常言語に変換するルールを Tweet1 と同様に適用する
+・140文字以内""".strip()
+
+# Tweet3 用の商品カテゴリ別「返信を誘発する問いかけ」
+# キーワードマッチングで選ぶ（どれにも当てはまらなければ fallback を使う）
+_CATEGORY_QUESTIONS: list[tuple[list[str], list[str]]] = [
+    (
+        ["イヤホン", "ヘッドホン", "スピーカー", "オーディオ", "音楽"],
+        [
+            "みなさんはイヤホンに何を一番求めますか？（音質？ノイキャン？軽さ？）",
+            "ワイヤレスイヤホンって何を基準に選んでますか？コスパ派？音質派？",
+        ],
+    ),
+    (
+        ["充電", "バッテリー", "モバイル", "USB", "GaN", "充電器"],
+        [
+            "モバイルバッテリーに何を一番求めてますか？（軽さ？大容量？急速充電？）",
+            "充電器・バッテリーを選ぶとき一番重視するのって何ですか？",
+        ],
+    ),
+    (
+        ["掃除", "クリーナー", "掃除機", "ロボット"],
+        [
+            "掃除機を選ぶとき吸引力派？軽さ派？静音派？ぜひ教えてください！",
+            "自動掃除と手動掃除、どっち派ですか？体験談も聞いてみたい",
+        ],
+    ),
+    (
+        ["圧力鍋", "炊飯器", "トースター", "電子レンジ", "キッチン", "調理"],
+        [
+            "キッチン家電って時短と味、どっちを優先して選びますか？",
+            "料理家電で「買って正解だった」ってものがあれば教えてください！",
+        ],
+    ),
+    (
+        ["マウス", "キーボード", "モニター", "PC", "デスク", "ウェブカメラ", "ハブ"],
+        [
+            "テレワークで「あってよかった」デスクグッズ、何ですか？",
+            "デスク環境で一番お金をかける価値があると思うのってどこですか？",
+        ],
+    ),
+    (
+        ["スマート", "スピーカー", "Alexa", "Google", "照明", "電球"],
+        [
+            "スマートホーム、どこから導入しましたか？入口のおすすめを教えてください！",
+            "音声操作って実際に使いこなせてますか？活用法を聞かせてほしい",
+        ],
+    ),
+    (
+        ["Wi-Fi", "ルーター", "インターネット", "回線"],
+        [
+            "自宅のWi-Fi環境、満足してますか？改善した経験があれば教えてください",
+            "Wi-Fiルーターって何年ごとに買い替えてますか？使用年数を教えてほしい",
+        ],
+    ),
+    (
+        ["シャワー", "節水", "お風呂", "水道"],
+        [
+            "節水グッズって効果を感じてますか？使ったことがある方の感想を聞きたい",
+            "光熱費を下げるために実際にやってみたことがあれば教えてください！",
+        ],
+    ),
+]
+
+_FALLBACK_QUESTIONS = [
+    "実際に使ったことがある方、正直な感想を教えてください！",
+    "同じもの持ってる方いますか？使い心地どうですか？",
+    "似たような商品で「こっちの方が良かった」ってものがあれば教えてほしい",
+    "皆さんならこういう商品を選ぶとき何を一番重視しますか？",
+]
+
+
+def _pick_engagement_question(product: dict) -> str:
+    """商品情報からカテゴリを推定して返信誘発の問いかけを選ぶ"""
+    import random as _rand
+    text = " ".join([
+        product.get("title", ""),
+        product.get("category", ""),
+        " ".join(product.get("features", [])),
+        product.get("why_viral", ""),
+    ])
+    for keywords, questions in _CATEGORY_QUESTIONS:
+        if any(kw in text for kw in keywords):
+            return _rand.choice(questions)
+    return _rand.choice(_FALLBACK_QUESTIONS)
+
 def _normalize_url(url: str) -> str:
     """
     AmazonアフィリエイトURLをX投稿用に正規化する。
@@ -276,13 +395,15 @@ def generate_thread(product: dict, optimized_instruction: str = None) -> dict:
 
     amazon_url = product.get("amazon_url", "")
 
-    # amazon_url が空の場合は search_keyword から検索URLを再生成（フェイ��セーフ）
+    # amazon_url が空の場合は search_keyword から検索URLを再生成（フェールセーフ）
     if not amazon_url:
-        from urllib.parse import quote
+        from urllib.parse import urlencode, urlunparse
         keyword = product.get("search_keyword") or product.get("title", "")
         associate_tag = os.getenv("AMAZON_ASSOCIATE_TAG", "smartearn22-22")
         if keyword:
-            amazon_url = f"https://www.amazon.co.jp/s?k={quote(keyword)}&tag={associate_tag}"
+            # urllib.parse.urlencode でクエリを安全に構築（スペース・特殊文字を正しくエンコード）
+            query = urlencode({"k": keyword, "tag": associate_tag})
+            amazon_url = urlunparse(("https", "www.amazon.co.jp", "/s", "", query, ""))
             print(f"  [generate_thread] amazon_url が空のため検索URLを生成: {amazon_url[:60]}")
 
     # X投稿向け計測パラメータ付与（sub1=x_YYYYMMDD）
@@ -334,10 +455,13 @@ def _generate_with_gemini(
         if optimized_instruction:
             instruction_block = f"{optimized_instruction}\n\n"
 
-        prompt = f"""
-{instruction_block}あなたはAmazonアソシエイトの、Amazonの主要な商品から「本当に価値のある1つ」を見つけ出すキュレーションメディアの中の人です。独自のスコアリング（価格・評価・トレンド）で、ガジェットや生活家電のセール情報を毎日配信しています。フォロワーの代わりに、今週の「買い」をピックアップするアカウントです。ステルスマーケティング防止のため、広告・PR投稿には必ず明示しています。
+        # 返信誘発の問いかけをカテゴリから自動選択
+        engagement_q = _pick_engagement_question(product)
 
-以下の商品について、スレッド形式（3ツイート）の投稿文を作成してください。
+        prompt = f"""
+{instruction_block}あなたはAmazonアソシエイトの、Amazonの主要な商品から「本当に価値のある1つ」を見つけ出すキュレーションメディアの中の人です。フォロワーの代わりに今週の「買い」をピックアップし、ステルスマーケティング防止のため広告・PR投稿には必ず明示しています。
+
+以下の商品について、滞在時間とエンゲージメントを最大化するスレッド形式（3ツイート）の投稿文を作成してください。
 
 【商品情報】
 - 商品名: {title}
@@ -347,24 +471,21 @@ def _generate_with_gemini(
 - バズりポイント: {why}
 - フックのヒント: {hook}
 
-【ルール】
-ツイート1（本文）:
-- 140文字以内
-- リンクを含めない（絶対厳守）
-- ハッシュタグなし
-- 「体験談」「気づき」「驚き」のいずれかのスタイル
-- 「宣伝感」を完全に消す
-- 例: 「〇〇を使って気づいたこと。」「これ知らなかった、やばい。」など
+{_PAS_INSTRUCTION}
 
-ツイート2（返信1）:
-- 商品名・価格・主な特徴を箇条書き
-- 「なぜ今買うべきか」を1行で
-- 140文字以内
+{_DEEP_DIVE_INSTRUCTION}
 
-ツイート3（返信2）:
-- URLや「#PR」は書かなくてよい（後から自動付与される）
-- 「気になる人はチェックしてみて」「詳細は下のリンクから」などの誘導文1行だけでよい
-- 50文字以内
+【Tweet3 構造: CTA + 返信誘発】
+・商品リンクへの誘導文を1行（自然な流れで）
+・最後に以下の問いかけをそのまま使う（変更不可）:
+  「{engagement_q}」
+・URLや「#PR」は書かなくてよい（後から自動付与される）
+・80文字以内（問いかけの文字数は含まない）
+
+【全ツイート共通ルール】
+- 「宣伝感」を完全に消す。独り言・体験談・気づきのトーンで書く
+- 「いかがでしたか？」「ぜひ」「チェック」などの定型フレーズは禁止
+- 対話的なトーン（フォロワーと会話するような温度感）を維持する
 
 以下の形式でJSONのみ出力（説明文不要）:
 {{
@@ -409,21 +530,45 @@ def _generate_with_gemini(
 
 
 def _generate_from_template(product: dict) -> dict:
-    """テンプレートベースでスレッドを生成（Geminiなし時）"""
+    """テンプレートベースでスレッドを生成（Geminiなし時・箇条書き禁止版）"""
+    import random as _rand
+
     title    = product.get("title", "この商品")
     price    = product.get("price", {}).get("display", "")
     discount = product.get("discount_rate", 0)
     features = product.get("features", [])
     url      = product.get("amazon_url", "")
     hook     = product.get("story_hook", f"{title}、これ気になってた。")
+    brand    = product.get("brand", "")
 
-    feature_lines = "\n".join(f"・{f}" for f in features[:3]) if features else f"・{title}"
-    discount_text = f"({discount}%OFF)" if discount >= 5 else ""
+    discount_text = f"{discount}%OFFで買えた" if discount >= 5 else (f"{price}円で買えた" if price else "思ってたより安く手に入った")
+    brand_note    = f"（{brand}製）" if brand else ""
 
-    brand = product.get("brand", "")
-    brand_prefix = f"{brand}の" if brand else ""
-    tweet1 = f"{hook}\n\n{brand_prefix}これ1個で、思ってたより全然変わった。\n\n正直ここまで効くとは思ってなかった。"
-    tweet2 = f"■ {title[:40]}\n{feature_lines}\n\n価格: {price}{discount_text}\n今がチャンスかも。"
+    # features を自然な体験談に変換（箇条書き禁止）
+    benefit = ""
+    if features:
+        f0 = features[0]
+        benefit = f"特に「{f0}」が思ってたより全然よくて"
+        benefit += f"、{features[1]}ところも想定外だった。" if len(features) >= 2 else "、正直ここまで効くとは思ってなかった。"
+
+    tweet1_pool = [
+        f"{hook}\n\n半信半疑で試してみたら、{discount_text}。正直ここまで変わるとは思ってなかった。",
+        f"ずっと迷ってた{title[:22]}{brand_note}、ついに買った。{discount_text}。これが思ってたより全然よかった。",
+        f"一人暮らし始めてから「なんとかしたい」と思ってたこと、{title[:18]}で解決した。{discount_text}。もっと早く買えばよかった。",
+        f"{hook} {discount_text}。正直半信半疑で買ったんだけど、使ってみたら想像以上だった。",
+    ]
+
+    tweet2_pool = [
+        (f"{benefit}使い始めて数日で「これなしはもう無理」ってなってた。"
+         f"{price}円でこのクオリティは正直コスパ異常だと思う。"),
+        (f"同じような商品を前に買って失敗してたから期待してなかったけど、これは別物だった。{benefit}"),
+        (f"{title[:22]}って名前だけ聞くと普通そうだけど、実際使ってみると全然違う。{benefit}"),
+        (f"似たの3つ試した末にたどり着いた。{benefit}"
+         f"使い始めて「もっと早く知りたかった」って素直に思った。"),
+    ]
+
+    tweet1 = _rand.choice(tweet1_pool)
+    tweet2 = _rand.choice(tweet2_pool)
     tweet3 = f"詳細はこちら→ {_normalize_url(url)}\n#PR"
 
     # 文字数チェック・トリム（X単位: CJK=2、URL=23、ASCII=1）
@@ -499,43 +644,54 @@ def _generate_ab_with_gemini(product: dict, api_key: str) -> dict:
                 f"もう一方は対照群として標準的なクオリティで出力すること。\n\n"
             )
 
+        # A/B 両パターン共通の返信誘発問いかけ
+        engagement_q = _pick_engagement_question(product)
+
         prompt = f"""
 {ab_learning_block}あなたはX（Twitter）コピーライターです。
-同じ商品に対して2パターンのスレッド投稿を作成してください。
+同じ商品に対して2パターンのスレッド投稿（A/Bテスト用）を作成してください。
 
 【商品情報】
 - 商品名: {title}
 - 価格: {price}{discount_text}
 - 特徴: {feature_text}
 - バズりポイント: {why}
-- URL: {url}
+
+{_PAS_INSTRUCTION}
 
 【パターンA: ベネフィット訴求】
-「これを使うとこうなれる」という未来のポジティブな変化を描く。
-Tweet1の冒頭: 「〜したら、〇〇が変わった」「〜使い始めて、△△に気づいた」スタイル
-リンクなし、140文字以内
+- Tweet1: PAS法を使い「これを使うとこうなれる」という未来の変化で書く
+  冒頭例: 「〜したら、〇〇が変わった」「〜使い始めて、△△に気づいた」
+- 数字（価格・時間・割引率など）を必ず入れる
+- リンクなし、140文字以内
 
 【パターンB: 損失回避訴求】
-「今買わないと損」という機会損失・後悔を引き出す。
-Tweet1の冒頭: 「〜を知らないままだと損」「この値段、今だけ」スタイル
-リンクなし、140文字以内
+- Tweet1: PAS法を使い「知らないと損」という機会損失・後悔を引き出す
+  冒頭例: 「〜を知らないままだと損」「この値段、今だけ」
+- 数字（価格・割引率・期間など）を必ず入れる
+- リンクなし、140文字以内
 
-共通ルール:
-- Tweet2: 商品スペック・価格（140文字以内）
-- Tweet3: リンク（{url}）+ #PR（100文字以内）
-- 宣伝感を消し、体験談・気づきとして書く
+{_DEEP_DIVE_INSTRUCTION}（両パターン共通）
+
+【Tweet3 共通】
+- 誘導文1行 + 以下の問いかけをそのまま含める（変更不可）:
+  「{engagement_q}」
+- URLや「#PR」は書かなくてよい（後から自動付与される）
+- 80文字以内（問いかけ除く）
+
+全ツイート共通: 宣伝感なし・対話的トーン・「いかがでしたか？」禁止
 
 以下のJSONのみ出力（説明文不要）:
 {{
   "benefit": {{
     "tweet1": "...",
     "tweet2": "...",
-    "tweet3": "詳細はこちら→ {url}\\n#PR"
+    "tweet3": "気になった方はリンクからチェックを。\\n{engagement_q}"
   }},
   "loss_aversion": {{
     "tweet1": "...",
     "tweet2": "...",
-    "tweet3": "詳細はこちら→ {url}\\n#PR"
+    "tweet3": "気になった方はリンクからチェックを。\\n{engagement_q}"
   }}
 }}
 """
