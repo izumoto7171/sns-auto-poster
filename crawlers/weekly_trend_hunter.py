@@ -31,7 +31,7 @@ ROOT_DIR = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT_DIR))
 sys.path.insert(0, str(ROOT_DIR / "money_agent"))
 
-PORTFOLIO_PATH        = ROOT_DIR / "money_agent" / "config" / "program_portfolio.json"
+PORTFOLIO_PATH        = ROOT_DIR / "money_agent" / "data" / "program_portfolio.json"
 AMAZON_KEYWORDS_PATH  = ROOT_DIR / "x_automation" / "weekly_amazon_keywords.json"
 RAKUTEN_KEYWORDS_PATH = ROOT_DIR / "x_automation" / "weekly_rakuten_keywords.json"
 CACHE_PATH     = ROOT_DIR / "money_agent" / "a8_programs_cache.json"

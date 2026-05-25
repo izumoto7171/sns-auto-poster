@@ -291,7 +291,7 @@ def load_a8_programs() -> list:
             print(f"[TrendReasoner] a8_programs_cache 読み込み失敗: {e}")
 
     # program_portfolio.json（A8 の ins_id が id として入っている）
-    portfolio_path = _ROOT / "money_agent" / "config" / "program_portfolio.json"
+    portfolio_path = _ROOT / "money_agent" / "data" / "program_portfolio.json"
     if portfolio_path.exists():
         try:
             raw = json.loads(portfolio_path.read_text(encoding="utf-8"))
