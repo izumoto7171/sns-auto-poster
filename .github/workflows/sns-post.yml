@@ -388,6 +388,15 @@ jobs:
       - name: Chromiumインストール（キャッシュミス時のみ）
         run: playwright install chromium --with-deps
 
+      - name: 楽天 Cookie を復元
+        env:
+          RAKUTEN_COOKIES: ${{ secrets.RAKUTEN_COOKIES }}
+        run: |
+          mkdir -p rakuten_room
+          if [ ! -z "$RAKUTEN_COOKIES" ]; then
+            echo "$RAKUTEN_COOKIES" > rakuten_room/rakuten_cookies.json
+          fi
+
       - name: 楽天ルーム投稿
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -397,6 +406,17 @@ jobs:
           RAKUTEN_PASSWORD: ${{ secrets.RAKUTEN_PASSWORD }}
         run: |
           python3 -m rakuten_room.main --count 1
+
+      - name: 楽天更新済み Cookie をコミット & プッシュ
+        if: always()
+        continue-on-error: true
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [ -f rakuten_room/rakuten_cookies.json ]; then
+            git add rakuten_room/rakuten_cookies.json
+            git commit -m "chore: update rakuten cookies [skip ci]" && git push origin main || echo "No cookie changes to commit"
+          fi
 
       - name: 投稿ログをコミット
         if: always()

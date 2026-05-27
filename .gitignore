@@ -4,6 +4,9 @@
 *_session.json
 x_browser_cookies.json
 
+# 楽天 Cookie は Actions が書き込む → 除外対象から外す
+!rakuten_room/rakuten_cookies.json
+
 # ログ・一時ファイル
 *.log
 *.mp4
