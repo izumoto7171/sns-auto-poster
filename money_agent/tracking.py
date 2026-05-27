@@ -20,6 +20,7 @@
     # → https://smart-earn-life.hateblo.jp/entry/xxx?utm_source=x&utm_medium=social&utm_campaign=20260411_auto
 """
 from datetime import datetime
+from urllib.parse import urlencode, urlparse, parse_qsl, urlunparse
 
 
 # プラットフォーム識別子（A8レポートで見やすい短縮形）
@@ -38,6 +39,19 @@ def _today() -> str:
     return datetime.now().strftime("%Y%m%d")
 
 
+def _merge_params(url: str, new_params: dict) -> str:
+    """
+    urllib.parse を使って URL に安全にクエリパラメータを追加する。
+    既存のパラメータを壊さず、重複キーは new_params の値で上書きする。
+    """
+    parsed = urlparse(url)
+    # 既存パラメータを取得（重複キーを new_params で上書き）
+    existing = [(k, v) for k, v in parse_qsl(parsed.query, keep_blank_values=True)
+                if k not in new_params]
+    merged = existing + list(new_params.items())
+    return urlunparse(parsed._replace(query=urlencode(merged)))
+
+
 def add_a8_sid(url: str, platform: str) -> str:
     """
     A8.netトラッキングURLにa8sidサブIDを付与する。
@@ -48,8 +62,7 @@ def add_a8_sid(url: str, platform: str) -> str:
         return url
     pid = PLATFORM_IDS.get(platform, platform)
     sid = f"{pid}_{_today()}"
-    sep = "&" if "?" in url else "?"
-    return f"{url}{sep}a8sid={sid}"
+    return _merge_params(url, {"a8sid": sid})
 
 
 def add_amazon_sub(url: str, platform: str) -> str:
@@ -63,8 +76,7 @@ def add_amazon_sub(url: str, platform: str) -> str:
         return url
     pid = PLATFORM_IDS.get(platform, platform)
     sub = f"{pid}_{_today()}"
-    sep = "&" if "?" in url else "?"
-    return f"{url}{sep}sub1={sub}"
+    return _merge_params(url, {"sub1": sub})
 
 
 def add_utm(url: str, platform: str, campaign: str = "auto") -> str:
@@ -77,9 +89,11 @@ def add_utm(url: str, platform: str, campaign: str = "auto") -> str:
         return url
     pid = PLATFORM_IDS.get(platform, platform)
     date = _today()
-    params = f"utm_source={pid}&utm_medium=social&utm_campaign={date}_{campaign}"
-    sep = "&" if "?" in url else "?"
-    return f"{url}{sep}{params}"
+    return _merge_params(url, {
+        "utm_source":   pid,
+        "utm_medium":   "social",
+        "utm_campaign": f"{date}_{campaign}",
+    })
 
 
 def tag_affiliate_link(url: str, platform: str) -> str:

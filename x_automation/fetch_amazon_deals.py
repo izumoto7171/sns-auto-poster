@@ -79,9 +79,17 @@ def _mark_validated(asin: str, cache: dict) -> None:
 
 
 def _make_search_url(keyword: str) -> str:
-    """Amazon検索URL生成（PA-API不使用・アフィリエイトタグ付き）"""
-    from urllib.parse import quote
-    return f"https://www.amazon.co.jp/s?k={quote(keyword)}&tag={ASSOCIATE_TAG}"
+    """Amazon検索URL生成（urllib.parse.urlencode でクエリを安全に構築）"""
+    from urllib.parse import urlencode, urlunparse
+    query = urlencode({"k": keyword, "tag": ASSOCIATE_TAG})
+    return urlunparse(("https", "www.amazon.co.jp", "/s", "", query, ""))
+
+
+def _make_dp_url(asin: str) -> str:
+    """ASIN から商品直リンクURLを安全に生成する"""
+    from urllib.parse import urlencode, urlunparse
+    query = urlencode({"tag": ASSOCIATE_TAG})
+    return urlunparse(("https", "www.amazon.co.jp", f"/dp/{asin}", "", query, ""))
 
 
 def _resolve_asin(keyword: str) -> str:
@@ -91,9 +99,11 @@ def _resolve_asin(keyword: str) -> str:
     """
     import re
     import urllib.request
-    from urllib.parse import quote
+    from urllib.parse import urlencode, urlunparse
 
-    search_url = f"https://www.amazon.co.jp/s?k={quote(keyword)}"
+    # 検索URL は urlencode で安全に構築（スペース等を正しくエンコード）
+    search_url = urlunparse(("https", "www.amazon.co.jp", "/s", "",
+                              urlencode({"k": keyword}), ""))
     headers = {
         "User-Agent": (
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -112,7 +122,8 @@ def _resolve_asin(keyword: str) -> str:
         asins = re.findall(r'data-asin="([A-Z0-9]{10})"', html)
         for asin in asins:
             if asin:
-                return f"https://www.amazon.co.jp/dp/{asin}?tag={ASSOCIATE_TAG}"
+                # ASIN ベースのURLを urllib.parse で安全に生成
+                return _make_dp_url(asin)
     except Exception as e:
         print(f"  ⚠️  ASIN解決失敗 ({keyword[:20]}): {e}")
 
@@ -371,9 +382,9 @@ def fetch_via_paapi(category: str, count: int) -> list:
                         features = item.item_info.features.display_values[:3]
 
                     # PA-API の DetailPageURL を優先（アフィリエイトタグ込みの公式URL）
-                    # 取得できない場合は /dp/ASIN 形式で構築
+                    # 取得できない場合は /dp/ASIN 形式で urllib.parse を使って構築
                     detail_url = getattr(item, "detail_page_url", None)
-                    amazon_url = detail_url if detail_url else f"https://www.amazon.co.jp/dp/{asin}?tag={ASSOCIATE_TAG}"
+                    amazon_url = detail_url if detail_url else _make_dp_url(asin)
 
                     products.append({
                         "asin":          asin,
