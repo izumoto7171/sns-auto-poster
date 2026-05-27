@@ -108,6 +108,43 @@ def _generate_card_file(text: str, post_type: str) -> str:
         return ""
 
 
+def _generate_review_image(product: dict) -> str:
+    """
+    商品情報からスマホ編集風レビュー画像を生成してファイルパスを返す。
+    楽天・Amazon商品投稿で呼び出す。失敗時は空文字列。
+
+    Args:
+        product: {"name"/"title": 商品名, "image_url": 画像URL,
+                  "category": カテゴリ, "price": 価格}
+    """
+    try:
+        sys.path.insert(0, os.path.dirname(__file__))
+        from image_editor import create_review_image
+        from x_post_generator import generate_review_text_for_image
+
+        # Amazon/楽天どちらでも動くように name/title を吸収
+        name     = product.get("name") or product.get("title", "")
+        img_url  = product.get("image_url", "")
+        category = product.get("category", "")
+        price    = int(product.get("price", 0))
+
+        if not name:
+            print("⚠️  商品名が取得できないためレビュー画像をスキップ")
+            return ""
+
+        # Gemini でレビューテキストを生成
+        review_text = generate_review_text_for_image(name, category, price)
+
+        tmp_path = os.path.join(
+            tempfile.gettempdir(),
+            f"review_card_{int(time.time())}.jpg",
+        )
+        return create_review_image(name, review_text, img_url, output_path=tmp_path)
+    except Exception as e:
+        print(f"⚠️ レビュー画像生成スキップ: {e}")
+        return ""
+
+
 # ─────────────────────────────────────────
 # tweepy（公式API v2 + v1.1 media upload）
 # ─────────────────────────────────────────
@@ -415,13 +452,20 @@ def post_now(force_type: str = None, test_mode: bool = False) -> bool:
     print(f"\n投稿タイプ: {post['label']} ({post['chars']}文字)")
     print(f"投稿時刻: {datetime.now().strftime('%Y/%m/%d %H:%M')}")
 
-    # Amazon商品タイプはスレッド投稿
+    # Amazon商品タイプはスレッド投稿（+ レビュー画像添付）
     if post["type"] == "product":
         amazon_post = generate_amazon_product_post()
+        if not amazon_post or not amazon_post.get("thread"):
+            # 静的データで再試行（Gemini/PA-APIが使えない場合）
+            print("⚠️ Amazon商品取得失敗、静的データで再試行")
+            amazon_post = generate_amazon_product_post(force_refresh=True)
+
         if amazon_post and amazon_post.get("thread"):
-            thread = amazon_post["thread"]
-            product_title = amazon_post.get("product", {}).get("title", "")
+            thread        = amazon_post["thread"]
+            product_info  = amazon_post.get("product", {})
+            product_title = product_info.get("title", "")
             print(f"Amazon商品: {product_title}")
+
             if test_mode:
                 print("\n[DRY RUN] Amazonスレッド投稿プレビュー:")
                 print("── Tweet1 ──")
@@ -431,8 +475,28 @@ def post_now(force_type: str = None, test_mode: bool = False) -> bool:
                 print("── Tweet3 ──")
                 print(thread.get("tweet3", ""))
                 success = True
+                image_path = ""
             else:
-                success = post_amazon_thread(thread)
+                # レビュー画像生成 → tweepy で tweet1 に添付投稿を試みる
+                image_path = _generate_review_image(product_info)
+                tweet1_text = thread.get("tweet1", "")
+                if image_path:
+                    print("レビュー画像添付で tweepy 投稿を試みます...")
+                    success = post_with_tweepy(tweet1_text, image_path)
+                    if not success:
+                        # tweepy失敗 → 画像なしでスレッド投稿（ブラウザ）
+                        print("⚠️ tweepy失敗、画像なしのスレッド投稿にフォールバック")
+                        success = post_amazon_thread(thread)
+                else:
+                    # 画像生成失敗 → 従来スレッド投稿
+                    success = post_amazon_thread(thread)
+
+            if image_path and os.path.exists(image_path):
+                try:
+                    os.remove(image_path)
+                except Exception:
+                    pass
+
             save_log({
                 "datetime": datetime.now().isoformat(),
                 "type":     "amazon_thread",
@@ -441,41 +505,12 @@ def post_now(force_type: str = None, test_mode: bool = False) -> bool:
                 "text":     thread.get("tweet1", ""),
                 "success":  success,
                 "mode":     "dry_run" if test_mode else "live",
-                "has_image": False,
+                "has_image": bool(image_path),
             })
             return success
-        else:
-            # 静的データで再試行（Gemini/PA-APIが使えない場合）
-            print("⚠️ Amazon商品取得失敗、静的データで再試行")
-            amazon_post = generate_amazon_product_post(force_refresh=True)
-            if amazon_post and amazon_post.get("thread"):
-                thread = amazon_post["thread"]
-                product_title = amazon_post.get("product", {}).get("title", "")
-                print(f"Amazon商品（静的）: {product_title}")
-                if test_mode:
-                    print("\n[DRY RUN] Amazonスレッド投稿プレビュー（静的）:")
-                    print("── Tweet1 ──")
-                    print(thread.get("tweet1", ""))
-                    print("── Tweet2 ──")
-                    print(thread.get("tweet2", ""))
-                    print("── Tweet3 ──")
-                    print(thread.get("tweet3", ""))
-                    success = True
-                else:
-                    success = post_amazon_thread(thread)
-                save_log({
-                    "datetime": datetime.now().isoformat(),
-                    "type":     "amazon_thread",
-                    "label":    "Amazon商品紹介（静的）",
-                    "chars":    len(thread.get("tweet1", "")),
-                    "text":     thread.get("tweet1", ""),
-                    "success":  success,
-                    "mode":     "dry_run" if test_mode else "live",
-                    "has_image": False,
-                })
-                return success
-            print("❌ Amazon商品取得完全失敗、投稿スキップ")
-            return False
+
+        print("❌ Amazon商品取得完全失敗、投稿スキップ")
+        return False
 
     # A8タイプはスレッド投稿（tweet1=本文リンクなし、tweet2=短縮URL）
     if post["type"] == "a8" and post.get("thread", {}).get("tweet2"):
@@ -509,9 +544,10 @@ def post_now(force_type: str = None, test_mode: bool = False) -> bool:
             )
         return success
 
-    # 楽天タイプはスレッド投稿（tweet1=本文、tweet2=URL）
+    # 楽天タイプはスレッド投稿（tweet1=本文、tweet2=URL）+ レビュー画像添付
     if post["type"] == "rakuten" and post.get("thread", {}).get("tweet2"):
-        thread = post["thread"]
+        thread       = post["thread"]
+        product_info = post.get("product", {})
         print(f"楽天商品スレッド投稿: {thread.get('tweet1', '')[:40]}...")
         if test_mode:
             print("\n[DRY RUN] 楽天スレッド投稿プレビュー:")
@@ -519,18 +555,36 @@ def post_now(force_type: str = None, test_mode: bool = False) -> bool:
             print(thread.get("tweet1", ""))
             print("── Tweet2 ──")
             print(thread.get("tweet2", ""))
-            success = True
+            success    = True
+            image_path = ""
         else:
-            success = post_amazon_thread(thread)  # 同じスレッド投稿ロジックを流用
+            # レビュー画像生成 → tweepy で tweet1 に添付投稿を試みる
+            image_path  = _generate_review_image(product_info)
+            tweet1_text = thread.get("tweet1", "")
+            if image_path:
+                print("レビュー画像添付で tweepy 投稿を試みます...")
+                success = post_with_tweepy(tweet1_text, image_path)
+                if not success:
+                    print("⚠️ tweepy失敗、画像なしのスレッド投稿にフォールバック")
+                    success = post_amazon_thread(thread)
+            else:
+                success = post_amazon_thread(thread)
+
+            if image_path and os.path.exists(image_path):
+                try:
+                    os.remove(image_path)
+                except Exception:
+                    pass
+
         save_log({
-            "datetime": datetime.now().isoformat(),
-            "type":     "rakuten_thread",
-            "label":    "楽天商品紹介",
-            "chars":    len(thread.get("tweet1", "")),
-            "text":     thread.get("tweet1", ""),
-            "success":  success,
-            "mode":     "dry_run" if test_mode else "live",
-            "has_image": False,
+            "datetime":  datetime.now().isoformat(),
+            "type":      "rakuten_thread",
+            "label":     "楽天商品紹介",
+            "chars":     len(thread.get("tweet1", "")),
+            "text":      thread.get("tweet1", ""),
+            "success":   success,
+            "mode":      "dry_run" if test_mode else "live",
+            "has_image": bool(image_path),
         })
         return success
 

@@ -1621,11 +1621,18 @@ S（Solution）  : この商品を使うとどう変わるか、ベネフィッ�
         tweet2 = f"▶ {name}\n{url}\n\n#楽天市場 #{category['name'].replace('・', '')} #楽天アフィリエイト"
 
         return {
-            "type":   "rakuten",
-            "label":  "楽天商品紹介",
-            "text":   tweet1,
-            "thread": {"tweet1": tweet1, "tweet2": tweet2},
-            "chars":  len(tweet1),
+            "type":    "rakuten",
+            "label":   "楽天商品紹介",
+            "text":    tweet1,
+            "thread":  {"tweet1": tweet1, "tweet2": tweet2},
+            "chars":   len(tweet1),
+            # 画像カード生成に使う商品情報
+            "product": {
+                "name":      product.get("name", ""),
+                "price":     product.get("price", 0),
+                "image_url": product.get("image_url", ""),
+                "category":  category.get("name", ""),
+            },
         }
     except Exception as e:
         print(f"⚠️  楽天商品投稿生成エラー: {e}")
@@ -1949,6 +1956,64 @@ def preview_posts(count: int = 4):
         print("─" * 45)
         print(post["text"])
     print("=" * 55)
+
+
+def generate_review_text_for_image(
+    product_name: str,
+    category: str = "",
+    price: int = 0,
+) -> str:
+    """
+    商品レビュー画像に載せる「体験レビュー型の生々しいテキスト」をGeminiで生成する。
+    AI感を排除するため、口語・ですます混在・誤字っぽさのある自然な文体を指示。
+
+    Returns:
+        2〜4行のレビューテキスト。Gemini失敗時はテンプレートを返す。
+    """
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        return _review_fallback(product_name, category)
+
+    try:
+        from money_agent.gemini_client import generate as gemini_generate
+
+        price_str = f"{price:,}円" if price else ""
+        prompt = f"""あなたは実際にこの商品を使った一般人です。
+Xに投稿する画像に載せるための短い手書き風レビューを書いてください。
+
+商品名: {product_name[:40]}
+カテゴリ: {category}
+価格: {price_str}
+
+【出力ルール】
+- 2〜4行（80〜120文字）
+- 口語で自然なカジュアルな文体（「〜した」「〜だった」「〜かも」）
+- AI感・宣伝感は一切禁止
+- 具体的な数値や日数を1つ入れる（例: 3日目、1週間、毎朝）
+- 最後の一文は感情の本音で締める（例: 「もっと早く買えばよかった」「意外と使えてる」）
+- ハッシュタグ不要、絵文字1個まで
+
+テキストのみ出力（前置き・説明不要）。"""
+
+        text = gemini_generate(prompt, use_cache=False, temperature=0.9)
+        if text and len(text.strip()) > 10:
+            return text.strip()
+    except Exception as e:
+        print(f"  [ReviewGen] Gemini生成失敗: {e}")
+
+    return _review_fallback(product_name, category)
+
+
+def _review_fallback(product_name: str, category: str) -> str:
+    """Gemini失敗時のレビューテキストテンプレート（ランダム選択）"""
+    templates = [
+        f"半信半疑で買ったけど、想像以上だった。\n毎日使ってるし、コスパも悪くない。\nもっと早く知りたかったやつ。",
+        f"正直そこまで期待してなかった。\n使い始めて3日目くらいから手放せなくなった😅\nこれはリピートするかも。",
+        f"レビュー見て買ったけど評判通りで良かった。\n細かいところまで使いやすくて気に入ってる。\n周りにも勧めたくなる一品。",
+        f"価格的に迷ったけど思い切って買った。\n結果的に買って正解。満足度が高い。\n使うたびに買ってよかったなと思う。",
+    ]
+    import random as _r
+    return _r.choice(templates)
 
 
 if __name__ == "__main__":
