@@ -514,7 +514,7 @@ def _generate_with_gemini(
 
         client = genai.Client(api_key=api_key)
         resp   = client.models.generate_content(
-            model="gemini-2.0-flash-lite",
+            model="gemini-2.5-flash-lite",
             contents=prompt,
         )
         raw = resp.text.strip()
@@ -715,7 +715,7 @@ def _generate_ab_with_gemini(product: dict, api_key: str) -> dict:
 
         client = genai.Client(api_key=api_key)
         resp   = client.models.generate_content(
-            model="gemini-2.0-flash-lite",
+            model="gemini-2.5-flash-lite",
             contents=prompt,
         )
         raw = resp.text.strip()

@@ -339,7 +339,7 @@ def generate_products_via_gemini(
 
         client = genai.Client(api_key=api_key)
         resp   = client.models.generate_content(
-            model="gemini-2.0-flash-lite",
+            model="gemini-2.5-flash-lite",
             contents=prompt,
         )
         raw = resp.text.strip()
