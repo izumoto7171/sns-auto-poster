@@ -221,6 +221,7 @@ jobs:
 
       - name: クールダウン履歴をコミット & プッシュ
         if: always()
+        continue-on-error: true  # GitHub側のサーバーエラーでジョブ全体を失敗させない
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
