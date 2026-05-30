@@ -1379,12 +1379,11 @@ def _filter_amazon_cooldown(products: list) -> list:
             available.append(p)
     if available:
         return available
-    # 全件クールダウン中 → 最も古く投稿されたものを優先して全件返す
-    print("  [AmazonPost] 全商品クールダウン中 → 最古投稿を優先して全件返す")
-    history_oldest = sorted(products, key=lambda p: history.get(
-        p.get("asin") or p.get("search_keyword", ""), ""
-    ))
-    return history_oldest
+    # 全件クールダウン中 → ランダムシャッフルして固着を防ぐ
+    print("  [AmazonPost] 全商品クールダウン中 → ランダム順で全件返す")
+    shuffled = list(products)
+    random.shuffle(shuffled)
+    return shuffled
 
 
 def generate_amazon_product_post(force_refresh: bool = False) -> dict:
@@ -1398,7 +1397,7 @@ def generate_amazon_product_post(force_refresh: bool = False) -> dict:
         from fetch_amazon_deals import fetch_deals
         from generate_amazon_thread import generate_thread
 
-        products = fetch_deals("gadget", count=5, force_refresh=force_refresh)
+        products = fetch_deals("gadget", count=15, force_refresh=force_refresh)
         if not products:
             return {}
 
