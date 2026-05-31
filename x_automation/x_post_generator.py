@@ -1368,22 +1368,29 @@ def _mark_amazon_product_posted(product: dict) -> None:
 
 
 def _filter_amazon_cooldown(products: list) -> list:
-    """last_posted_at が14日以内の商品をフィルタして返す"""
+    """
+    last_posted_at が14日以内の商品を除外して返す。
+    残った商品を「未投稿 → 最古投稿」順に並べて返す（選択側がローテーションしやすくなる）。
+    全件クールダウン中の場合は最古投稿順で全件返す（ランダムシャッフルは廃止）。
+    """
     cutoff = (datetime.now() - timedelta(days=_AMAZON_COOLDOWN_DAYS)).isoformat()
     history = {e["key"]: e.get("last_posted_at", "") for e in _load_amazon_product_history()}
-    available = []
-    for p in products:
+
+    def _sort_key(p: dict) -> str:
         key = p.get("asin") or p.get("search_keyword", "")
-        posted_at = history.get(key, "")
-        if posted_at < cutoff:
-            available.append(p)
+        # 未投稿（履歴なし）は最古扱いにして先頭へ
+        return history.get(key, "0000-00-00")
+
+    available = [
+        p for p in products
+        if history.get(p.get("asin") or p.get("search_keyword", ""), "") < cutoff
+    ]
     if available:
-        return available
-    # 全件クールダウン中 → ランダムシャッフルして固着を防ぐ
-    print("  [AmazonPost] 全商品クールダウン中 → ランダム順で全件返す")
-    shuffled = list(products)
-    random.shuffle(shuffled)
-    return shuffled
+        return sorted(available, key=_sort_key)
+
+    # 全件クールダウン中 → 最古投稿を優先して全件返す（楽天と同方針）
+    print("  [AmazonPost] 全商品クールダウン中 → 最古投稿を優先")
+    return sorted(products, key=_sort_key)
 
 
 def generate_amazon_product_post(force_refresh: bool = False) -> dict:
@@ -1397,17 +1404,31 @@ def generate_amazon_product_post(force_refresh: bool = False) -> dict:
         from fetch_amazon_deals import fetch_deals
         from generate_amazon_thread import generate_thread
 
-        products = fetch_deals("gadget", count=15, force_refresh=force_refresh)
+        # count を多めに取得してローテーションの選択プールを広げる
+        products = fetch_deals("gadget", count=25, force_refresh=force_refresh)
         if not products:
             return {}
 
-        # クールダウン済み商品を除外
+        # クールダウン済み商品を除外（戻り値は「未投稿 → 最古投稿」順）
         products = _filter_amazon_cooldown(products)
 
-        # 上位5件から重み付きランダム選択（特定商品への固着を防ぐ）
-        top = products[:5]
-        scores = [p.get("intent_score", 50) for p in top]
-        product = random.choices(top, weights=scores, k=1)[0]
+        # 未投稿商品（履歴に存在しないもの）を最優先で選択し、
+        # すべて投稿済みなら最古投稿グループから均等ランダムで選ぶ。
+        # intent_score による重み付きランダムは廃止（高スコア商品への固着を防ぐ）。
+        history_keys = {e["key"] for e in _load_amazon_product_history()}
+        not_posted = [
+            p for p in products
+            if (p.get("asin") or p.get("search_keyword", "")) not in history_keys
+        ]
+        if not_posted:
+            # 未投稿商品が残っていれば、その中からランダムに1件選ぶ
+            product = random.choice(not_posted)
+            print(f"  [AmazonPost] 未投稿商品を選択: {product.get('title','')[:40]}")
+        else:
+            # 全件投稿済み → 最古投稿グループ（先頭1/3または最低3件）から均等ランダム
+            pool_size = max(3, len(products) // 3)
+            product = random.choice(products[:pool_size])
+            print(f"  [AmazonPost] 最古投稿グループから選択: {product.get('title','')[:40]}")
 
         # 投稿済みとして記録（14日クールダウン開始）
         _mark_amazon_product_posted(product)
