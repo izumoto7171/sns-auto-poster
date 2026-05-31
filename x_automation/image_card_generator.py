@@ -86,21 +86,44 @@ def _is_pillow_available() -> bool:
         return False
 
 
+_ASSETS_FONTS_DIR = os.path.join(os.path.dirname(__file__), "..", "assets", "fonts")
+
+_FONT_PATHS = [
+    # ① リポジトリ内（環境非依存・最優先）
+    os.path.join(_ASSETS_FONTS_DIR, "NotoSansJP-Regular.ttf"),
+    os.path.join(_ASSETS_FONTS_DIR, "NotoSansJP-Bold.ttf"),
+    os.path.join(_ASSETS_FONTS_DIR, "NotoSansCJK-Regular.ttc"),
+    # ② Ubuntu / GitHub Actions（fonts-noto-cjk）
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
+    # ③ macOS
+    "/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc",
+    "/Library/Fonts/Arial Unicode MS.ttf",
+    # ④ 汎用フォールバック
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+]
+
+
+def _fc_list_fonts() -> list:
+    """fc-list で日本語フォントパスを動的に取得。失敗時は空リスト。"""
+    try:
+        import subprocess
+        result = subprocess.run(
+            ["fc-list", ":lang=ja", "--format=%{file}\n"],
+            capture_output=True, text=True, timeout=3,
+        )
+        if result.returncode == 0:
+            return [l.strip() for l in result.stdout.splitlines() if l.strip()]
+    except Exception:
+        pass
+    return []
+
+
 def _get_font(size: int):
     """日本語対応フォントを取得（なければデフォルト）"""
     from PIL import ImageFont
-    font_paths = [
-        # Ubuntu / GitHub Actions
-        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-        "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
-        "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
-        # macOS
-        "/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc",
-        "/Library/Fonts/Arial Unicode MS.ttf",
-        # Fallback
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-    ]
-    for path in font_paths:
+    for path in _FONT_PATHS + _fc_list_fonts():
         if os.path.exists(path):
             try:
                 return ImageFont.truetype(path, size)

@@ -33,36 +33,60 @@ ACCENT_COLOR = (220, 80, 60)     # アクセント（レビュー星など）
 
 TILT_ANGLE   = -3.0   # 傾き角度（度）。負 = 反時計回り
 
-# フォント候補（OS別にフォールバック）
+# リポジトリ内フォントディレクトリ（環境非依存・最優先）
+_ASSETS_FONTS_DIR = Path(__file__).parent.parent / "assets" / "fonts"
+
+# フォント候補（優先順）
 _FONT_CANDIDATES = [
-    # macOS — 丸ゴシック系
+    # ① リポジトリ内（git 管理 or CI でダウンロード済み）
+    str(_ASSETS_FONTS_DIR / "NotoSansJP-Regular.ttf"),
+    str(_ASSETS_FONTS_DIR / "NotoSansJP-Bold.ttf"),
+    str(_ASSETS_FONTS_DIR / "NotoSansCJK-Regular.ttc"),
+    # ② Ubuntu / GitHub Actions（fonts-noto-cjk パッケージ）
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
+    "/usr/share/fonts/truetype/noto/NotoSansCJKjp-Regular.otf",
+    "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
+    # ③ macOS
     "/System/Library/Fonts/ヒラギノ丸ゴ ProN W4.ttc",
     "/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc",
     "/System/Library/Fonts/ヒラギノ角ゴシック W6.ttc",
-    # macOS — AppleGothic
     "/System/Library/Fonts/Supplemental/AppleGothic.ttf",
-    # Ubuntu / GitHub Actions
-    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-    "/usr/share/fonts/truetype/noto/NotoSansCJKjp-Regular.otf",
-    "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
-    # 汎用フォールバック
+    # ④ 汎用フォールバック
     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
 ]
+
+_BOLD_CANDIDATES = [
+    str(_ASSETS_FONTS_DIR / "NotoSansJP-Bold.ttf"),
+    str(_ASSETS_FONTS_DIR / "NotoSansCJK-Bold.ttc"),
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
+    "/System/Library/Fonts/ヒラギノ角ゴシック W6.ttc",
+    "/System/Library/Fonts/ヒラギノ角ゴシック W9.ttc",
+]
+
+
+def _fc_list_fonts() -> list:
+    """fc-list で日本語フォントのパスを動的に取得（Linux/macOS）。失敗時は空リスト。"""
+    try:
+        import subprocess
+        result = subprocess.run(
+            ["fc-list", ":lang=ja", "--format=%{file}\n"],
+            capture_output=True, text=True, timeout=3,
+        )
+        if result.returncode == 0:
+            return [l.strip() for l in result.stdout.splitlines() if l.strip()]
+    except Exception:
+        pass
+    return []
 
 
 def _get_font(size: int, bold: bool = False):
     """日本語対応フォントを取得。見つからなければデフォルトを返す。"""
     from PIL import ImageFont
 
-    # ボールドはヒラギノ W6 を優先
-    bold_candidates = []
-    if bold:
-        bold_candidates = [
-            "/System/Library/Fonts/ヒラギノ角ゴシック W6.ttc",
-            "/System/Library/Fonts/ヒラギノ角ゴシック W9.ttc",
-        ]
+    candidates = (_BOLD_CANDIDATES if bold else []) + _FONT_CANDIDATES + _fc_list_fonts()
 
-    for path in (bold_candidates + _FONT_CANDIDATES):
+    for path in candidates:
         if os.path.exists(path):
             try:
                 return ImageFont.truetype(path, size)

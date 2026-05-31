@@ -10,3 +10,4 @@ Pillow
 python-amazon-paapi
 tenacity
 supabase
+beautifulsoup4

@@ -8,8 +8,9 @@ Amazon商品データ自動ローテーター（PA-API不使用）
 4. Geminiで本日分5件を新規生成 → data/amazon_deals.json を上書き
 5. data/product_history.json に今日のキーワードを追記
 
-商品URL形式（PA-API不使用）:
-  https://www.amazon.co.jp/s?k={URLエンコード済みキーワード}&tag={ASSOCIATE_TAG}
+商品URL形式:
+  静的データ: https://www.amazon.co.jp/dp/{ASIN}/?tag={ASSOCIATE_TAG}（個別商品ページ・成果対象）
+  Gemini生成: https://www.amazon.co.jp/s?k={URLエンコード済みキーワード}&tag={ASSOCIATE_TAG}（ASIN未確定時）
 
 実行:
   python3 scripts/product_rotator.py             # 本番実行

@@ -1,97 +1,682 @@
 [
   {
-    "search_keyword": "Anker 電源タップ 延長コード USB-C USB-A 6口 雷ガード",
+    "asin": "B0B96T9CBY",
+    "search_keyword": "Anker 電源タップ 延長コード USB-C 6口 雷ガード",
     "title": "Anker 電源タップ 6口+USB-C付き 雷ガード 2m延長コード",
     "brand": "Anker",
-    "price":          { "amount": 2980, "currency": "JPY", "display": "¥2,980" },
-    "original_price": { "amount": 3980, "display": "¥3,980" },
+    "price": {
+      "amount": 2980,
+      "currency": "JPY",
+      "display": "¥2,980"
+    },
+    "original_price": {
+      "amount": 3980,
+      "display": "¥3,980"
+    },
     "discount_rate": 25,
     "category": "ガジェット",
+    "keywords": [
+      "電源タップ",
+      "デスク周り",
+      "便利ガジェット",
+      "テレワーク"
+    ],
     "features": [
       "コンセント6口 + USB-C/A同時充電対応",
       "雷サージ保護で機器を守る",
       "2m延長コードでデスク周りをスッキリ整理"
     ],
-    "why_viral":    "新生活のタコ足配線を一発解決。新社会人の定番買い",
-    "story_hook":   "引っ越して最初に後悔したのが、コンセントの少なさだった。",
+    "why_viral": "新生活のタコ足配線を一発解決。新社会人の定番買い",
+    "story_hook": "引っ越して最初に後悔したのが、コンセントの少なさだった。",
     "user_problem": "コンセントが足りなくてデスクがごちゃごちゃ",
-    "amazon_url": "https://www.amazon.co.jp/s?k=Anker+%E9%9B%BB%E6%BA%90%E3%82%BF%E3%83%83%E3%83%97+%E5%BB%B6%E9%95%B7%E3%82%B3%E3%83%BC%E3%83%89+USB-C+6%E5%8F%A3+%E9%9B%B7%E3%82%AC%E3%83%BC%E3%83%89&tag=smartearn22-22",
-    "source": "static"
+    "amazon_url": "https://www.amazon.co.jp/dp/B0B96T9CBY/?tag=smartearn22-22",
+    "source": "static",
+    "image_url": ""
   },
   {
+    "asin": "B09V7C9V8B",
     "search_keyword": "衣類圧縮袋 掃除機不要 トラベル 収納 大容量 引越し",
     "title": "掃除機不要の衣類圧縮袋 10枚セット（引越し・クローゼット整理）",
     "brand": "Storage Works",
-    "price":          { "amount": 1980, "currency": "JPY", "display": "¥1,980" },
-    "original_price": { "amount": 2980, "display": "¥2,980" },
+    "price": {
+      "amount": 1980,
+      "currency": "JPY",
+      "display": "¥1,980"
+    },
+    "original_price": {
+      "amount": 2980,
+      "display": "¥2,980"
+    },
     "discount_rate": 33,
     "category": "ガジェット",
+    "keywords": [
+      "旅行グッズ",
+      "便利グッズ",
+      "衣類圧縮袋",
+      "収納"
+    ],
     "features": [
       "掃除機不要・くるくる丸めるだけで圧縮",
       "S/M/L/XL 4サイズ10枚入り",
       "クローゼット・引越し・旅行全対応"
     ],
-    "why_viral":    "新生活の荷物整理に必ず役立つ。引越し前後の需要が爆発",
-    "story_hook":   "服の量は変わっていないのに、クローゼットが2倍広くなった。",
+    "why_viral": "新生活の荷物整理に必ず役立つ。引越し前後の需要が爆発",
+    "story_hook": "服の量は変わっていないのに、クローゼットが2倍広くなった。",
     "user_problem": "収納が少なくて服がクローゼットに入らない",
-    "amazon_url": "https://www.amazon.co.jp/s?k=%E8%A1%A3%E9%A1%9E%E5%9C%A7%E7%B8%AE%E8%A2%8B+%E6%8E%83%E9%99%A4%E6%A9%9F%E4%B8%8D%E8%A6%81+%E3%83%88%E3%83%A9%E3%83%99%E3%83%AB+%E5%8F%8E%E7%B4%8D+10%E6%9E%9A&tag=smartearn22-22",
-    "source": "static"
+    "amazon_url": "https://www.amazon.co.jp/dp/B09V7C9V8B/?tag=smartearn22-22",
+    "source": "static",
+    "image_url": ""
   },
   {
+    "asin": "B0B247R68G",
     "search_keyword": "TP-Link スマートプラグ Wi-Fi Alexa Google Home 対応 節電",
     "title": "TP-Link スマートプラグ Wi-Fi対応 Amazon Alexa/Google Home連携",
     "brand": "TP-Link",
-    "price":          { "amount": 1490, "currency": "JPY", "display": "¥1,490" },
-    "original_price": { "amount": 1990, "display": "¥1,990" },
+    "price": {
+      "amount": 1490,
+      "currency": "JPY",
+      "display": "¥1,490"
+    },
+    "original_price": {
+      "amount": 1990,
+      "display": "¥1,990"
+    },
     "discount_rate": 25,
     "category": "スマートホーム",
+    "keywords": [
+      "スマートホーム",
+      "節電",
+      "ガジェット",
+      "Alexa"
+    ],
     "features": [
       "スマホから遠隔ON/OFF・タイマー設定",
       "Alexa/Google Home音声操作対応",
       "電力使用量のモニタリング機能付き"
     ],
-    "why_viral":    "1,500円でスマートホーム入門。一人暮らし防犯にも使える",
-    "story_hook":   "外出先から「あ、消し忘れた」が二度とない生活になった。",
+    "why_viral": "1,500円でスマートホーム入門。一人暮らし防犯にも使える",
+    "story_hook": "外出先から「あ、消し忘れた」が二度とない生活になった。",
     "user_problem": "家電の消し忘れが不安・電気代を節約したい",
-    "amazon_url": "https://www.amazon.co.jp/s?k=TP-Link+%E3%82%B9%E3%83%9E%E3%83%BC%E3%83%88%E3%83%97%E3%83%A9%E3%82%B0+Wi-Fi+Alexa+%E7%AF%80%E9%9B%BB&tag=smartearn22-22",
-    "source": "static"
+    "amazon_url": "https://www.amazon.co.jp/dp/B0B247R68G/?tag=smartearn22-22",
+    "source": "static",
+    "image_url": ""
   },
   {
+    "asin": "B0C1Z8R7Y2",
     "search_keyword": "Anker Soundcore Liberty 4 NC ワイヤレスイヤホン ノイキャン",
     "title": "Anker Soundcore Liberty 4 NC ワイヤレスイヤホン",
     "brand": "Anker Soundcore",
-    "price":          { "amount": 7990, "currency": "JPY", "display": "¥7,990" },
-    "original_price": { "amount": 9990, "display": "¥9,990" },
+    "price": {
+      "amount": 7990,
+      "currency": "JPY",
+      "display": "¥7,990"
+    },
+    "original_price": {
+      "amount": 9990,
+      "display": "¥9,990"
+    },
     "discount_rate": 20,
     "category": "オーディオ",
+    "keywords": [
+      "イヤホン",
+      "オーディオ",
+      "Anker",
+      "ノイズキャンセリング"
+    ],
     "features": [
       "アクティブノイズキャンセリング搭載",
       "最大10時間再生・外音取り込みモード対応",
       "1万円以下で最強クラスのコスパ"
     ],
-    "why_viral":    "通勤・テレワーク・勉強。新生活のあらゆるシーンに刺さる",
-    "story_hook":   "電車の中で「仕事モード」に切り替えられるようになった。",
+    "why_viral": "通勤・テレワーク・勉強。新生活のあらゆるシーンに刺さる",
+    "story_hook": "電車の中で「仕事モード」に切り替えられるようになった。",
     "user_problem": "通勤・通学中に集中できない・騒音が気になる",
-    "amazon_url": "https://www.amazon.co.jp/s?k=Anker+Soundcore+Liberty+4+NC+%E3%83%AF%E3%82%A4%E3%83%A4%E3%83%AC%E3%82%B9%E3%82%A4%E3%83%A4%E3%83%9B%E3%83%B3+%E3%83%8E%E3%82%A4%E3%82%AD%E3%83%A3%E3%83%B3&tag=smartearn22-22",
-    "source": "static"
+    "amazon_url": "https://www.amazon.co.jp/dp/B0C1Z8R7Y2/?tag=smartearn22-22",
+    "source": "static",
+    "image_url": ""
   },
   {
+    "asin": "B0C2V5Y6K9",
     "search_keyword": "Baseus GaN 67W USB-C 急速充電器 窒化ガリウム コンパクト 新生活",
     "title": "Baseus 67W GaN USB-C 急速充電器（窒化ガリウム採用）",
     "brand": "Baseus",
-    "price":          { "amount": 2480, "currency": "JPY", "display": "¥2,480" },
-    "original_price": { "amount": 3280, "display": "¥3,280" },
+    "price": {
+      "amount": 2480,
+      "currency": "JPY",
+      "display": "¥2,480"
+    },
+    "original_price": {
+      "amount": 3280,
+      "display": "¥3,280"
+    },
     "discount_rate": 24,
     "category": "充電・バッテリー",
+    "keywords": [
+      "充電器",
+      "スマホアクセサリー",
+      "ガジェット",
+      "時短"
+    ],
     "features": [
       "GaN採用で純正より小型・軽量",
       "67W急速充電・PC/スマホ/タブレット同時充電",
       "新生活の充電環境をこれ1台で完結"
     ],
-    "why_viral":    "純正より小さくて速い。新社会人の必携アイテム",
-    "story_hook":   "充電器の数を3つから1つに減らした話。",
+    "why_viral": "純正より小さくて速い。新社会人の必携アイテム",
+    "story_hook": "充電器の数を3つから1つに減らした話。",
     "user_problem": "デバイスが増えて充電器が足りない",
-    "amazon_url": "https://www.amazon.co.jp/s?k=Baseus+GaN+67W+USB-C+%E6%80%A5%E9%80%9F%E5%85%85%E9%9B%BB%E5%99%A8+%E7%AA%92%E5%8C%96%E3%82%AC%E3%83%AA%E3%82%A6%E3%83%A0+%E3%82%B3%E3%83%B3%E3%83%91%E3%82%AF%E3%83%88&tag=smartearn22-22",
-    "source": "static"
+    "amazon_url": "https://www.amazon.co.jp/dp/B0C2V5Y6K9/?tag=smartearn22-22",
+    "source": "static",
+    "image_url": ""
+  },
+  {
+    "asin": "B0B566Y7N4",
+    "search_keyword": "CIO NovaPort TRIO 65W 3ポート GaN充電器 USB-C",
+    "title": "CIO NovaPort TRIO 65W 3ポート GaN充電器",
+    "brand": "CIO",
+    "price": {
+      "amount": 3980,
+      "currency": "JPY",
+      "display": "¥3,980"
+    },
+    "original_price": {
+      "amount": 5280,
+      "display": "¥5,280"
+    },
+    "discount_rate": 25,
+    "category": "充電・バッテリー",
+    "keywords": [
+      "充電器",
+      "GaN",
+      "USB-C",
+      "デスク周り"
+    ],
+    "features": [
+      "GaN採用コンパクト設計で持ち運び楽々",
+      "USB-C×2+USB-A 3ポート同時充電",
+      "最大65W急速充電でPC・スマホ・タブレット対応"
+    ],
+    "why_viral": "3ポートあればカバン1個で全デバイス充電完結。旅行・出張に最強",
+    "story_hook": "出張先でケーブル3本持ち歩くの、もうやめた。",
+    "user_problem": "出張中に複数デバイスを充電したい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0B566Y7N4/?tag=smartearn22-22",
+    "source": "static",
+    "image_url": ""
+  },
+  {
+    "asin": "B0BY8S8G7R",
+    "search_keyword": "山崎実業 マグネット ケーブルホルダー デスク 収納",
+    "title": "山崎実業 マグネット ケーブルホルダー デスク収納",
+    "brand": "山崎実業",
+    "price": {
+      "amount": 1290,
+      "currency": "JPY",
+      "display": "¥1,290"
+    },
+    "original_price": {
+      "amount": 1650,
+      "display": "¥1,650"
+    },
+    "discount_rate": 22,
+    "category": "デスク環境",
+    "keywords": [
+      "デスク周り",
+      "ケーブル整理",
+      "収納",
+      "テレワーク"
+    ],
+    "features": [
+      "マグネットで簡単設置・取り外し自由",
+      "ケーブル3本同時収納可能",
+      "スチール・マグネット対応壁面に最適"
+    ],
+    "why_viral": "デスクのケーブルごちゃごちゃが1分で解決。Instaで映えるデスクに",
+    "story_hook": "机の上のケーブル地獄、1,000円で終わった。",
+    "user_problem": "デスクのケーブルが散らかって汚い",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0BY8S8G7R/?tag=smartearn22-22",
+    "source": "static",
+    "image_url": ""
+  },
+  {
+    "asin": "B07W59K48K",
+    "search_keyword": "ロジクール Pebble M350 ワイヤレスマウス 静音 Bluetooth",
+    "title": "ロジクール Pebble M350 静音ワイヤレスマウス",
+    "brand": "Logicool",
+    "price": {
+      "amount": 3080,
+      "currency": "JPY",
+      "display": "¥3,080"
+    },
+    "original_price": {
+      "amount": 3880,
+      "display": "¥3,880"
+    },
+    "discount_rate": 21,
+    "category": "PC周辺機器",
+    "keywords": [
+      "マウス",
+      "ワイヤレス",
+      "テレワーク",
+      "PC周辺機器"
+    ],
+    "features": [
+      "静音クリックで会議中も気を遣わない",
+      "Bluetooth+USBレシーバー対応でデバイスを選ばない",
+      "最大18ヶ月電池寿命でランニングコスト最小"
+    ],
+    "why_viral": "静音設計+コンパクト。在宅ワーカーが全員持っていいレベル",
+    "story_hook": "カフェで仕事するようになってから、静音マウスの必要性を知った。",
+    "user_problem": "マウスの音が気になる・持ち運びが不便",
+    "amazon_url": "https://www.amazon.co.jp/dp/B07W59K48K/?tag=smartearn22-22",
+    "source": "static",
+    "image_url": ""
+  },
+  {
+    "asin": "B099DN8ZKK",
+    "search_keyword": "エレコム 電源タップ タワー型 8個口 雷サージ 個別スイッチ",
+    "title": "エレコム 電源タップ タワー型 8個口 個別スイッチ付",
+    "brand": "ELECOM",
+    "price": {
+      "amount": 3580,
+      "currency": "JPY",
+      "display": "¥3,580"
+    },
+    "original_price": {
+      "amount": 4980,
+      "display": "¥4,980"
+    },
+    "discount_rate": 28,
+    "category": "デスク環境",
+    "keywords": [
+      "電源タップ",
+      "デスク周り",
+      "テレワーク",
+      "便利グッズ"
+    ],
+    "features": [
+      "縦型タワー設計でデスクスペースを節約",
+      "個別スイッチ付き8個口で節電も簡単",
+      "雷ガード・過電流保護搭載"
+    ],
+    "why_viral": "デスク下に置けるタワー型が話題。縦に積むから場所を取らない",
+    "story_hook": "電源タップ、横置きをやめたら机が広くなった。",
+    "user_problem": "電源タップが場所を取ってデスクが狭い",
+    "amazon_url": "https://www.amazon.co.jp/dp/B099DN8ZKK/?tag=smartearn22-22",
+    "source": "static",
+    "image_url": ""
+  },
+  {
+    "asin": "B08Y8M78F2",
+    "search_keyword": "Anker Magnetic Cable Holder マグネット ケーブルホルダー",
+    "title": "Anker Magnetic Cable Holder マグネット式ケーブルホルダー",
+    "brand": "Anker",
+    "price": {
+      "amount": 1490,
+      "currency": "JPY",
+      "display": "¥1,490"
+    },
+    "original_price": {
+      "amount": 1990,
+      "display": "¥1,990"
+    },
+    "discount_rate": 25,
+    "category": "デスク環境",
+    "keywords": [
+      "デスク周り",
+      "ケーブル整理",
+      "Anker",
+      "テレワーク"
+    ],
+    "features": [
+      "マグネット式でケーブルをピタッと固定",
+      "デスク天板に貼り付けるだけで即セット",
+      "充電ケーブル・イヤホンケーブル対応"
+    ],
+    "why_viral": "充電ケーブルが床に落ちなくなる。一度使うと手放せないガジェット",
+    "story_hook": "充電ケーブル、落としたくない人に伝えたい。",
+    "user_problem": "ケーブルが毎回机から落ちる",
+    "amazon_url": "https://www.amazon.co.jp/dp/B08Y8M78F2/?tag=smartearn22-22",
+    "source": "static",
+    "image_url": ""
+  },
+  {
+    "asin": "B0C5D2S476",
+    "search_keyword": "バッファロー 外付けSSD 1TB 小型 USB3.2 高速",
+    "title": "バッファロー 外付けSSD 1TB 小型 USB3.2 Gen2",
+    "brand": "BUFFALO",
+    "price": {
+      "amount": 9980,
+      "currency": "JPY",
+      "display": "¥9,980"
+    },
+    "original_price": {
+      "amount": 14800,
+      "display": "¥14,800"
+    },
+    "discount_rate": 33,
+    "category": "PC周辺機器",
+    "keywords": [
+      "SSD",
+      "外付けSSD",
+      "PC周辺機器",
+      "テレワーク"
+    ],
+    "features": [
+      "読み取り最大600MB/s高速転送",
+      "コンパクト・軽量でポケットに入るサイズ",
+      "TV録画・Mac/Windows両対応"
+    ],
+    "why_viral": "スマホ動画・写真の保存場所問題を一発解決。テレワーカーの必需品",
+    "story_hook": "「容量不足」という通知、もう出なくなった。",
+    "user_problem": "パソコンのストレージが足りない",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0C5D2S476/?tag=smartearn22-22",
+    "source": "static",
+    "image_url": ""
+  },
+  {
+    "asin": "B085698Z8H",
+    "search_keyword": "イトーキ サリダ YL9 オフィスチェア ヘッドレスト メッシュ",
+    "title": "イトーキ サリダ YL9 メッシュオフィスチェア ヘッドレスト付",
+    "brand": "イトーキ",
+    "price": {
+      "amount": 19800,
+      "currency": "JPY",
+      "display": "¥19,800"
+    },
+    "original_price": {
+      "amount": 24800,
+      "display": "¥24,800"
+    },
+    "discount_rate": 20,
+    "category": "デスク環境",
+    "keywords": [
+      "オフィスチェア",
+      "テレワーク",
+      "腰痛対策",
+      "デスク環境"
+    ],
+    "features": [
+      "3D可動ヘッドレスト付き高機能チェア",
+      "メッシュ素材で通気性抜群・夏も快適",
+      "座面高・リクライニング・肘掛け全調整可"
+    ],
+    "why_viral": "在宅ワーク2年目で腰を壊してから気づいた、椅子の重要性",
+    "story_hook": "テレワークで腰痛になって初めて、椅子の値段を後悔した。",
+    "user_problem": "テレワークで腰痛・肩こりが悪化している",
+    "amazon_url": "https://www.amazon.co.jp/dp/B085698Z8H/?tag=smartearn22-22",
+    "source": "static",
+    "image_url": ""
+  },
+  {
+    "asin": "B005UIF2D4",
+    "search_keyword": "キングジム デスクマット レザフェス A3 合皮",
+    "title": "キングジム デスクマット レザフェス A3サイズ",
+    "brand": "キングジム",
+    "price": {
+      "amount": 2980,
+      "currency": "JPY",
+      "display": "¥2,980"
+    },
+    "original_price": {
+      "amount": 3850,
+      "display": "¥3,850"
+    },
+    "discount_rate": 23,
+    "category": "デスク環境",
+    "keywords": [
+      "デスクマット",
+      "デスク周り",
+      "テレワーク",
+      "インテリア"
+    ],
+    "features": [
+      "合皮素材で高級感があり汚れに強い",
+      "マウスパッド兼用でデスク全体を保護",
+      "A3サイズで広い作業スペースを確保"
+    ],
+    "why_viral": "デスクマットを敷くだけで仕事部屋が5倍おしゃれになる",
+    "story_hook": "デスクに革マットを敷いたら、仕事のモチベが上がった。",
+    "user_problem": "デスクに傷がつく・見た目が安っぽい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B005UIF2D4/?tag=smartearn22-22",
+    "source": "static",
+    "image_url": ""
+  },
+  {
+    "asin": "B0BVMN9H6D",
+    "search_keyword": "スイッチボット Hub 2 スマートリモコン 温湿度 Matter",
+    "title": "SwitchBot Hub 2 スマートリモコン 温湿度センサー付",
+    "brand": "SwitchBot",
+    "price": {
+      "amount": 6980,
+      "currency": "JPY",
+      "display": "¥6,980"
+    },
+    "original_price": {
+      "amount": 8980,
+      "display": "¥8,980"
+    },
+    "discount_rate": 22,
+    "category": "スマートホーム",
+    "keywords": [
+      "スマートホーム",
+      "スマート家電",
+      "Alexa",
+      "IoT"
+    ],
+    "features": [
+      "赤外線家電をスマホで遠隔操作",
+      "温湿度センサー内蔵で部屋の環境を見える化",
+      "Matter対応・Alexa/Google/Siri連携"
+    ],
+    "why_viral": "エアコン・テレビ・照明を全部スマホで管理。帰宅前予約が便利すぎる",
+    "story_hook": "帰宅する前にエアコンをONする生活が普通になった。",
+    "user_problem": "家電のリモコンが多くて管理が大変",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0BVMN9H6D/?tag=smartearn22-22",
+    "source": "static",
+    "image_url": ""
+  },
+  {
+    "asin": "B07B959W3D",
+    "search_keyword": "コクヨ バッグインバッグ カハ-BR31D A4 仕切り",
+    "title": "コクヨ バッグインバッグ カハ-BR31D A4対応",
+    "brand": "コクヨ",
+    "price": {
+      "amount": 1980,
+      "currency": "JPY",
+      "display": "¥1,980"
+    },
+    "original_price": {
+      "amount": 2750,
+      "display": "¥2,750"
+    },
+    "discount_rate": 28,
+    "category": "ガジェット",
+    "keywords": [
+      "バッグインバッグ",
+      "収納",
+      "ビジネスバッグ",
+      "整理整頓"
+    ],
+    "features": [
+      "A4サイズ対応・仕切りが豊富で中身を整理",
+      "バッグの中のごちゃごちゃをそのまま移動可能",
+      "ポケット多数でケーブル・文具をすっきり整理"
+    ],
+    "why_viral": "カバンを変えるたびに全部移し替える手間がゼロになる",
+    "story_hook": "カバンの中身の移し替え、もうしなくていい方法がある。",
+    "user_problem": "カバンの中がごちゃごちゃで物が見つからない",
+    "amazon_url": "https://www.amazon.co.jp/dp/B07B959W3D/?tag=smartearn22-22",
+    "source": "static",
+    "image_url": ""
+  },
+  {
+    "asin": "B08PTPTMH5",
+    "search_keyword": "KIOXIA(キオクシア) 旧東芝メモリ microSD 128GB UHS-I",
+    "title": "KIOXIA(キオクシア) 旧東芝メモリ microSD 128GB UHS-I Class10 (最大読出速度100MB/s) Nintendo Switch動作確認済 国内サポート正規品 メーカー保証5年 KLMEA128G",
+    "brand": "KIOXIA",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "要確認"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "ガジェット",
+    "keywords": [
+      "KIOXIA",
+      "キオクシア",
+      "旧東芝メモリ",
+      "microSD"
+    ],
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B08PTPTMH5/?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-05-28T13:43:10.188291",
+    "image_url": ""
+  },
+  {
+    "asin": "B093L5CMMT",
+    "search_keyword": "Anker PowerLine III Flow USB-C & USB-C ケ",
+    "title": "Anker PowerLine III Flow USB-C & USB-C ケーブル Anker絡まないケーブル 240W 結束バンド付き USB PD対応 シリコン素材採用 iPhone 17 / 16 / 15 / Galaxy iPad Pr",
+    "brand": "Anker",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "要確認"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "ガジェット",
+    "keywords": [
+      "Anker",
+      "PowerLine",
+      "III",
+      "Flow"
+    ],
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B093L5CMMT/?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-05-28T13:43:10.188346",
+    "image_url": ""
+  },
+  {
+    "asin": "B07V1XJ56J",
+    "search_keyword": "エレコム 電源タップ 6個口 3m 雷ガード 個別スイッチ ほこりシャッター付 ",
+    "title": "エレコム 電源タップ 6個口 3m 雷ガード 個別スイッチ ほこりシャッター付 耐熱 PSE技術基準適合 ブラック T-K6A-2630BK",
+    "brand": "エレコム",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "要確認"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "ガジェット",
+    "keywords": [
+      "エレコム",
+      "電源タップ",
+      "6個口",
+      "3m"
+    ],
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B07V1XJ56J/?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-05-28T13:43:10.188369",
+    "image_url": ""
+  },
+  {
+    "asin": "B071D8THD2",
+    "search_keyword": "Anker USB Type C ケーブル PowerLine USB-C & ",
+    "title": "Anker USB Type C ケーブル PowerLine USB-C & USB-A 3.0 ケーブル iPhone 17 / 16 / 15 /Xperia/Galaxy/LG/iPad Pro/MacBook その他 Android 等 U",
+    "brand": "Anker",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "要確認"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "ガジェット",
+    "keywords": [
+      "Anker",
+      "USB",
+      "Type",
+      "ケーブル"
+    ],
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B071D8THD2/?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-05-28T13:43:10.188394",
+    "image_url": ""
+  },
+  {
+    "asin": "B0CBPF2ZJ1",
+    "search_keyword": "KIOXIA(キオクシア)【日本製】USBフラッシュメモリ 32GB USB2.",
+    "title": "KIOXIA(キオクシア)【日本製】USBフラッシュメモリ 32GB USB2.0 国内サポート正規品 KLU202A032GL",
+    "brand": "KIOXIA",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "要確認"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "ガジェット",
+    "keywords": [
+      "KIOXIA",
+      "キオクシア",
+      "日本製",
+      "USBフラッシュメモリ"
+    ],
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0CBPF2ZJ1/?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-05-28T13:43:10.188412",
+    "image_url": ""
   }
 ]

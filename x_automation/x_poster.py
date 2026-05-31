@@ -126,7 +126,15 @@ def _generate_review_image(product: dict) -> str:
         name     = product.get("name") or product.get("title", "")
         img_url  = product.get("image_url", "")
         category = product.get("category", "")
-        price    = int(product.get("price", 0))
+        # price は数値（楽天）またはdict {"amount": N, ...}（静的商品）の両方に対応
+        price_raw = product.get("price", 0)
+        if isinstance(price_raw, dict):
+            price = int(price_raw.get("amount", 0))
+        else:
+            try:
+                price = int(price_raw)
+            except (TypeError, ValueError):
+                price = 0
 
         if not name:
             print("⚠️  商品名が取得できないためレビュー画像をスキップ")
@@ -143,6 +151,249 @@ def _generate_review_image(product: dict) -> str:
     except Exception as e:
         print(f"⚠️ レビュー画像生成スキップ: {e}")
         return ""
+
+
+def _download_image_from_url(image_url: str) -> str:
+    """
+    商品の image_url から画像をダウンロードして一時ファイルに保存し、パスを返す。
+    ダウンロード失敗・URL未設定の場合は空文字列を返す（フォールバック用）。
+
+    楽天サムネイル（?_ex=128x128）は自動的に 400x400 に拡大して取得する。
+
+    Returns:
+        一時ファイルパス（str）。失敗時は ""。
+    """
+    if not image_url or not image_url.startswith("http"):
+        return ""
+
+    # 楽天サムネイルのサイズパラメータを拡大（X推奨最低解像度に合わせる）
+    import re as _re
+    image_url = _re.sub(r'[?&]_ex=\d+x\d+', lambda m: m.group(0).replace(
+        m.group(0).split("_ex=")[1], "400x400"
+    ), image_url)
+
+    try:
+        import requests
+
+        headers = {"User-Agent": "Mozilla/5.0 (compatible; SNSBot/1.0)"}
+        resp = requests.get(image_url, headers=headers, timeout=10)
+        resp.raise_for_status()
+
+        # Content-Type から拡張子を決定
+        content_type = resp.headers.get("Content-Type", "image/jpeg").split(";")[0].strip()
+        ext_map = {
+            "image/jpeg": ".jpg",
+            "image/jpg":  ".jpg",
+            "image/png":  ".png",
+            "image/gif":  ".gif",
+            "image/webp": ".webp",
+        }
+        ext = ext_map.get(content_type, ".jpg")
+
+        # X は webp を受け付けないため jpg に変換
+        if ext == ".webp":
+            try:
+                from PIL import Image
+                import io
+                img = Image.open(io.BytesIO(resp.content)).convert("RGB")
+                tmp_path = os.path.join(tempfile.gettempdir(), f"product_img_{int(time.time())}.jpg")
+                img.save(tmp_path, "JPEG", quality=90)
+                print(f"画像ダウンロード成功（webp→jpg変換）: {image_url[:60]}")
+                return tmp_path
+            except Exception as conv_err:
+                print(f"⚠️ webp変換失敗: {conv_err}")
+                return ""
+
+        tmp_path = os.path.join(tempfile.gettempdir(), f"product_img_{int(time.time())}{ext}")
+        with open(tmp_path, "wb") as f:
+            f.write(resp.content)
+
+        # 最低サイズチェック（1KB未満は壊れ画像の可能性）
+        if os.path.getsize(tmp_path) < 1024:
+            print("⚠️ ダウンロードした画像が小さすぎるためスキップ")
+            os.remove(tmp_path)
+            return ""
+
+        print(f"画像ダウンロード成功: {image_url[:60]} → {tmp_path}")
+        return tmp_path
+
+    except Exception as e:
+        print(f"⚠️ 画像ダウンロード失敗（テキストのみで投稿）: {e}")
+        return ""
+
+
+# ─────────────────────────────────────────
+# Bitly URL短縮（BITLY_TOKEN 未設定時は元URLをそのまま返す）
+# ─────────────────────────────────────────
+def _shorten_url_bitly(url: str) -> str:
+    """
+    Bitly API で URL を短縮する。
+    環境変数 BITLY_TOKEN が未設定の場合は元URLをそのまま返す（フォールバック）。
+    """
+    token = os.getenv("BITLY_TOKEN", "")
+    if not token or not url.startswith("http"):
+        return url
+    try:
+        import requests as _req
+        resp = _req.post(
+            "https://api-ssl.bitly.com/v4/shorten",
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            json={"long_url": url},
+            timeout=5,
+        )
+        resp.raise_for_status()
+        short = resp.json().get("link", url)
+        print(f"Bitly短縮: {url[:50]} → {short}")
+        return short
+    except Exception as e:
+        print(f"⚠️ Bitly短縮失敗（元URLを使用）: {e}")
+        return url
+
+
+# ─────────────────────────────────────────
+# 子ポスト（アフィリエイトリプライ）テキスト生成
+# ─────────────────────────────────────────
+def _build_affiliate_reply(thread: dict, post_type: str = "amazon_thread") -> str:
+    """
+    親ポストへのリプライ（子ポスト）テキストを生成する。
+
+    thread["tweet3"] からアフィリエイトURLを抽出し、
+    雑誌スタイルの導線文 + Bitly短縮URL + ハッシュタグ + PR開示 で構成する。
+
+    Args:
+        thread:    generate_thread() が返したスレッド dict
+        post_type: "amazon_thread" | "rakuten_thread" | "amazon"
+
+    Returns:
+        子ポスト用テキスト（str）。URLが取れなければ最低限の開示文のみ。
+    """
+    import re
+
+    # tweet3 or tweet2 からアフィリエイトURLを探す
+    url = ""
+    for key in ("tweet3", "tweet2"):
+        m = re.search(r'https?://\S+', thread.get(key, ""))
+        if m:
+            url = m.group(0).rstrip(".,)")  # 末尾の句読点を除去
+            break
+
+    # Bitly で短縮（BITLY_TOKEN が未設定なら元URL）
+    short_url = _shorten_url_bitly(url) if url else ""
+
+    if "rakuten" in post_type.lower():
+        intro       = "紹介したアイテムの詳細・購入リンクはこちら（楽天市場）👇"
+        disclosure  = "※楽天アフィリエイトに参加しています"
+    else:
+        intro       = "紹介したアイテムの詳細・購入リンクはこちら（Amazon）👇"
+        disclosure  = "※Amazonアソシエイトに参加しています"
+
+    parts = [intro]
+    if short_url:
+        parts.append(short_url)
+    parts.append("#一人暮らし #便利グッズ")
+    parts.append("#PR")
+    parts.append(disclosure)
+
+    return "\n".join(parts)
+
+
+# ─────────────────────────────────────────
+# 親ポスト（画像付き）→ 子ポスト（アフィリエイトリプライ）ツリー投稿
+# ─────────────────────────────────────────
+def post_parent_and_reply(
+    parent_text: str,
+    image_path:  str = "",
+    reply_text:  str = "",
+) -> bool:
+    """
+    「親ポスト（雑誌風文章＋商品画像）→ 子ポスト（アフィリエイトリンク）」の
+    ツリー形式で X に投稿する。tweepy v2 + v1.1 media upload を使用。
+
+    フロー:
+        1. 画像があれば v1.1 media_upload でアップロード → media_id 取得
+        2. v2 create_tweet で親ポストを投稿（画像添付）→ tweet_id 取得
+        3. reply_text がある場合、in_reply_to_tweet_id を指定して子ポストを投稿
+        4. 親ポスト失敗 → False を返す（呼び出し元でフォールバック）
+           子ポスト失敗 → ログ出力のみ、親成功扱い（True を返す）
+
+    Args:
+        parent_text: 親ポストのテキスト（リンクなし・雑誌風）
+        image_path:  商品画像のローカルパス（なければ空文字）
+        reply_text:  子ポストのテキスト（アフィリエイトURL含む）
+
+    Returns:
+        True: 親ポスト成功（子ポストの成否は問わない）
+        False: 親ポスト失敗 または tweepy 設定不備
+    """
+    try:
+        import tweepy
+
+        api_key       = os.getenv("X_API_KEY")
+        api_secret    = os.getenv("X_API_SECRET")
+        access_token  = os.getenv("X_ACCESS_TOKEN")
+        access_secret = os.getenv("X_ACCESS_TOKEN_SECRET")
+
+        if not all([api_key, api_secret, access_token, access_secret]):
+            print("⚠️ X APIキーが未設定（post_parent_and_reply をスキップ）")
+            return False
+
+        # v1.1 API（メディアアップロード専用）
+        auth   = tweepy.OAuth1UserHandler(api_key, api_secret, access_token, access_secret)
+        api_v1 = tweepy.API(auth)
+
+        # v2 Client（ツイート投稿）
+        client = tweepy.Client(
+            consumer_key        = api_key,
+            consumer_secret     = api_secret,
+            access_token        = access_token,
+            access_token_secret = access_secret,
+        )
+
+        # ── ① 画像アップロード ────────────────────────
+        media_ids = []
+        if image_path and os.path.exists(image_path):
+            try:
+                media     = api_v1.media_upload(filename=image_path)
+                media_ids = [media.media_id]
+                print(f"画像アップロード成功: media_id={media.media_id}")
+            except Exception as e:
+                print(f"⚠️ 画像アップロード失敗（テキストのみで親ポスト）: {e}")
+                media_ids = []
+
+        # ── ② 親ポスト投稿 ────────────────────────────
+        parent_kwargs: dict = {"text": parent_text}
+        if media_ids:
+            parent_kwargs["media_ids"] = media_ids
+
+        resp      = client.create_tweet(**parent_kwargs)
+        parent_id = str(resp.data["id"])
+        print(f"✅ 親ポスト成功: ID={parent_id} | 画像={'あり' if media_ids else 'なし'}")
+        print(f"   URL: https://x.com/{os.getenv('X_USERNAME', 'user')}/status/{parent_id}")
+
+        global _last_tweet_id
+        _last_tweet_id = parent_id
+
+        # ── ③ 子ポスト（リプライ）投稿 ──────────────────
+        if reply_text and parent_id:
+            try:
+                time.sleep(2)  # 連投ペナルティ回避
+                reply_resp = client.create_tweet(
+                    text                  = reply_text,
+                    in_reply_to_tweet_id  = parent_id,
+                )
+                reply_id = str(reply_resp.data["id"])
+                print(f"✅ 子ポスト（リプライ）成功: ID={reply_id}")
+            except Exception as e:
+                print(f"⚠️ 子ポスト失敗（親ポストは成功済み・ログのみ）: {e}")
+
+        return True
+
+    except ImportError:
+        print("⚠️ tweepy 未インストール")
+        return False
+    except Exception as e:
+        print(f"❌ 親ポスト失敗: {e}")
+        return False
 
 
 # ─────────────────────────────────────────
@@ -467,28 +718,28 @@ def post_now(force_type: str = None, test_mode: bool = False) -> bool:
             print(f"Amazon商品: {product_title}")
 
             if test_mode:
-                print("\n[DRY RUN] Amazonスレッド投稿プレビュー:")
-                print("── Tweet1 ──")
+                reply_preview = _build_affiliate_reply(thread, "amazon_thread")
+                print("\n[DRY RUN] Amazonツリー投稿プレビュー:")
+                print("── 親ポスト（雑誌風文章＋画像）──")
                 print(thread.get("tweet1", ""))
-                print("── Tweet2 ──")
-                print(thread.get("tweet2", ""))
-                print("── Tweet3 ──")
-                print(thread.get("tweet3", ""))
+                print("── 子ポスト（アフィリエイトリプライ）──")
+                print(reply_preview)
                 success = True
                 image_path = ""
             else:
-                # レビュー画像生成 → tweepy で tweet1 に添付投稿を試みる
+                # 画像取得: レビューカード生成 → image_url直接DL → なし の優先順
                 image_path = _generate_review_image(product_info)
+                if not image_path:
+                    image_path = _download_image_from_url(product_info.get("image_url", ""))
+
                 tweet1_text = thread.get("tweet1", "")
-                if image_path:
-                    print("レビュー画像添付で tweepy 投稿を試みます...")
-                    success = post_with_tweepy(tweet1_text, image_path)
-                    if not success:
-                        # tweepy失敗 → 画像なしでスレッド投稿（ブラウザ）
-                        print("⚠️ tweepy失敗、画像なしのスレッド投稿にフォールバック")
-                        success = post_amazon_thread(thread)
-                else:
-                    # 画像生成失敗 → 従来スレッド投稿
+                reply_text  = _build_affiliate_reply(thread, "amazon_thread")
+
+                # 親ポスト（画像付き）→ 子ポスト（アフィリエイトリプライ）ツリー投稿
+                success = post_parent_and_reply(tweet1_text, image_path, reply_text)
+                if not success:
+                    # tweepy 完全失敗 → ブラウザ経由スレッド投稿にフォールバック
+                    print("⚠️ tweepy失敗、ブラウザスレッド投稿にフォールバック")
                     success = post_amazon_thread(thread)
 
             if image_path and os.path.exists(image_path):
@@ -550,24 +801,27 @@ def post_now(force_type: str = None, test_mode: bool = False) -> bool:
         product_info = post.get("product", {})
         print(f"楽天商品スレッド投稿: {thread.get('tweet1', '')[:40]}...")
         if test_mode:
-            print("\n[DRY RUN] 楽天スレッド投稿プレビュー:")
-            print("── Tweet1 ──")
+            reply_preview = _build_affiliate_reply(thread, "rakuten_thread")
+            print("\n[DRY RUN] 楽天ツリー投稿プレビュー:")
+            print("── 親ポスト（雑誌風文章＋画像）──")
             print(thread.get("tweet1", ""))
-            print("── Tweet2 ──")
-            print(thread.get("tweet2", ""))
+            print("── 子ポスト（アフィリエイトリプライ）──")
+            print(reply_preview)
             success    = True
             image_path = ""
         else:
-            # レビュー画像生成 → tweepy で tweet1 に添付投稿を試みる
+            # 画像取得: レビューカード生成 → image_url直接DL → なし の優先順
             image_path  = _generate_review_image(product_info)
+            if not image_path:
+                image_path = _download_image_from_url(product_info.get("image_url", ""))
+
             tweet1_text = thread.get("tweet1", "")
-            if image_path:
-                print("レビュー画像添付で tweepy 投稿を試みます...")
-                success = post_with_tweepy(tweet1_text, image_path)
-                if not success:
-                    print("⚠️ tweepy失敗、画像なしのスレッド投稿にフォールバック")
-                    success = post_amazon_thread(thread)
-            else:
+            reply_text  = _build_affiliate_reply(thread, "rakuten_thread")
+
+            # 親ポスト（画像付き）→ 子ポスト（アフィリエイトリプライ）ツリー投稿
+            success = post_parent_and_reply(tweet1_text, image_path, reply_text)
+            if not success:
+                print("⚠️ tweepy失敗、ブラウザスレッド投稿にフォールバック")
                 success = post_amazon_thread(thread)
 
             if image_path and os.path.exists(image_path):
@@ -722,7 +976,7 @@ if __name__ == "__main__":
 
     cmd       = sys.argv[1] if len(sys.argv) > 1 else "test"
     # --type x_info などのオプションを簡易パース
-    force_post_type: str | None = None
+    force_post_type: Optional[str] = None
     for i, arg in enumerate(sys.argv[2:], start=2):
         if arg == "--type" and i + 1 < len(sys.argv):
             force_post_type = sys.argv[i + 1]

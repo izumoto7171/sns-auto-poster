@@ -13,7 +13,7 @@ jobs:
   update-amazon-products:
     name: 🔄 Amazon商品データ更新
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     permissions:
       contents: write
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
@@ -29,7 +29,23 @@ jobs:
           cache: 'pip'
 
       - name: 依存関係インストール
-        run: pip install google-genai requests supabase
+        run: pip install google-genai requests supabase beautifulsoup4
+
+      - name: トレンド商品収集（Amazonランキング巡回）
+        continue-on-error: true  # スクレイピング失敗でも後続処理を継続
+        env:
+          AMAZON_ASSOCIATE_TAG: ${{ secrets.AMAZON_ASSOCIATE_TAG }}
+        run: python3 x_automation/trend_product_fetcher.py
+
+      - name: 楽天商品収集（IchibaItemSearch API）
+        continue-on-error: true  # API失敗でも後続処理を継続
+        env:
+          RAKUTEN_APPLICATION_ID: ${{ secrets.RAKUTEN_APPLICATION_ID }}
+          RAKUTEN_APP_ID:         ${{ secrets.RAKUTEN_APP_ID }}
+          RAKUTEN_ACCESS_KEY:     ${{ secrets.RAKUTEN_ACCESS_KEY }}
+          RAKUTEN_AFFILIATE_ID:   ${{ secrets.RAKUTEN_AFFILIATE_ID }}
+          RAKUTEN_ORIGIN:         ${{ secrets.RAKUTEN_ORIGIN }}
+        run: python3 x_automation/rakuten_product_fetcher.py
 
       - name: Amazon商品データ更新
         env:
@@ -69,9 +85,14 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add x_automation/product_history.json || true
+          git add \
+            x_automation/product_history.json \
+            x_automation/static_products.json \
+            x_automation/rakuten_products.json \
+            data/static_products.json \
+            data/rakuten_products.json || true
           git diff --staged --quiet || \
-            git commit -m "chore: Amazon商品履歴更新 $(date +'%Y-%m-%d')"
+            git commit -m "chore: 商品プール更新（Amazon+楽天） $(date +'%Y-%m-%d') [skip ci]"
           git push || true
 
   # ============================================================
@@ -173,6 +194,24 @@ jobs:
         run: |
           sudo apt-get install -y fonts-noto-cjk 2>/dev/null || true
           fc-cache -fv 2>/dev/null || true
+          # assets/fonts/ に NotoSansJP が未配置の場合はダウンロード
+          FONT_DIR="assets/fonts"
+          FONT_FILE="${FONT_DIR}/NotoSansJP-Regular.ttf"
+          FONT_BOLD="${FONT_DIR}/NotoSansJP-Bold.ttf"
+          mkdir -p "$FONT_DIR"
+          if [ ! -f "$FONT_FILE" ]; then
+            echo "NotoSansJP-Regular をダウンロード..."
+            # Noto Sans JP 可変フォント（Google Fonts GitHub）
+            curl -fsSL \
+              "https://github.com/googlefonts/noto-cjk/raw/main/Sans/OTF/Japanese/NotoSansCJKjp-Regular.otf" \
+              -o "$FONT_FILE" 2>/dev/null || true
+          fi
+          # シンボリックリンクで Bold を補完（可変フォントの場合は同一ファイルで代用）
+          if [ -f "$FONT_FILE" ] && [ ! -f "$FONT_BOLD" ]; then
+            cp "$FONT_FILE" "$FONT_BOLD" 2>/dev/null || true
+          fi
+          # インストール済みシステムフォントパスを確認（デバッグ用）
+          fc-list :lang=ja | head -5 2>/dev/null || true
 
       - name: Playwrightブラウザキャッシュ
         uses: actions/cache@v5

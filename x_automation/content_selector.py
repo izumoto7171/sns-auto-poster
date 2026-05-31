@@ -43,13 +43,20 @@ def _get_deal_boosted_types() -> dict[str, float]:
         import sys as _sys
         _sys.path.insert(0, str(BASE_DIR.parent))
         from crawlers.deal_selector import _rakuten_score, _a8_score, _amazon_score
-        from crawlers.crawler_a8 import load_programs
+        from crawlers.crawler_a8 import load_programs, _has_safe_link, _history
         from datetime import date
         today = date.today()
-        programs = load_programs()
+        # キュー + 履歴を合わせた全案件で安全リンクの有無を判定
+        all_programs = load_programs() + _history.list_load()
+        safe_programs = [p for p in all_programs if _has_safe_link(p)]
+        if not safe_programs and all_programs:
+            print("[DealSelector] A8: 全件 hatena_url 未設定 → A8スコアを 0.0 に強制（直リンク露出防止）")
+            a8_score = 0.0
+        else:
+            a8_score = _a8_score(today, safe_programs).score
         scores = {
             "rakuten": _rakuten_score(today).score,
-            "a8":      _a8_score(today, programs).score,
+            "a8":      a8_score,
             "product": _amazon_score(today).score,
         }
         return scores

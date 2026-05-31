@@ -142,42 +142,71 @@ def _cooldown_cutoff() -> str:
     return (datetime.now() - timedelta(days=A8_COOLDOWN_DAYS)).isoformat()
 
 
+def _has_safe_link(program: dict) -> bool:
+    """
+    X投稿に安全なリンクが確保されているか判定する。
+    hatena_url が設定されていない場合、px.a8.net 生リンクがそのまま露出するため
+    スパム判定リスクが高い → False を返して投稿候補から除外する。
+    hatena_url が設定されていれば True（はてな経由でリンクを隠蔽できる）。
+    """
+    return bool(program.get("hatena_url"))
+
+
 def select_for_post() -> tuple[dict, str]:
     """
     X投稿用に案件を1件選択する。
 
     同じプログラムは A8_COOLDOWN_DAYS 日間再投稿しない。
-    全件クールダウン中は {} / "empty" を返す（呼び出し元で Amazon/楽天に切り替える）。
+    hatena_url が未設定の案件は凍結リスク回避のためスキップする。
+    全件スキップ・クールダウン中は {} / "empty" を返す（呼び出し元で Amazon/楽天に切り替える）。
 
     Returns
     -------
     (program, source)
       source == "cache"   : キューから選択（投稿後に pop_from_cache() を呼ぶこと）
       source == "history" : 履歴から選択（クールダウン明け・再投稿）
-      source == "empty"   : 全件クールダウン中 or キュー・履歴ともに空
+      source == "empty"   : 全件クールダウン中 / hatena_url 未設定 / キュー・履歴ともに空
     """
     cutoff = _cooldown_cutoff()
 
-    # 1. キュー（消費型）から選択（クールダウン除外）
+    def _filter(candidates: list) -> list:
+        """クールダウン除外 + 安全リンクチェックを適用"""
+        result = []
+        skipped_no_hatena = 0
+        for p in candidates:
+            if (p.get("last_posted_at") or "") >= cutoff:
+                continue
+            if not _has_safe_link(p):
+                skipped_no_hatena += 1
+                continue
+            result.append(p)
+        if skipped_no_hatena:
+            print(f"  [A8Post] 安全弁: hatena_url 未設定 {skipped_no_hatena}件をスキップ（直リンク露出防止）")
+        return result
+
+    # 1. キュー（消費型）から選択
     queue = _cache.list_load()
     if queue:
-        available = [p for p in queue if (p.get("last_posted_at") or "") < cutoff]
+        available = _filter(queue)
         if available:
             selected = weighted_choice(available[-20:])
             print(f"  [A8Post] キューから選択: {selected.get('name','')} (残 {len(queue)} 件, 利用可 {len(available)} 件)")
             return selected, "cache"
-        # キューが全件クールダウン中 → 履歴へフォールオーバー
+        # キューが全件クールダウン or hatena_url 未設定 → 履歴へフォールオーバー
 
-    # 2. キューが空 or 全件クールダウン → 履歴からクールダウン除外で選択
+    # 2. キューが空 or 全件除外 → 履歴からクールダウン除外で選択
     hist = _history.list_load()
     if hist:
-        available = [p for p in hist if (p.get("last_posted_at") or "") < cutoff]
+        available = _filter(hist)
         if available:
             selected = weighted_choice(available)
             print(f"  [A8Post] 履歴から選択: {selected.get('name','')} (利用可 {len(available)}/{len(hist)} 件)")
             return selected, "history"
-        # 履歴も全件クールダウン中 → 投稿しない
-        print(f"  [A8Post] 全件クールダウン中（{len(hist)}件）→ Amazon/楽天フォールバックへ")
+        no_hatena_count = sum(1 for p in hist if not _has_safe_link(p))
+        if no_hatena_count == len(hist):
+            print(f"  [A8Post] 全件 hatena_url 未設定（{no_hatena_count}件）→ Amazon/楽天フォールバックへ")
+        else:
+            print(f"  [A8Post] 全件クールダウン中（{len(hist)}件）→ Amazon/楽天フォールバックへ")
         return {}, "empty"
 
     print("  [A8Post] キューも履歴も空 → A8投稿スキップ")
