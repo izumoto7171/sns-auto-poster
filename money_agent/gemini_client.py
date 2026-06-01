@@ -24,9 +24,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from utils.decorators import api_retry
 
 # ── 定数 ────────────────────────────────────────────────
-DEFAULT_MODEL  = "gemini-1.5-flash"   # 2.0-flash-liteは無料枠limit:0のため1.5-flashに変更
-BLOG_MODEL     = "gemini-1.5-flash"
-X_POST_MODEL   = "gemini-1.5-flash"
+DEFAULT_MODEL  = "gemini-2.5-flash"
+BLOG_MODEL     = "gemini-2.5-flash"
+X_POST_MODEL   = "gemini-2.5-flash"
 CACHE_FILE     = Path(__file__).parent / "data" / "gemini_cache.json"
 CACHE_TTL_H    = 24   # キャッシュ有効期間（時間）
 MAX_CACHE_SIZE = 500  # エントリ上限（古い順に削除）
