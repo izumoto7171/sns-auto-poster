@@ -40,6 +40,72 @@ def _load_feedback_insights() -> dict:
         return {}
 
 
+# ─────────────────────────────────────────
+# ジャンル推定（DBに保存するメタデータ用）
+# ─────────────────────────────────────────
+_HASHTAG_TO_GENRE: dict[str, str] = {
+    "副業": "side_hustle", "在宅ワーク": "side_hustle", "フリーランス": "side_hustle",
+    "確定申告": "tax", "節税": "tax", "経費": "tax",
+    "NISA": "investment", "積立": "investment", "投資": "investment", "iDeCo": "investment",
+    "保険": "insurance", "医療保険": "insurance", "生命保険": "insurance",
+    "クレジットカード": "credit_card", "ポイ活": "credit_card", "楽天カード": "credit_card",
+    "ガジェット": "gadget", "スマホ": "gadget", "イヤホン": "gadget",
+    "家電": "appliance", "掃除": "appliance", "洗濯": "appliance",
+    "転職": "career", "就活": "career",
+    "節約": "saving", "生活費": "saving", "光熱費": "saving",
+    "日用品": "daily_goods", "洗剤": "daily_goods", "シャンプー": "daily_goods",
+    "料理": "cooking", "キッチン": "cooking", "食費": "cooking",
+    "美容": "beauty", "スキンケア": "beauty",
+    "ブログ": "blog", "アフィリエイト": "blog", "SEO": "blog",
+    "AI": "ai_tools", "ChatGPT": "ai_tools", "Gemini": "ai_tools",
+    "会計": "accounting", "freee": "accounting", "マネーフォワード": "accounting",
+}
+
+_POST_TYPE_TO_GENRE: dict[str, str] = {
+    "product": "gadget",
+    "rakuten": "daily_goods",
+    "useful":  "saving",
+    "empathy": "saving",
+    "trivia":  "saving",
+    "progress": "side_hustle",
+}
+
+
+def _infer_genre_from_hashtags(hashtags: list[str]) -> str:
+    """ハッシュタグリスト（例: ["#副業", "#在宅ワーク"]）からジャンルを推定する。"""
+    for tag in hashtags:
+        clean = tag.lstrip("#").strip()
+        if clean in _HASHTAG_TO_GENRE:
+            return _HASHTAG_TO_GENRE[clean]
+    return "lifestyle"
+
+
+def _infer_genre_from_text(text: str, post_type: str = "") -> str:
+    """投稿テキストからジャンルを推定する（ハッシュタグがない場合のフォールバック）。"""
+    for kw, genre in _HASHTAG_TO_GENRE.items():
+        if kw in text:
+            return genre
+    return _POST_TYPE_TO_GENRE.get(post_type, "lifestyle")
+
+
+def _load_winner_few_shot(genre: str = "") -> str:
+    """
+    DB から is_winner=True の成功投稿を取得し、プロンプト用の参考例文ブロックを返す。
+    取得失敗・0件の場合は空文字列を返す。
+    """
+    try:
+        winners = db.get_winner_posts(genre=genre, limit=1)
+        if not winners:
+            return ""
+        example = winners[0].get("text", "")
+        if not example:
+            return ""
+        # プロンプトに埋め込む参考例ブロック
+        return f"\n[参考となる成功例（実際に高インプレッションを獲得した投稿）]\n{example}\n"
+    except Exception:
+        return ""
+
+
 def _build_feedback_context(insights: dict, platform: str = "x") -> str:
     """
     insights から X 投稿プロンプト用のフィードバックブロックを生成する。
@@ -1055,15 +1121,16 @@ def _load_progress_stats() -> dict:
         return {"total_articles": 0, "today_articles": 0, "last_run": ""}
 
 
-def generate_with_gemini(post_type: str, label: str) -> str:
+def generate_with_gemini(post_type: str, label: str) -> tuple[str, str]:
     """
     Gemini API で投稿文を生成（gemini_client 経由・バックオフ・キャッシュなし）。
     失敗時はテンプレートにフォールバック。
+    Returns: (tweet_text, style_name)
     """
     try:
         from money_agent.gemini_client import generate as gemini_generate
     except ImportError:
-        return generate_with_template(post_type)
+        return generate_with_template(post_type), "テンプレート"
 
     # フィードバックinsights読み込み
     insights         = _load_feedback_insights()
@@ -1149,10 +1216,131 @@ X（Twitter）でクリック率（CTR）が高く、かつ「人間味」のあ
     # SNS投稿は毎回新鮮な内容にするためキャッシュなし・temperature動的適用
     text = gemini_generate(prompt, use_cache=False, temperature=temperature)
     if text:
-        return append_hashtags(text, post_type)
+        return append_hashtags(text, post_type), style_name
 
     # フォールバック
-    return generate_with_template(post_type)
+    return generate_with_template(post_type), "テンプレート"
+
+
+def generate_amazon_pool_post() -> dict:
+    """
+    product_pool.py の商品を使って体験談・口コミ風の投稿を生成する。
+    PA-APIなしで動作（Gemini生成 + 動的アソシエイトURL）。
+    スレッド形式: tweet1（体験談本文・URLなし）/ tweet2（URL + #PR）
+    """
+    try:
+        from product_pool import PRODUCT_POOL
+        from money_agent.gemini_client import generate as gemini_generate
+    except ImportError as e:
+        print(f"  [AmazonPool] インポートエラー: {e}")
+        return {}
+
+    if not PRODUCT_POOL:
+        return {}
+
+    # クールダウンフィルタリング（既存ロジックを流用）
+    available = _filter_amazon_cooldown(PRODUCT_POOL)
+
+    # 未投稿商品を優先
+    history_keys = {e["key"] for e in _load_amazon_product_history()}
+    not_posted = [p for p in available if p.get("asin", "") not in history_keys]
+    if not_posted:
+        product = random.choice(not_posted)
+        print(f"  [AmazonPool] 未投稿商品を選択: {product['name'][:40]}")
+    else:
+        pool_size = max(3, len(available) // 3)
+        product = random.choice(available[:pool_size])
+        print(f"  [AmazonPool] 最古投稿グループから選択: {product['name'][:40]}")
+
+    name     = product["name"]
+    url      = product["url"]
+    keywords = "・".join(product.get("keywords", [])[:3])
+
+    # 口コミ・体験談スタイルをランダム選択
+    style = random.choice(_AMAZON_POOL_STYLES)
+
+    prompt = f"""あなたは一人暮らしの20〜30代男性です。Amazonで実際に購入した商品の体験談をXに投稿します。
+
+商品名: {name}
+キーワード: {keywords}
+
+【投稿スタイル: {style['name']}】
+{style['desc']}
+
+参考例（このまま使わず、商品に合わせた完全オリジナルの表現で）:
+{style['example']}
+
+【ルール（厳守）】
+- 100〜130文字以内
+- スペックの数値は書かず「使ってどう変わったか」「どんな不便が消えたか」を語る
+- 「おすすめ」「ぜひ」「絶対」「騙されたと思って」などの広告臭は禁止
+- 一人暮らし・節約・生活改善の文脈で書く
+- URLは含めない（リプライに分ける）
+- ハッシュタグは含めない
+- 末尾に対話的な問いかけを1つ入れる（例:「同じ悩みある人いる？」「使ってる人いたら教えて」）
+- JSON形式のみ返す: {{"tweet1": "..."}}"""
+
+    try:
+        result = gemini_generate(prompt, use_cache=False, temperature=0.9)
+        import re as _re, json as _json
+        m = _re.search(r'\{.*\}', result or '', _re.DOTALL)
+        tweet1 = _json.loads(m.group()).get("tweet1", "") if m else ""
+    except Exception as e:
+        print(f"  [AmazonPool] Gemini生成エラー: {e}")
+        tweet1 = ""
+
+    if not tweet1:
+        return {}
+
+    tweet1 = append_hashtags(tweet1, "product")
+    tweet2 = f"詳細・購入はこちら↓\n{url}\n※Amazonアソシエイトに参加しています #PR"
+
+    _mark_amazon_product_posted(product)
+
+    return {
+        "type":    "amazon_pool",
+        "label":   "Amazon商品紹介（プール）",
+        "product": product,
+        "thread":  {"tweet1": tweet1, "tweet2": tweet2},
+        "text":    tweet1,
+        "url":     url,
+        "chars":   len(tweet1),
+    }
+
+
+# 体験談・口コミスタイル定義（generate_amazon_pool_post で使用）
+_AMAZON_POOL_STYLES = [
+    {
+        "name": "体験談・ストーリー型",
+        "desc": "「困っていた → 試してみた → こう変わった」の3段構造。日常の具体的なシーンから入る。",
+        "example": (
+            "ワンルームでコンセントが足りなくていつも困ってた。\n"
+            "試しに買ってみたら問題が全部消えた。\n"
+            "2,000円でこれが解決するとは思わなかった。"
+        ),
+    },
+    {
+        "name": "正直レビュー型",
+        "desc": "「半信半疑で買ったが想像以上だった」または「メリット・デメリットを正直に」の構成。信頼感が大事。",
+        "example": (
+            "正直、半信半疑だった。\n"
+            "実際に使ってみると想像以上。\n"
+            "・〇〇のストレスが消えた\n"
+            "・△△が格段に楽になった\n"
+            "もっと早く買えばよかった。"
+        ),
+    },
+    {
+        "name": "比較・本音型",
+        "desc": "「安物と比べた結果」「遠回りした末の結論」の構成。比較対象を出すと説得力が増す。",
+        "example": (
+            "安いやつを何回か買い替えた。\n"
+            "結局こっちに戻ってきた。\n"
+            "理由は耐久性と使いやすさ。\n"
+            "長く使うならこっち一択。"
+        ),
+    },
+]
 
 
 def generate_post(force_type: str = None) -> dict:
@@ -1181,19 +1369,27 @@ def generate_post(force_type: str = None) -> dict:
         post_type = "product"
         label = "Amazon商品紹介"
 
+    # Amazonプール投稿（PA-APIなしで動作）: product タイプの50%で使用
+    if post_type == "product" and random.random() < 0.5:
+        result = generate_amazon_pool_post()
+        if result:
+            return result
+
     api_key = os.getenv("GEMINI_API_KEY")
 
     # 重複チェック用インデックスをロード
     full_texts, hooks = _load_dedup_index()
 
     # 重複していたら最大3回リトライ（Geminiの場合のみ）
-    MAX_RETRY = 3
-    text = None
+    MAX_RETRY   = 3
+    text        = None
+    style_name  = "テンプレート"
     for attempt in range(MAX_RETRY):
         if api_key:
-            candidate = generate_with_gemini(post_type, label)
+            candidate, style_name = generate_with_gemini(post_type, label)
         else:
-            candidate = generate_with_template(post_type)
+            candidate  = generate_with_template(post_type)
+            style_name = "テンプレート"
 
         hook_line = candidate.split("\n")[0].strip() if candidate else ""
         if candidate and candidate.strip() not in full_texts and hook_line not in hooks:
@@ -1206,11 +1402,15 @@ def generate_post(force_type: str = None) -> dict:
     if not text:
         text = candidate if candidate else generate_with_template(post_type)
 
+    genre = _infer_genre_from_text(text, post_type)
+
     return {
-        "type":  post_type,
-        "label": label,
-        "text":  text,
-        "chars": len(text),
+        "type":          post_type,
+        "label":         label,
+        "text":          text,
+        "chars":         len(text),
+        "genre":         genre,
+        "writing_style": style_name,
     }
 
 
@@ -1744,6 +1944,8 @@ def generate_a8_program_post() -> dict:
     tweet_body     = ""
     selected_style = "テンプレート"
     _a8_cache_key  = program.get("ins_id", name)[:80]
+    # ジャンル推定（few-shot取得・DB保存に使う）
+    a8_genre = _infer_genre_from_hashtags(genre_tags)
 
     # history / cache ともにGemini+ペルソナで毎回新鮮な文体を生成
     if source in ("history", "cache"):
@@ -1752,6 +1954,8 @@ def generate_a8_program_post() -> dict:
         try:
             from money_agent.gemini_client import generate as _gem_gen
             _a8_question = random.choice(_ENGAGEMENT_QUESTIONS)
+            # few-shot: 同ジャンルの成功投稿を1件取得してプロンプトに注入
+            few_shot_block = _load_winner_few_shot(genre=a8_genre)
             _persona_prompt = f"""あなたは次のキャラクターとして X（Twitter）投稿を書いてください。
 キャラクター: {persona}
 
@@ -1761,7 +1965,7 @@ def generate_a8_program_post() -> dict:
 
 【{style_name}の書き方】
 {style_guide}
-
+{few_shot_block}
 【コピーライティング手法: PAS法（必須適用）】
 P（Problem）   : 読者が抱える悩みや不便を具体的に1〜2行で提示する
 A（Agitation） : その悩みを放置した場合のリスク・後悔を1行で描写する
@@ -1836,13 +2040,15 @@ S（Solution）  : サービスのベネフィット（使うとどう変わる�
         f"タグ: {hashtag_str}"
     )
     return {
-        "type":    "a8",
-        "label":   "A8アフィリエイト",
-        "text":    tweet1,
-        "chars":   len(tweet1),
-        "program": program,
-        "source":  source,
-        "thread":  {"tweet1": tweet1, "tweet2": tweet2_body},
+        "type":          "a8",
+        "label":         "A8アフィリエイト",
+        "text":          tweet1,
+        "chars":         len(tweet1),
+        "program":       program,
+        "source":        source,
+        "thread":        {"tweet1": tweet1, "tweet2": tweet2_body},
+        "genre":         a8_genre,
+        "writing_style": selected_style,
     }
 
 

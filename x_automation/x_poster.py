@@ -71,19 +71,21 @@ def _save_log_local(entry: dict):
 
 def save_log(entry: dict):
     """投稿ログを DB に INSERT する。DB未設定時はローカルJSONにフォールバック。"""
-    db_ok = False
     try:
         db.insert_post(
-            platform  = "x",
-            post_type = entry.get("type", ""),
-            label     = entry.get("label", ""),
-            chars     = entry.get("chars", 0),
-            text      = entry.get("text", ""),
-            success   = entry.get("success", False),
-            mode      = entry.get("mode", "live"),
-            has_image = entry.get("has_image", False),
+            platform       = "x",
+            post_type      = entry.get("type", ""),
+            label          = entry.get("label", ""),
+            chars          = entry.get("chars", 0),
+            text           = entry.get("text", ""),
+            success        = entry.get("success", False),
+            mode           = entry.get("mode", "live"),
+            has_image      = entry.get("has_image", False),
+            tweet1_id      = entry.get("tweet1_id") or _last_tweet_id or "",
+            genre          = entry.get("genre", ""),
+            writing_style  = entry.get("writing_style", ""),
+            posted_at_hour = entry.get("posted_at_hour", datetime.now().hour),
         )
-        db_ok = True
     except Exception as e:
         print(f"⚠️ DB書き込みエラー（ログ保存失敗）: {e}")
     # Supabase成否にかかわらずローカルにも書く（dedup用）
@@ -749,14 +751,17 @@ def post_now(force_type: str = None, test_mode: bool = False) -> bool:
                     pass
 
             save_log({
-                "datetime": datetime.now().isoformat(),
-                "type":     "amazon_thread",
-                "label":    "Amazon商品紹介",
-                "chars":    len(thread.get("tweet1", "")),
-                "text":     thread.get("tweet1", ""),
-                "success":  success,
-                "mode":     "dry_run" if test_mode else "live",
-                "has_image": bool(image_path),
+                "datetime":      datetime.now().isoformat(),
+                "type":          "amazon_thread",
+                "label":         "Amazon商品紹介",
+                "chars":         len(thread.get("tweet1", "")),
+                "text":          thread.get("tweet1", ""),
+                "success":       success,
+                "mode":          "dry_run" if test_mode else "live",
+                "has_image":     bool(image_path),
+                "genre":         "gadget",
+                "writing_style": "Amazon",
+                "posted_at_hour": datetime.now().hour,
             })
             return success
 
@@ -777,14 +782,17 @@ def post_now(force_type: str = None, test_mode: bool = False) -> bool:
         else:
             success = post_amazon_thread(thread)
         save_log({
-            "datetime": datetime.now().isoformat(),
-            "type":     "a8",
-            "label":    "A8アフィリエイト",
-            "chars":    len(thread.get("tweet1", "")),
-            "text":     thread.get("tweet1", ""),
-            "success":  success,
-            "mode":     "dry_run" if test_mode else "live",
-            "has_image": False,
+            "datetime":      datetime.now().isoformat(),
+            "type":          "a8",
+            "label":         "A8アフィリエイト",
+            "chars":         len(thread.get("tweet1", "")),
+            "text":          thread.get("tweet1", ""),
+            "success":       success,
+            "mode":          "dry_run" if test_mode else "live",
+            "has_image":     False,
+            "genre":         post.get("genre", ""),
+            "writing_style": post.get("writing_style", ""),
+            "posted_at_hour": datetime.now().hour,
         })
         # A8投稿成功 → ブログ連動パイプライン起動
         if success and not test_mode and _last_tweet_id:
@@ -831,14 +839,17 @@ def post_now(force_type: str = None, test_mode: bool = False) -> bool:
                     pass
 
         save_log({
-            "datetime":  datetime.now().isoformat(),
-            "type":      "rakuten_thread",
-            "label":     "楽天商品紹介",
-            "chars":     len(thread.get("tweet1", "")),
-            "text":      thread.get("tweet1", ""),
-            "success":   success,
-            "mode":      "dry_run" if test_mode else "live",
-            "has_image": bool(image_path),
+            "datetime":      datetime.now().isoformat(),
+            "type":          "rakuten_thread",
+            "label":         "楽天商品紹介",
+            "chars":         len(thread.get("tweet1", "")),
+            "text":          thread.get("tweet1", ""),
+            "success":       success,
+            "mode":          "dry_run" if test_mode else "live",
+            "has_image":     bool(image_path),
+            "genre":         post.get("genre", "daily_goods"),
+            "writing_style": post.get("writing_style", "楽天"),
+            "posted_at_hour": datetime.now().hour,
         })
         return success
 
@@ -850,14 +861,17 @@ def post_now(force_type: str = None, test_mode: bool = False) -> bool:
         print("📌 スレッド形式で投稿（リンク分離でリーチ最大化）")
         success = post_value_thread(post["type"])
         save_log({
-            "datetime":  datetime.now().isoformat(),
-            "type":      post["type"],
-            "label":     post["label"],
-            "chars":     post["chars"],
-            "text":      text,
-            "success":   success,
-            "mode":      "live_thread",
-            "has_image": True,
+            "datetime":      datetime.now().isoformat(),
+            "type":          post["type"],
+            "label":         post["label"],
+            "chars":         post["chars"],
+            "text":          text,
+            "success":       success,
+            "mode":          "live_thread",
+            "has_image":     True,
+            "genre":         post.get("genre", "saving"),
+            "writing_style": post.get("writing_style", ""),
+            "posted_at_hour": datetime.now().hour,
         })
         return success
 
@@ -888,14 +902,17 @@ def post_now(force_type: str = None, test_mode: bool = False) -> bool:
 
     # ログ保存
     save_log({
-        "datetime":   datetime.now().isoformat(),
-        "type":       post["type"],
-        "label":      post["label"],
-        "chars":      post["chars"],
-        "text":       text,
-        "success":    success,
-        "mode":       "dry_run" if test_mode else "live",
-        "has_image":  bool(image_path),
+        "datetime":      datetime.now().isoformat(),
+        "type":          post["type"],
+        "label":         post["label"],
+        "chars":         post["chars"],
+        "text":          text,
+        "success":       success,
+        "mode":          "dry_run" if test_mode else "live",
+        "has_image":     bool(image_path),
+        "genre":         post.get("genre", ""),
+        "writing_style": post.get("writing_style", ""),
+        "posted_at_hour": datetime.now().hour,
     })
 
     return success

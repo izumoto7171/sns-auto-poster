@@ -80,29 +80,158 @@ class DBClient:
         thread_url: str = "",
         dry_run: bool = False,
         error_message: str = "",
+        genre: str = "",
+        writing_style: str = "",
+        posted_at_hour: Optional[int] = None,
         **_kwargs,  # 旧コードからの余分なキーを無視
     ) -> None:
         """投稿ログを1件 INSERT する。失敗時は error_message に詳細を記録。"""
+        if posted_at_hour is None:
+            posted_at_hour = datetime.now().hour
         row = {
-            "platform":      platform,
-            "post_type":     post_type,
-            "label":         label,
-            "chars":         chars,
-            "text":          text,
-            "success":       success,
-            "mode":          mode,
-            "has_image":     has_image,
-            "url":           url,
-            "tweet1_id":     tweet1_id,
-            "tweet2_id":     tweet2_id,
-            "tweet3_id":     tweet3_id,
-            "thread_url":    thread_url,
-            "dry_run":       dry_run,
-            "error_message": error_message,
+            "platform":        platform,
+            "post_type":       post_type,
+            "label":           label,
+            "chars":           chars,
+            "text":            text,
+            "success":         success,
+            "mode":            mode,
+            "has_image":       has_image,
+            "url":             url,
+            "tweet1_id":       tweet1_id,
+            "tweet2_id":       tweet2_id,
+            "tweet3_id":       tweet3_id,
+            "thread_url":      thread_url,
+            "dry_run":         dry_run,
+            "error_message":   error_message,
+            "genre":           genre,
+            "writing_style":   writing_style,
+            "posted_at_hour":  posted_at_hour,
+            "impression_count": 0,
+            "click_count":     0,
+            "is_winner":       False,
         }
         # 空文字列は None に変換（Supabase の TEXT 型は空文字でも OK だが NULL の方が意味が明確）
         row = {k: (None if v == "" else v) for k, v in row.items()}
         _get_supabase().table("posts").insert(row).execute()
+
+    def get_pending_analytics_posts(self, hours_min: int = 24, hours_max: int = 48) -> list:
+        """
+        投稿から hours_min〜hours_max 時間経過かつ impression_count=0 の X 投稿を返す。
+        analytics_fetcher.py がアナリティクスを埋めるために使う。
+        """
+        from datetime import timezone
+        now     = datetime.now(timezone.utc)
+        dt_min  = (now - timedelta(hours=hours_max)).isoformat()
+        dt_max  = (now - timedelta(hours=hours_min)).isoformat()
+        rows = (
+            _get_supabase()
+            .table("posts")
+            .select("id, tweet1_id, genre, text, created_at")
+            .eq("platform", "x")
+            .eq("success", True)
+            .eq("impression_count", 0)
+            .gte("created_at", dt_min)
+            .lte("created_at", dt_max)
+            .execute()
+            .data
+        ) or []
+        return rows
+
+    def update_post_analytics(
+        self,
+        post_id: int,
+        impression_count: int,
+        click_count: int = 0,
+        is_winner: bool = False,
+    ) -> None:
+        """投稿の impression_count / click_count / is_winner を更新する。"""
+        _get_supabase().table("posts").update({
+            "impression_count": impression_count,
+            "click_count":      click_count,
+            "is_winner":        is_winner,
+        }).eq("id", post_id).execute()
+
+    def get_winner_posts(self, genre: str = "", limit: int = 5) -> list:
+        """
+        is_winner=True の成功投稿を返す。few-shot プロンプト注入に使う。
+        genre 指定時は同ジャンルを優先し、不足分を全体から補う。
+        """
+        sb = _get_supabase()
+        results: list = []
+        if genre:
+            rows = (
+                sb.table("posts")
+                .select("text, genre, writing_style")
+                .eq("platform", "x")
+                .eq("is_winner", True)
+                .eq("genre", genre)
+                .order("impression_count", desc=True)
+                .limit(limit)
+                .execute()
+                .data
+            ) or []
+            results.extend(rows)
+        if len(results) < limit:
+            remaining = limit - len(results)
+            rows = (
+                sb.table("posts")
+                .select("text, genre, writing_style")
+                .eq("platform", "x")
+                .eq("is_winner", True)
+                .order("impression_count", desc=True)
+                .limit(remaining)
+                .execute()
+                .data
+            ) or []
+            existing_texts = {r["text"] for r in results}
+            for r in rows:
+                if r["text"] not in existing_texts:
+                    results.append(r)
+        return results[:limit]
+
+    def get_winner_genre_counts(self, days: int = 14) -> dict:
+        """
+        直近 days 日間の is_winner=True 投稿をジャンル別にカウントして返す。
+        deal_selector のボーナススコア計算に使う。
+        """
+        cutoff = (datetime.now() - timedelta(days=days)).isoformat()
+        rows = (
+            _get_supabase()
+            .table("posts")
+            .select("genre")
+            .eq("platform", "x")
+            .eq("is_winner", True)
+            .gte("created_at", cutoff)
+            .execute()
+            .data
+        ) or []
+        counts: dict[str, int] = {}
+        for r in rows:
+            g = r.get("genre") or "unknown"
+            counts[g] = counts.get(g, 0) + 1
+        return counts
+
+    def get_genre_impression_avg(self, genre: str) -> float:
+        """
+        指定ジャンルの impression_count 平均値を返す（is_winner 判定の基準値）。
+        データが3件未満の場合は 0 を返す。
+        """
+        rows = (
+            _get_supabase()
+            .table("posts")
+            .select("impression_count")
+            .eq("platform", "x")
+            .eq("success", True)
+            .eq("genre", genre)
+            .gt("impression_count", 0)
+            .execute()
+            .data
+        ) or []
+        if len(rows) < 3:
+            return 0.0
+        total = sum(r["impression_count"] for r in rows)
+        return total / len(rows)
 
     def get_posts(self, platform: Optional[str] = None, limit: int = 100) -> list:
         """

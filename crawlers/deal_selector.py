@@ -408,6 +408,54 @@ def _fetch_amazon_deal(category: str = "gadget") -> dict:
     return {}
 
 
+# ── Winner ジャンルボーナス ───────────────────────────────────
+
+# ジャンル名 → サービス のマッピング
+_GENRE_TO_SERVICE: dict[str, str] = {
+    "side_hustle": "a8",  "tax": "a8",        "investment": "a8",
+    "insurance":   "a8",  "credit_card": "a8", "career": "a8",
+    "accounting":  "a8",  "blog": "a8",        "ai_tools": "a8",
+    "gadget":      "amazon", "appliance": "amazon",
+    "daily_goods": "rakuten", "cooking": "rakuten", "saving": "rakuten",
+    "lifestyle":   "rakuten", "beauty": "rakuten",  "points": "rakuten",
+}
+
+# ボーナス倍率の上限
+_WINNER_BONUS_MAX = 0.20  # +20% まで
+_WINNER_BONUS_PER_WIN = 0.05  # 勝利投稿 1 件につき +5%
+
+
+def _get_winner_bonus_scores() -> dict[str, float]:
+    """
+    直近 14 日の is_winner=True 投稿をジャンル別に集計し、
+    サービス別のボーナス倍率（0.0〜0.20）を返す。
+    DB 接続失敗時は空 dict を返す。
+    """
+    try:
+        sys.path.insert(0, str(_ROOT_DIR))
+        from db_client import db as _db
+        genre_counts = _db.get_winner_genre_counts(days=14)
+    except Exception:
+        return {}
+
+    if not genre_counts:
+        return {}
+
+    # サービス別に勝利数を合算
+    service_wins: dict[str, int] = {}
+    for genre, count in genre_counts.items():
+        service = _GENRE_TO_SERVICE.get(genre)
+        if service:
+            service_wins[service] = service_wins.get(service, 0) + count
+
+    # 勝利数 → ボーナス倍率（上限 _WINNER_BONUS_MAX）
+    bonus: dict[str, float] = {}
+    for service, wins in service_wins.items():
+        bonus[service] = min(wins * _WINNER_BONUS_PER_WIN, _WINNER_BONUS_MAX)
+
+    return bonus
+
+
 # ── メイン: select_best_deal ─────────────────────────────────
 
 def select_best_deal(
@@ -439,11 +487,23 @@ def select_best_deal(
         a8_programs = []
 
     # ── 各サービスのスコア算出 ────────────────────────────────
-    scores: list[ServiceScore] = [
+    base_scores: list[ServiceScore] = [
         _rakuten_score(today),
         _a8_score(today, a8_programs),
         _amazon_score(today),
     ]
+
+    # winner ジャンルボーナスを適用
+    winner_bonus = _get_winner_bonus_scores()
+    scores: list[ServiceScore] = []
+    for s in base_scores:
+        bonus = winner_bonus.get(s.service, 0.0)
+        if bonus > 0:
+            boosted_score  = s.score * (1.0 + bonus)
+            boosted_reason = f"{s.reason} + winner_bonus×{1.0 + bonus:.2f}"
+            scores.append(ServiceScore(s.service, boosted_score, boosted_reason, s.boosted_ids))
+        else:
+            scores.append(s)
 
     if verbose:
         print(f"  [DealSelector] {now_str} スコア計算:")

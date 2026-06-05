@@ -4,6 +4,7 @@ on:
   schedule:
     - cron: '0 23 * * *'   # JST 8:00  ← 朝ピーク
     - cron: '0 13 * * *'   # JST 22:00 ← 夜の余暇時間
+    - cron: '0 0 * * *'    # JST 9:00  ← アナリティクス回収（前日投稿の 24h 後）
   workflow_dispatch:        # 手動実行ボタン
 
 jobs:
@@ -470,3 +471,33 @@ jobs:
           git add rakuten_room/post_log.json || true
           git diff --staged --quiet || git commit -m "chore: 楽天ルーム投稿ログ更新 $(date +'%Y-%m-%d')"
           git push || true
+
+  # ============================================================
+  # 📊 アナリティクス回収（JST 翌日 8:00 → 前日投稿の 24h 後）
+  # ============================================================
+  analytics-fetch:
+    name: 📊 X アナリティクス回収
+    runs-on: ubuntu-latest
+    # 毎朝 JST 9:00 (UTC 0:00) に実行 ── 前日 8〜22 時投稿の 24〜48h 後
+    if: github.event.schedule == '0 0 * * *' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Python セットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 依存関係インストール
+        run: pip install tweepy supabase
+
+      - name: アナリティクス回収
+        env:
+          SUPABASE_URL:             ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY:     ${{ secrets.SUPABASE_SERVICE_KEY }}
+          X_BEARER_TOKEN:           ${{ secrets.X_BEARER_TOKEN }}
+          X_API_KEY:                ${{ secrets.X_API_KEY }}
+          X_API_SECRET:             ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN:           ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_TOKEN_SECRET:    ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+        run: python3 money_agent/analytics_fetcher.py
