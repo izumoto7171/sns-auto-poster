@@ -1,0 +1,57 @@
+name: Supabase テーブル確認
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install supabase
+      - name: テーブル一覧を確認
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          python3 - <<'EOF'
+          import os
+          from supabase import create_client
+
+          url = os.environ["SUPABASE_URL"]
+          key = os.environ["SUPABASE_SERVICE_KEY"]
+          sb = create_client(url, key)
+
+          # information_schema でテーブル一覧を取得
+          res = sb.rpc("pg_catalog_tables", {}).execute() if False else None
+
+          # postgrest 経由で直接確認
+          import httpx
+          headers = {
+              "apikey": key,
+              "Authorization": f"Bearer {key}",
+          }
+          r = httpx.get(
+              f"{url}/rest/v1/",
+              headers=headers,
+              timeout=10,
+          )
+          print("=== PostgREST ルート ===")
+          print(r.status_code)
+          import json
+          data = r.json()
+          if isinstance(data, dict) and "definitions" in data:
+              print("テーブル一覧:", list(data["definitions"].keys()))
+          else:
+              print(data)
+
+          # posts テーブルに直接アクセス
+          try:
+              res = sb.table("posts").select("id").limit(1).execute()
+              print("✅ posts テーブル: 存在する（行数確認OK）")
+              print("データ:", res.data)
+          except Exception as e:
+              print(f"❌ posts テーブル: {e}")
+          EOF
