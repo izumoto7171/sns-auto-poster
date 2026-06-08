@@ -268,7 +268,7 @@ def add_new_product(trend: dict, products: list) -> dict:
     cat_ja = CAT_EN_TO_JA.get(cat_en, "日本のお菓子")
 
     amazon_url = (
-        f"https://www.amazon.co.jp/dp/{asin}?tag={AMAZON_TAG}" if asin
+        f"https://www.amazon.co.jp/dp/{asin}/?tag={AMAZON_TAG}" if asin
         else ""
     )
 

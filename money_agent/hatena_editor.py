@@ -61,6 +61,25 @@ COMPARISON_SIGNALS = ["比較", "違い", "どっち", "vs ", "versus", "どち�
 # 挿入済みマーカー（冪等性のため）
 SENTINEL = "<!-- hatena_editor:comparison_inserted -->"
 
+# ─────────────────────────────────────────────────────────────
+# Amazon公式セールバナー
+# 本番コードは affiliate.amazon.co.jp のツール → バナーリンク から
+# HTMLをコピーして AMAZON_SALE_BANNER_HTML に貼り付けてください。
+# バナーHTMLは改変せずそのまま貼ること（規約上の改変禁止）。
+# ─────────────────────────────────────────────────────────────
+AMAZON_SALE_BANNER_HTML = """\
+<!-- PLACEHOLDER: 下記をAmazonアソシエイト公式バナーHTMLで差し替える -->
+<!-- 取得場所: affiliate.amazon.co.jp → ツール → バナーリンク -->
+<div style="text-align:center;margin:20px 0;">
+<a href="https://www.amazon.co.jp/?tag=smartearn22-22" target="_blank" rel="noopener noreferrer">
+<img src="https://m.media-amazon.com/images/G/09/associates/banners/600x90JP._CB1198675309_.gif"
+     alt="Amazonでお得な商品を見る" width="600" height="90" border="0" />
+</a>
+</div>"""
+
+# バナー挿入済みマーカー（冪等性のため）
+AMAZON_BANNER_SENTINEL = "<!-- hatena_editor:amazon_banner_inserted -->"
+
 
 # ── 認証 ──────────────────────────────────────────────────────
 def _auth_header() -> str:
@@ -287,6 +306,34 @@ JSONで返してください（keyは comparison_table, selection_guide）:
     return markdown_to_html(table_md), markdown_to_html(guide_md)
 
 
+# ── Amazonバナー挿入 ──────────────────────────────────────
+def _insert_amazon_banners(html: str) -> str:
+    """
+    リード文直下（最初の<h2>直前）と記事末尾の2箇所にAmazonバナーを挿入する。
+    AMAZON_BANNER_SENTINEL があれば挿入済みとしてスキップ（冪等性）。
+    バナーHTMLは改変せずそのまま挿入（Amazonアソシエイト規約準拠）。
+    """
+    if AMAZON_BANNER_SENTINEL in html:
+        return html
+
+    # リード文直下 = 最初の<h2>直前に挿入（<h2>がなければ最初の</p>の直後）
+    lead_banner = f"\n{AMAZON_BANNER_SENTINEL}\n{AMAZON_SALE_BANNER_HTML}\n"
+    m = re.search(r"<h2[^>]*>", html, re.IGNORECASE)
+    if m:
+        html = html[: m.start()] + lead_banner + html[m.start() :]
+    else:
+        m2 = re.search(r"</p>", html, re.IGNORECASE)
+        if m2:
+            html = html[: m2.end()] + lead_banner + html[m2.end() :]
+        else:
+            html = lead_banner + html
+
+    # 末尾にもバナーを追加
+    html = html.rstrip() + f"\n{AMAZON_SALE_BANNER_HTML}\n"
+
+    return html
+
+
 # ── 記事への挿入 ─────────────────────────────────────────
 def _insert_sections(html: str, table_html: str, guide_html: str) -> str:
     """
@@ -486,6 +533,7 @@ def run(dry_run: bool = False) -> dict:
             guide_html = ""
 
         new_body = _insert_sections(body_html, table_html, guide_html)
+        new_body = _insert_amazon_banners(new_body)
 
         if dry_run:
             sentinel_pos = new_body.find(SENTINEL)
@@ -541,6 +589,69 @@ def run(dry_run: bool = False) -> dict:
     return final
 
 
+def run_banner_only(dry_run: bool = False, max_articles: int = 20) -> dict:
+    """
+    既存記事にAmazonバナーのみを挿入する（比較表不要）。
+    バナー未挿入の記事を最大 max_articles 件更新する。
+
+    実行方法:
+      python3 money_agent/hatena_editor.py banner           # バナー挿入モード
+      python3 money_agent/hatena_editor.py banner dry-run   # 確認のみ
+    """
+    print("[HatenaEditor] Amazonバナー挿入モードを開始...")
+
+    if not HATENA_API_KEY:
+        msg = "HATENA_API_KEY 未設定"
+        print(f"[HatenaEditor] {msg} — スキップ")
+        return {"status": "skip", "reason": "no_api_key", "updated": 0}
+
+    entries = _fetch_entry_list(max_pages=5)
+    if not entries:
+        return {"status": "error", "reason": "fetch_entries_failed", "updated": 0}
+
+    print(f"[HatenaEditor] エントリ取得: {len(entries)} 件")
+
+    updated_count = 0
+    skipped_count = 0
+    results       = []
+
+    for entry in entries:
+        if updated_count >= max_articles:
+            break
+
+        entry_id = entry["entry_id"]
+        title    = entry["title"]
+
+        _, body_html = _fetch_entry_body(entry_id)
+        if not body_html:
+            continue
+
+        if AMAZON_BANNER_SENTINEL in body_html:
+            skipped_count += 1
+            continue
+
+        new_body = _insert_amazon_banners(body_html)
+
+        if dry_run:
+            pos = new_body.find(AMAZON_BANNER_SENTINEL)
+            preview = new_body[pos: pos + 200] if pos >= 0 else ""
+            print(f"  [dry-run] {title[:40]}\n  プレビュー: {preview[:100]}\n")
+            results.append({"entry_id": entry_id, "title": title, "status": "dry_run"})
+            updated_count += 1
+            continue
+
+        success = _update_entry(entry_id, title, new_body)
+        status  = "updated" if success else "failed"
+        results.append({"entry_id": entry_id, "title": title, "status": status})
+        if success:
+            updated_count += 1
+            print(f"  [HatenaEditor] バナー挿入完了: {title[:40]}")
+        time.sleep(2)
+
+    print(f"\n[HatenaEditor] バナー挿入 完了 — 更新: {updated_count} / スキップ: {skipped_count}")
+    return {"status": "ok", "updated": updated_count, "skipped": skipped_count, "results": results}
+
+
 if __name__ == "__main__":
     # .env 読み込み
     env_path = Path(__file__).parent.parent / ".env"
@@ -551,6 +662,12 @@ if __name__ == "__main__":
                 k, v = line.split("=", 1)
                 os.environ.setdefault(k.strip(), v.strip())
 
-    mode   = sys.argv[1] if len(sys.argv) > 1 else "run"
-    result = run(dry_run=(mode == "dry-run"))
+    mode = sys.argv[1] if len(sys.argv) > 1 else "run"
+
+    if mode == "banner":
+        dry = len(sys.argv) > 2 and sys.argv[2] == "dry-run"
+        result = run_banner_only(dry_run=dry)
+    else:
+        result = run(dry_run=(mode == "dry-run"))
+
     print(json.dumps(result, ensure_ascii=False, indent=2))

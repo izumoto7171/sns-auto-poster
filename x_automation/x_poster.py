@@ -225,6 +225,20 @@ def _download_image_from_url(image_url: str) -> str:
 
 
 # ─────────────────────────────────────────
+# Amazon URL をフルURL形式に正規化（短縮リンク不使用）
+# amzn.to / bit.ly など短縮URL経由だとX上でアソシエイトIDが消えるため、
+# ASINを抽出して https://www.amazon.co.jp/dp/{ASIN}/?tag={TAG} に組み直す
+# ─────────────────────────────────────────
+def _build_full_amazon_url(url: str) -> str:
+    import re
+    tag = os.getenv("AMAZON_ASSOCIATE_TAG", "smartearn22-22")
+    m = re.search(r'/dp/([A-Z0-9]{10})', url)
+    if m:
+        return f"https://www.amazon.co.jp/dp/{m.group(1)}/?tag={tag}"
+    return url
+
+
+# ─────────────────────────────────────────
 # Bitly URL短縮（BITLY_TOKEN 未設定時は元URLをそのまま返す）
 # ─────────────────────────────────────────
 def _shorten_url_bitly(url: str) -> str:
@@ -279,8 +293,8 @@ def _build_affiliate_reply(thread: dict, post_type: str = "amazon_thread") -> st
             url = m.group(0).rstrip(".,)")  # 末尾の句読点を除去
             break
 
-    # Bitly で短縮（BITLY_TOKEN が未設定なら元URL）
-    short_url = _shorten_url_bitly(url) if url else ""
+    # Amazon URL はフルURLに正規化（短縮リンク禁止: X上でアソシエイトIDが消えるため）
+    short_url = _build_full_amazon_url(url) if url else ""
 
     if "rakuten" in post_type.lower():
         intro       = "紹介したアイテムの詳細・購入リンクはこちら（楽天市場）👇"

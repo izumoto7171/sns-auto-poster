@@ -381,6 +381,55 @@ def generate_optimized_instruction(stats: dict = None) -> str:
 
 
 # ─────────────────────────────────────────
+# 商品直リンクの解決
+# ─────────────────────────────────────────
+def get_product_url(product: dict) -> str:
+    """
+    商品情報から「商品直リンク（/dp/{ASIN}）」を最優先で組み立てて返す。
+
+    検索結果ページ（/s?k=...）への着地は、投稿で語った商品と違うものが
+    並んで離脱を招き、コンバージョン率0%の原因になっていた
+    （実データ: 258クリックで紹介料¥0）。そのため検索URLは
+    「ASINがどうしても解決できなかった時の最終セーフティネット」に限定する。
+    """
+    associate_tag = os.getenv("AMAZON_ASSOCIATE_TAG", "smartearn22-22")
+
+    # 1. ASIN が分かっているなら直リンクを組み立てる
+    asin = product.get("asin")
+    if asin:
+        return f"https://www.amazon.co.jp/dp/{asin}/?tag={associate_tag}"
+
+    amazon_url = product.get("amazon_url", "")
+    keyword = product.get("search_keyword") or product.get("title", "")
+
+    # 2. URLが空、または検索URL（/s?k=）の場合は ASIN 解決を挟む
+    if (not amazon_url or "/s?k=" in amazon_url) and keyword:
+        try:
+            import sys as _sys_ra
+            _sys_ra.path.insert(0, str(BASE_DIR))
+            from fetch_amazon_deals import _resolve_asin
+            resolved = _resolve_asin(keyword)
+            if "/dp/" in resolved:
+                print(f"  [get_product_url] ASIN解決で直リンクを生成: {resolved[:60]}")
+                return resolved
+            print(f"  [get_product_url] ⚠️ ASIN解決失敗、検索URLにフォールバック: {resolved[:60]}")
+            amazon_url = resolved
+        except Exception as e:
+            print(f"  [get_product_url] ⚠️ ASIN解決エラー: {e}")
+
+    # 3. 既存の amazon_url（直リンク or 解決済み検索URL）があればそれを使う
+    if amazon_url:
+        return amazon_url
+
+    # 4. どうしてもダメな場合の最終セーフティネット
+    from urllib.parse import urlencode, urlunparse
+    query = urlencode({"k": keyword, "tag": associate_tag})
+    fallback_url = urlunparse(("https", "www.amazon.co.jp", "/s", "", query, ""))
+    print(f"  [get_product_url] ⚠️ 最終フォールバック（検索URL）: {fallback_url[:60]}")
+    return fallback_url
+
+
+# ─────────────────────────────────────────
 # Gemini でスレッド3本を生成
 # ─────────────────────────────────────────
 def generate_thread(product: dict, optimized_instruction: str = None) -> dict:
@@ -403,18 +452,7 @@ def generate_thread(product: dict, optimized_instruction: str = None) -> dict:
     if optimized_instruction is None:
         optimized_instruction = generate_optimized_instruction()
 
-    amazon_url = product.get("amazon_url", "")
-
-    # amazon_url が空の場合は search_keyword から検索URLを再生成（フェールセーフ）
-    if not amazon_url:
-        from urllib.parse import urlencode, urlunparse
-        keyword = product.get("search_keyword") or product.get("title", "")
-        associate_tag = os.getenv("AMAZON_ASSOCIATE_TAG", "smartearn22-22")
-        if keyword:
-            # urllib.parse.urlencode でクエリを安全に構築（スペース・特殊文字を正しくエンコード）
-            query = urlencode({"k": keyword, "tag": associate_tag})
-            amazon_url = urlunparse(("https", "www.amazon.co.jp", "/s", "", query, ""))
-            print(f"  [generate_thread] amazon_url が空のため検索URLを生成: {amazon_url[:60]}")
+    amazon_url = get_product_url(product)
 
     # X投稿向け計測パラメータ付与（sub1=x_YYYYMMDD）
     try:

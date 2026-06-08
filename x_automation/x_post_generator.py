@@ -1932,13 +1932,14 @@ def generate_a8_program_post() -> dict:
     # リンクは hatena 記事 URL を優先（スパム判定回避）
     link_url = hatena_url if hatena_url else affiliate_url
 
-    # Bitly 短縮（利用可能なら）
-    try:
-        sys.path.insert(0, str(Path(__file__).parent.parent / "money_agent"))
-        from affiliate_tracker import shorten_url
-        link_url = shorten_url(link_url) or link_url
-    except Exception:
-        pass
+    # Bitly 短縮（Amazon URL は短縮しない: X上でアソシエイトIDが消えるため）
+    if "amazon" not in link_url:
+        try:
+            sys.path.insert(0, str(Path(__file__).parent.parent / "money_agent"))
+            from affiliate_tracker import shorten_url
+            link_url = shorten_url(link_url) or link_url
+        except Exception:
+            pass
 
     # ── 生成ロジック ────────────────────────────────────────────
     tweet_body     = ""
