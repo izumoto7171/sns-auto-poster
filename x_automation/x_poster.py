@@ -580,9 +580,11 @@ def post_value_thread(post_type: str = "useful") -> bool:
         print("⚠️ スレッドのtweet1が空")
         return False
 
-    # tweet1を通常投稿（twikit → browser）
+    # tweet1を投稿: tweepy（ID取得できてリプライ可）→ browser の順
     image_path = _generate_card_file(tweet1, post_type)
-    success1 = post_with_twikit(tweet1, image_path)
+    success1 = post_with_tweepy(tweet1, image_path)
+    if not success1:
+        success1 = post_with_twikit(tweet1, image_path)
     if not success1:
         success1 = post_with_browser(tweet1)
 
@@ -595,8 +597,30 @@ def post_value_thread(post_type: str = "useful") -> bool:
     if not success1 or not tweet2:
         return success1
 
-    # tweet2はtwikit daily limit 344 のためスキップ（tweet1のみ投稿）
-    print("⏭️  tweet2リプライをスキップ（twikit daily limit 回避）")
+    # tweet2: tweepy でリプライ（twikit は daily limit 344 頻発のためスキップ）
+    if _last_tweet_id:
+        try:
+            import tweepy
+            api_key       = os.getenv("X_API_KEY")
+            api_secret    = os.getenv("X_API_SECRET")
+            access_token  = os.getenv("X_ACCESS_TOKEN")
+            access_secret = os.getenv("X_ACCESS_TOKEN_SECRET")
+            if all([api_key, api_secret, access_token, access_secret]):
+                client = tweepy.Client(
+                    consumer_key        = api_key,
+                    consumer_secret     = api_secret,
+                    access_token        = access_token,
+                    access_token_secret = access_secret,
+                )
+                time.sleep(2)
+                client.create_tweet(text=tweet2, in_reply_to_tweet_id=_last_tweet_id)
+                print("✅ tweet2リプライ成功（tweepy）")
+            else:
+                print("⚠️ X APIキー未設定のためtweet2リプライをスキップ")
+        except Exception as e:
+            print(f"⚠️ tweet2リプライ失敗（無視）: {e}")
+    else:
+        print("⚠️ tweet1のID未取得のためtweet2リプライをスキップ")
 
     return True
 
@@ -781,6 +805,53 @@ def post_now(force_type: str = None, test_mode: bool = False) -> bool:
 
         print("❌ Amazon商品取得完全失敗、投稿スキップ")
         return False
+
+    # Amazonプールタイプはスレッド投稿（tweet1=本文、tweet2=アフィリエイトURL）
+    if post["type"] == "amazon_pool" and post.get("thread", {}).get("tweet2"):
+        thread       = post["thread"]
+        product_info = post.get("product", {})
+        print(f"Amazonプール商品スレッド投稿: {thread.get('tweet1', '')[:40]}...")
+        if test_mode:
+            print("\n[DRY RUN] Amazonプールツリー投稿プレビュー:")
+            print("── 親ポスト（体験談）──")
+            print(thread.get("tweet1", ""))
+            print("── 子ポスト（アフィリエイトリプライ）──")
+            print(thread.get("tweet2", ""))
+            success    = True
+            image_path = ""
+        else:
+            image_path = _generate_review_image(product_info)
+            if not image_path:
+                image_path = _download_image_from_url(product_info.get("image_url", ""))
+
+            tweet1_text = thread.get("tweet1", "")
+            reply_text  = thread.get("tweet2", "")
+
+            success = post_parent_and_reply(tweet1_text, image_path, reply_text)
+            if not success:
+                print("⚠️ tweepy失敗、ブラウザスレッド投稿にフォールバック")
+                success = post_amazon_thread(thread)
+
+            if image_path and os.path.exists(image_path):
+                try:
+                    os.remove(image_path)
+                except Exception:
+                    pass
+
+        save_log({
+            "datetime":      datetime.now().isoformat(),
+            "type":          "amazon_pool",
+            "label":         "Amazon商品紹介（プール）",
+            "chars":         len(thread.get("tweet1", "")),
+            "text":          thread.get("tweet1", ""),
+            "success":       success,
+            "mode":          "dry_run" if test_mode else "live",
+            "has_image":     bool(image_path) if not test_mode else False,
+            "genre":         "gadget",
+            "writing_style": "amazon_pool",
+            "posted_at_hour": datetime.now().hour,
+        })
+        return success
 
     # A8タイプはスレッド投稿（tweet1=本文リンクなし、tweet2=短縮URL）
     if post["type"] == "a8" and post.get("thread", {}).get("tweet2"):
