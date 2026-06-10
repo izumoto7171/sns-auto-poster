@@ -1358,5 +1358,175 @@
     "amazon_url": "https://www.amazon.co.jp/dp/B0FNKH3ZZS/?tag=smartearn22-22",
     "source": "fetched",
     "fetched_at": "2026-06-09T15:56:50.294597"
+  },
+  {
+    "asin": "B07PP2RB25",
+    "search_keyword": "UGREEN USB Type C ケーブル USB A to USB C ケー",
+    "title": "UGREEN USB Type C ケーブル USB A to USB C ケーブル ナイロン編み 3A急速充電 Quick Charge 3.0/2.0対応 56Kレジスタ実装 iphone17/Galaxy S24/Pixel/Google/Xp",
+    "brand": "UGREEN",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "要確認"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "充電・バッテリー",
+    "keywords": [
+      "UGREEN",
+      "USB",
+      "Type",
+      "ケーブル"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/61QVF+H+eeL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B07PP2RB25/?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-10T00:05:27.316085"
+  },
+  {
+    "asin": "B07V78HMDQ",
+    "search_keyword": "UGREEN USB Type Cケーブル PD対応 100W/5A 超急速充電",
+    "title": "UGREEN USB Type Cケーブル PD対応 100W/5A 超急速充電 USB C ナイロン編み 断線防止 iphone17/16/15シリーズ/iPad/MacBook Pro/Galaxy S24/Matebook/iPad/Xperi",
+    "brand": "UGREEN",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "要確認"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "充電・バッテリー",
+    "keywords": [
+      "UGREEN",
+      "USB",
+      "Type",
+      "Cケーブル"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/61DgZxJhEZL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B07V78HMDQ/?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-10T00:05:27.316123"
+  },
+  {
+    "asin": "B0FJ5N5PX4",
+    "search_keyword": "対応 iPhone 17 ガラスフィルム iPhone 17 ガイド枠付き 指紋",
+    "title": "対応 iPhone 17 ガラスフィルム iPhone 17 ガイド枠付き 指紋防止 【2* フィルム + 2* レンズ保護フィルム+ 1*ガイド枠付き+ 1*取り除き発泡板】国産旭硝子材質 アイフォン17 薄型 強化ガラス アイフォン 17 保護フ",
+    "brand": "対応",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "要確認"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "ガジェット",
+    "keywords": [
+      "対応",
+      "iPhone",
+      "17",
+      "ガラスフィルム"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/71QEKhLZl5L._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0FJ5N5PX4/?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-10T00:05:29.931839"
+  },
+  {
+    "asin": "B0FNRS5WB2",
+    "search_keyword": "Anker Soundcore P31i (Bluetooth 6.1) 【完全",
+    "title": "Anker Soundcore P31i (Bluetooth 6.1) 【完全ワイヤレスイヤホン/アクティブノイズキャンセリング/マルチポイント接続 / 最大50時間再生 / PSE技術基準適合】ブラック",
+    "brand": "Anker",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "要確認"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "オーディオ",
+    "keywords": [
+      "Anker",
+      "Soundcore",
+      "P31i",
+      "Bluetooth"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/51nHT2kQ1bL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0FNRS5WB2/?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-10T00:05:29.931875"
+  },
+  {
+    "asin": "B0GK2L3T7W",
+    "search_keyword": "対応 Google Pixel 10A ガラスフイルム 用の ガイド枠付き【 G",
+    "title": "対応 Google Pixel 10A ガラスフイルム 用の ガイド枠付き【 Google Pixel10A フイルム（２枚入り） カメラフィルム（２枚入り）ガイド枠 】 強化ガラス 液晶 グーグルピクセル10A 保護フィルム 国産旭硝子素材 撥油性",
+    "brand": "対応",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "要確認"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "ガジェット",
+    "keywords": [
+      "対応",
+      "Google",
+      "Pixel",
+      "10A"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/61l09p9-oyL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0GK2L3T7W/?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-10T00:05:29.931906"
   }
 ]
