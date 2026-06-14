@@ -514,6 +514,50 @@ PRODUCT_POOL = [
         "category": "gadget",
     },
 
+    # === コーヒー器具 ===
+    {
+        "asin": "B000P4D5HG",
+        "name": "Hario V60 コーヒードリッパー 02 透明 VD-02T",
+        "url": f"https://www.amazon.co.jp/dp/B000P4D5HG?tag={_TAG}",
+        "keywords": ["コーヒー", "ハンドドリップ", "Hario", "一人暮らし"],
+        "category": "kitchen",
+    },
+    {
+        "asin": "B00FHKEXHA",
+        "name": "Kalita ウェーブドリッパー 185 ステンレス コーヒードリッパー",
+        "url": f"https://www.amazon.co.jp/dp/B00FHKEXHA?tag={_TAG}",
+        "keywords": ["コーヒー", "ドリッパー", "Kalita", "ハンドドリップ"],
+        "category": "kitchen",
+    },
+    {
+        "asin": "B00006IUWA",
+        "name": "Bialetti モカエキスプレス 直火式 エスプレッソ 3カップ",
+        "url": f"https://www.amazon.co.jp/dp/B00006IUWA?tag={_TAG}",
+        "keywords": ["エスプレッソ", "コーヒー", "Bialetti", "一人暮らし"],
+        "category": "kitchen",
+    },
+    {
+        "asin": "B07DJJ46FH",
+        "name": "De'Longhi ネスプレッソ エッセンサミニ EN80B カプセル式コーヒーメーカー",
+        "url": f"https://www.amazon.co.jp/dp/B07DJJ46FH?tag={_TAG}",
+        "keywords": ["ネスプレッソ", "コーヒーメーカー", "カプセル", "一人暮らし"],
+        "category": "kitchen",
+    },
+    {
+        "asin": "B0061NRXUM",
+        "name": "ポーレックス コーヒーミル セラミック ハンドグラインダー",
+        "url": f"https://www.amazon.co.jp/dp/B0061NRXUM?tag={_TAG}",
+        "keywords": ["コーヒーミル", "手動", "ポーレックス", "アウトドア"],
+        "category": "kitchen",
+    },
+    {
+        "asin": "B00DCRXC9W",
+        "name": "BODUM BRAZIL フレンチプレス コーヒーメーカー 1L",
+        "url": f"https://www.amazon.co.jp/dp/B00DCRXC9W?tag={_TAG}",
+        "keywords": ["フレンチプレス", "コーヒー", "BODUM", "一人暮らし"],
+        "category": "kitchen",
+    },
+
     # === スマートホーム（追加） ===
     {
         "asin": "B07V9FHK2D",
