@@ -11,6 +11,7 @@ PA-API が使えるときは PA-API を使用、なければ Gemini で代替生
 """
 
 import os
+import re
 import sys
 import json
 import time
@@ -129,6 +130,51 @@ def _resolve_asin(keyword: str) -> str:
 
     # 失敗時は検索URLにフォールバック
     return _make_search_url(keyword)
+
+
+def check_amazon_url_alive(url: str) -> bool:
+    """
+    Amazon商品URLが生存しているか確認する（投稿直前チェック用）。
+
+    requests.get() で実際にアクセスし、以下の条件で判定する:
+    - 404 → False（商品ページが削除済み）
+    - RequestException（タイムアウト・接続失敗）→ False
+    - 503 / 429（Bot判定によるブロック）→ True（商品は存在する可能性が高い）
+    - その他 2xx / 3xx → True
+
+    Args:
+        url: チェック対象のAmazon商品URL
+
+    Returns:
+        True=有効（投稿続行）、False=無効（スキップ対象）
+    """
+    if not url:
+        return False
+    if "/s?" in url:  # 検索URLは常に有効（ASINなしのfallback）
+        return True
+
+    try:
+        import requests
+        from requests.exceptions import RequestException
+
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/124.0.0.0 Safari/537.36"
+            ),
+            "Accept-Language": "ja-JP,ja;q=0.9",
+        }
+        resp = requests.get(url, headers=headers, timeout=5, allow_redirects=True)
+        resp.close()
+
+        if resp.status_code == 404:
+            return False
+        # 503/429 はBot判定によるブロック → 商品は存在する可能性が高い
+        return True
+
+    except Exception:
+        return False
 
 
 _ERROR_TITLES = (
@@ -437,13 +483,14 @@ def fetch_via_gemini(category: str, count: int) -> list:
 
     prompt = f"""
 あなたはAmazon Japanのガジェット専門バイヤーです。
-{today}時点でAmazonでタイムセールや値下がり中の実在する商品を{count}件教えてください。
+{today}時点でAmazonで実際に販売されている商品を{count}件教えてください。
 
 カテゴリ: {cat_info['label']}（{', '.join(cat_info['keywords'])}）
 
 以下のJSON配列のみ出力（説明文不要）:
 [
   {{
+    "asin": "AmazonのASIN（10桁の英数字、例: B0B96T9CBY）。正確にわかる場合のみ入力、不明なら空文字",
     "search_keyword": "Amazon検索に使う短いキーワード（ブランド名+商品種別+スペック）",
     "title": "商品の表示タイトル（わかりやすく簡潔に）",
     "brand": "メーカー名",
@@ -458,10 +505,10 @@ def fetch_via_gemini(category: str, count: int) -> list:
 ]
 
 条件:
-- 実際にAmazon Japanで販売されていそうなリアルな商品名・価格にする
+- 実際にAmazon Japanで販売されている商品のみ（架空の商品は禁止）
+- ASINが確実にわかる商品を優先する（有名ブランドの主力モデル等）
 - ガジェット好き（20〜40代男性）が「これは！」と思う商品
 - 割引率が高いものや、コスパが高い商品を優先
-- ニッチすぎず、話題になりやすい商品
 - JSON以外は出力しない
 """
 
@@ -489,10 +536,15 @@ def fetch_via_gemini(category: str, count: int) -> list:
             price   = item.get("price_yen", 0)
             orig    = item.get("original_price_yen", price)
 
-            # ASINを解決して商品直リンクを生成（失敗時は検索URLにフォールバック）
-            if keyword:
-                print(f"  🔍 ASIN解決中: {keyword[:30]}...")
-                amazon_url = _resolve_asin(keyword)
+            # GeminiからASINが得られた場合は直リンク、なければ検索URL
+            asin = item.get("asin", "").strip()
+            if asin and re.match(r'^[A-Z0-9]{10}$', asin):
+                amazon_url = _make_dp_url(asin)
+                print(f"  ✅ ASIN直リンク: {asin} → {keyword[:25]}...")
+            elif keyword:
+                # CIではAmazonのbot検出でASINスクレイピングが失敗するため検索URLを使用
+                amazon_url = _make_search_url(keyword)
+                print(f"  🔍 検索URL使用: {keyword[:30]}...")
             else:
                 amazon_url = ""
 

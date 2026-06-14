@@ -138,6 +138,19 @@ POST_TYPES = [
     {"type": "rakuten",  "label": "楽天商品紹介",        "weight": 25},
 ]
 
+# 非アフィリエイトタイプ（月〜木のエンゲージメント維持用）
+NON_AFFILIATE_TYPES = [
+    {"type": "useful",   "label": "役立つ情報",  "weight": 35},
+    {"type": "empathy",  "label": "共感・体験",  "weight": 30},
+    {"type": "trivia",   "label": "雑学・ネタ",  "weight": 20},
+    {"type": "progress", "label": "節約進捗",    "weight": 15},
+]
+
+# アフィリエイト系タイプ名（週比率チェック用）
+_AFFILIATE_TYPE_NAMES = frozenset({
+    "a8", "product", "rakuten", "amazon_thread", "amazon_pool", "rakuten_thread",
+})
+
 # ─────────────────────────────────────────
 # 投稿時間帯（4スロット）
 # ─────────────────────────────────────────
@@ -1026,26 +1039,21 @@ def _get_affiliate_deal_scores() -> dict[str, float]:
         return {}
 
 
-def pick_post_type() -> dict:
-    """
-    重み付きランダムで投稿タイプを選択。
-    アフィリエイトタイプ（product/a8/rakuten）は deal_selector のスコアで重みを動的調整。
-    """
-    affiliate_types = {"product", "a8", "rakuten"}
-    deal_scores = _get_affiliate_deal_scores()
+def _weekly_affiliate_ratio() -> float:
+    """直近7日の投稿ログからアフィリエイト投稿比率を計算"""
+    try:
+        from content_selector import load_recent_log
+        recent = load_recent_log(days=7)
+        if not recent:
+            return 0.0
+        count = sum(1 for r in recent if r.get("type") in _AFFILIATE_TYPE_NAMES)
+        return count / len(recent)
+    except Exception:
+        return 0.0
 
-    candidates = []
-    for pt in POST_TYPES:
-        if deal_scores and pt["type"] in affiliate_types:
-            multiplier = deal_scores.get(pt["type"], 1.0)
-            candidates.append({**pt, "weight": pt["weight"] * multiplier})
-        else:
-            candidates.append(pt)
 
-    if deal_scores:
-        best = max((t for t in affiliate_types if t in deal_scores), key=lambda t: deal_scores[t])
-        print(f"[DealSelector] アフィリエイトブースト: {best} (×{deal_scores[best]:.2f})")
-
+def _wc(candidates: list) -> dict:
+    """重み付きランダム選択（weighted choice）"""
     total = sum(p["weight"] for p in candidates)
     r = random.uniform(0, total)
     cumulative = 0.0
@@ -1053,7 +1061,58 @@ def pick_post_type() -> dict:
         cumulative += pt["weight"]
         if r <= cumulative:
             return pt
-    return candidates[0]
+    return candidates[-1]
+
+
+def pick_post_type() -> dict:
+    """
+    曜日別投稿比率 + 週間アフィリエイト比率セーフティで投稿タイプを選択。
+
+    月〜木: ノンアフィリエイト主軸（x_info/useful/empathy/trivia/progress）
+    金〜日: Amazonアフィリエイト 100%
+    セーフティ: 週比率 >= 60% → 強制ノンアフィリエイト
+    月〜木で週比率 < 40% の場合は affiliate 30% 混入で比率調整を助ける
+    """
+    weekday = datetime.now().weekday()  # 0=月 … 4=金 5=土 6=日
+    ratio = _weekly_affiliate_ratio()
+
+    # ── セーフティ: 週比率 60% 超えたら強制ノンアフィリエイト ─────────
+    if ratio >= 0.60:
+        pt = _wc(NON_AFFILIATE_TYPES)
+        print(f"[WeekdaySelector] セーフティ発動（週比率{ratio:.0%}）→ {pt['label']}")
+        return pt
+
+    # ── 金〜日: Amazonアフィリエイト主軸 ─────────────────────────────
+    if weekday >= 4:
+        deal_scores = _get_affiliate_deal_scores()
+        if deal_scores:
+            # DealSelector スコアが高いタイプを優先
+            cands = [
+                {**pt, "weight": pt["weight"] * deal_scores.get(pt["type"], 1.0)}
+                for pt in POST_TYPES
+            ]
+            best = _wc(cands)
+            print(f"[WeekdaySelector] 金〜日: {best['label']} (×{deal_scores.get(best['type'], 1):.2f})")
+            return best
+        pt = next(p for p in POST_TYPES if p["type"] == "product")
+        print(f"[WeekdaySelector] 金〜日: Amazon主軸（DealSelector未使用）")
+        return pt
+
+    # ── 月〜木: ノンアフィリエイト主軸 ───────────────────────────────
+    if ratio < 0.40:
+        # affiliateが少ない → 30% 程度 affiliate を混入して比率を補う
+        deal_scores = _get_affiliate_deal_scores()
+        aff_cands = [
+            {**pt, "weight": pt["weight"] * (deal_scores.get(pt["type"], 1.0) if deal_scores else 1.0) * 0.43}
+            for pt in POST_TYPES
+        ]
+        combined = NON_AFFILIATE_TYPES + aff_cands
+        pt = _wc(combined)
+        print(f"[WeekdaySelector] 月〜木（週比率{ratio:.0%}、affiliate混入30%）→ {pt['label']}")
+    else:
+        pt = _wc(NON_AFFILIATE_TYPES)
+        print(f"[WeekdaySelector] 月〜木（週比率{ratio:.0%}）→ {pt['label']}")
+    return pt
 
 
 _used_templates: dict = {}  # 同じ日に同じテンプレを使わないよう管理
@@ -1929,8 +1988,9 @@ def generate_a8_program_post() -> dict:
     if not affiliate_url:
         return {}
 
-    # リンクは hatena 記事 URL を優先（スパム判定回避）
-    link_url = hatena_url if hatena_url else affiliate_url
+    # affiliate_url（A8トラッキングリンク）を直接使用する
+    # hatena_url（ブログ記事）は商品/サービスページに飛ばないため不使用
+    link_url = affiliate_url
 
     # Bitly 短縮（Amazon URL は短縮しない: X上でアソシエイトIDが消えるため）
     if "amazon" not in link_url:

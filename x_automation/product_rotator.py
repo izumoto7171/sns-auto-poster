@@ -278,7 +278,7 @@ def generate_products_via_gemini(
 ) -> list:
     """
     Gemini APIを使って今日の文脈に最適なAmazon商品を生成する。
-    URLはAmazon検索URL形式（PA-API不使用）で出力させる。
+    ASINが得られた場合は商品直リンク、なければ検索URLにフォールバック。
     """
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
@@ -318,6 +318,7 @@ def generate_products_via_gemini(
 以下のJSON配列のみ出力（説明文・コードブロック不要）:
 [
   {{
+    "asin": "AmazonのASIN（10桁の英数字、例: B0B96T9CBY）。確実にわかる場合のみ入力、不明なら空文字",
     "search_keyword": "Amazon検索に使う短いキーワード（ブランド名+商品種別+用途、例: 山崎実業 マグネット収納）",
     "title": "商品の表示タイトル（わかりやすく簡潔に、40文字以内）",
     "brand": "メーカー名",
@@ -334,6 +335,8 @@ def generate_products_via_gemini(
 
 条件:
 - {month}月の季節・生活シーン（{', '.join(events)}）に合った商品を選ぶこと
+- 実際にAmazon Japanで販売されている商品のみ推薦すること（架空商品は禁止）
+- ASINが確実にわかる有名ブランドの商品（山崎実業・Anker・TP-Link等）を優先
 - 1,000〜15,000円の価格帯を優先（一人暮らしの衝動買いゾーン）
 - JSON以外は絶対に出力しない"""
 
@@ -362,7 +365,17 @@ def generate_products_via_gemini(
             price   = item.get("price_yen", 0)
             orig    = item.get("original_price_yen", price)
 
+            # ASINがあれば商品直リンク、なければ検索URLにフォールバック
+            import re as _re
+            asin = item.get("asin", "").strip()
+            if asin and _re.match(r'^[A-Z0-9]{10}$', asin):
+                amazon_url = f"https://www.amazon.co.jp/dp/{asin}?tag={ASSOCIATE_TAG}"
+                print(f"  ✅ ASIN直リンク: {asin} ({item.get('title','')[:25]})")
+            else:
+                amazon_url = make_search_url(keyword)
+
             products.append({
+                "asin":            asin if asin and _re.match(r'^[A-Z0-9]{10}$', asin) else "",
                 "search_keyword":  keyword,
                 "title":           item.get("title", ""),
                 "brand":           item.get("brand", ""),
@@ -381,7 +394,7 @@ def generate_products_via_gemini(
                 "why_viral":      item.get("why_viral", ""),
                 "story_hook":     item.get("story_hook", ""),
                 "user_problem":   item.get("user_problem", ""),
-                "amazon_url":     make_search_url(keyword),
+                "amazon_url":     amazon_url,
                 "source":         "gemini-rotator",
                 "fetched_at":     now_iso,
                 "intent_score":   50,
