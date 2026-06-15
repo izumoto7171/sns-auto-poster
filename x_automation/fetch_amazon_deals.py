@@ -150,8 +150,8 @@ def check_amazon_url_alive(url: str) -> bool:
     """
     if not url:
         return False
-    if "/s?" in url:  # 検索URLは常に有効（ASINなしのfallback）
-        return True
+    if "/s?" in url:  # 検索URLは商品直リンクでないため投稿対象外
+        return False
 
     try:
         import requests
@@ -203,9 +203,9 @@ def _validate_amazon_url(url: str) -> tuple[bool, str]:
     if not url:
         return False, ""
 
-    # 検索URLは常に有効（ASINなしのfallback）
+    # 検索URLは商品直リンクでないため無効扱い
     if "/s?" in url:
-        return True, ""
+        return False, ""
 
     # ASINを抽出
     m = re.search(r"/dp/([A-Z0-9]{10})", url)
@@ -874,9 +874,13 @@ def fetch_deals(category: str = "gadget", count: int = 5, force_refresh: bool = 
             if keyword:
                 print(f"  🔄 URL再解決中: {p.get('title', '')[:30]}")
                 new_url          = _resolve_asin(keyword)
+                # 検索URL（/s?k=...）への解決は失敗扱い（商品直リンクでなければ意味がない）
+                if "/s?" in new_url:
+                    print(f"  ⚠️  ASIN解決失敗（検索URLは無効）→ スキップ: {p.get('title', '')[:30]}")
+                    continue
                 re_valid, new_asin = _validate_amazon_url(new_url)
-                if re_valid:
-                    p = {**p, "amazon_url": new_url}
+                if re_valid and new_asin:
+                    p = {**p, "amazon_url": new_url, "asin": new_asin}
                     _mark_validated(new_asin, val_cache)
                     valid_products.append(p)
                     msg = f"🔗 Amazonリンク自動修復成功：ASIN {old_asin} -> {new_asin} に更新して投稿を継続します。"
@@ -891,6 +895,7 @@ def fetch_deals(category: str = "gadget", count: int = 5, force_refresh: bool = 
                         except Exception as e:
                             print(f"  ⚠️  Discord通知失敗（無視して続行）: {e}")
                     continue
+                print(f"  ⚠️  再解決失敗（直リンク取得不可）→ スキップ: {p.get('title', '')[:30]}")
 
             print(f"  ⚠️  URLスキップ（商品ページなし）: {p.get('title', '')[:30]} → {url[:60]}")
 

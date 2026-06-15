@@ -59,6 +59,32 @@ jobs:
           cd x_automation
           python3 product_rotator.py
 
+      - name: 検索URL商品のdeactivate（直リンクなし商品をプールから除外）
+        continue-on-error: true
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          python3 - <<'EOF'
+          import os, sys
+          sys.path.insert(0, '.')
+          try:
+              from db_client import _get_supabase
+              sb = _get_supabase()
+              r = sb.table('amazon_products').select('id,title,amazon_url').eq('is_active', True).execute()
+              deactivated = 0
+              for p in (r.data or []):
+                  url = p.get('amazon_url', '')
+                  if not url or '/s?' in url:
+                      sb.table('amazon_products').update({'is_active': False}).eq('id', p['id']).execute()
+                      print(f"[Cleanup] 検索URL商品をdeactivate: {p.get('title','')[:40]}")
+                      deactivated += 1
+              print(f"[Cleanup] 完了: {deactivated}件をdeactivate")
+          except Exception as e:
+              print(f"[スキップ] cleanup失敗: {e}")
+              sys.exit(0)
+          EOF
+
       - name: 商品プール件数確認
         continue-on-error: true  # テーブル未作成・Secrets未設定でも後続ジョブを止めない
         env:

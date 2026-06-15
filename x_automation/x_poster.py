@@ -227,14 +227,14 @@ def _download_image_from_url(image_url: str) -> str:
 # ─────────────────────────────────────────
 # Amazon URL をフルURL形式に正規化（短縮リンク不使用）
 # amzn.to / bit.ly など短縮URL経由だとX上でアソシエイトIDが消えるため、
-# ASINを抽出して https://www.amazon.co.jp/dp/{ASIN}/?tag={TAG} に組み直す
+# ASINを抽出して https://www.amazon.co.jp/dp/{ASIN}?tag={TAG} に組み直す
 # ─────────────────────────────────────────
 def _build_full_amazon_url(url: str) -> str:
     import re
     tag = os.getenv("AMAZON_ASSOCIATE_TAG", "smartearn22-22")
     m = re.search(r'/dp/([A-Z0-9]{10})', url)
     if m:
-        return f"https://www.amazon.co.jp/dp/{m.group(1)}/?tag={tag}"
+        return f"https://www.amazon.co.jp/dp/{m.group(1)}?tag={tag}"
     return url
 
 
@@ -285,9 +285,9 @@ def _build_affiliate_reply(thread: dict, post_type: str = "amazon_thread") -> st
     """
     import re
 
-    # tweet3 or tweet2 からアフィリエイトURLを探す
+    # tweet4 → tweet3 → tweet2 の順でアフィリエイトURLを探す
     url = ""
-    for key in ("tweet3", "tweet2"):
+    for key in ("tweet4", "tweet3", "tweet2"):
         m = re.search(r'https?://\S+', thread.get(key, ""))
         if m:
             url = m.group(0).rstrip(".,)")  # 末尾の句読点を除去
@@ -538,10 +538,11 @@ def post_with_browser(text: str) -> bool:
 # Amazonスレッド投稿（tweet1 → reply tweet2 → reply tweet3）
 # ─────────────────────────────────────────
 def post_amazon_thread(thread: dict) -> bool:
-    """Amazonアフィリエイトスレッドを3ツイートで投稿する（browser直行）"""
+    """Amazonアフィリエイトスレッドを最大4ツイートで投稿する（browser直行）"""
     tweet1 = thread.get("tweet1", "")
     tweet2 = thread.get("tweet2", "")
     tweet3 = thread.get("tweet3", "")
+    tweet4 = thread.get("tweet4", "")
     if not tweet1:
         print("❌ スレッドのtweet1が空")
         return False
@@ -550,10 +551,10 @@ def post_amazon_thread(thread: dict) -> bool:
     print("🌐 ブラウザ（Playwright）でスレッド投稿...")
     try:
         from x_browser_poster import post_thread_sync
-        tweets = [t for t in [tweet1, tweet2, tweet3] if t]
-        # tweet3 にURLが含まれているか事前チェック（アフィリエイト欠落防止）
-        if tweets and "http" not in (tweets[-1] if len(tweets) >= 3 else ""):
-            print(f"⚠️ tweet3 にURLが含まれていません。内容: {(tweets[-1] if tweets else '')[:80]}")
+        tweets = [t for t in [tweet1, tweet2, tweet3, tweet4] if t]
+        # 最終ツイートにURLが含まれているか事前チェック（アフィリエイト欠落防止）
+        if tweets and "http" not in tweets[-1]:
+            print(f"⚠️ 最終ツイートにURLが含まれていません。内容: {tweets[-1][:80]}")
         return post_thread_sync(tweets)
     except Exception as e:
         print(f"⚠️ スレッド投稿（Playwright）失敗: {e}")
@@ -757,6 +758,23 @@ def post_now(force_type: str = None, test_mode: bool = False) -> bool:
             product_title = product_info.get("title", "")
             print(f"Amazon商品: {product_title}")
 
+            # 投稿直前URLチェック: 商品直リンクがない・404・検索URLはスキップ
+            amazon_url = product_info.get("amazon_url", "")
+            import re as _re
+            if not amazon_url or "/s?" in amazon_url:
+                print(f"⚠️ 商品直リンクなし（検索URL or 空）→ 投稿スキップ: {amazon_url[:60]}")
+                return False
+            if not test_mode:
+                from fetch_amazon_deals import check_amazon_url_alive
+                if not check_amazon_url_alive(amazon_url):
+                    m = _re.search(r'/dp/([A-Z0-9]{10})', amazon_url)
+                    if m:
+                        deactivated = db.deactivate_amazon_product_by_asin(m.group(1))
+                        print(f"⚠️ 商品ページが存在しません（ASIN={m.group(1)}）→ Supabaseから{deactivated}件を無効化して投稿スキップ")
+                    else:
+                        print(f"⚠️ 商品URLが無効（ASIN不明）→ 投稿スキップ: {amazon_url[:60]}")
+                    return False
+
             if test_mode:
                 reply_preview = _build_affiliate_reply(thread, "amazon_thread")
                 print("\n[DRY RUN] Amazonツリー投稿プレビュー:")
@@ -811,6 +829,24 @@ def post_now(force_type: str = None, test_mode: bool = False) -> bool:
         thread       = post["thread"]
         product_info = post.get("product", {})
         print(f"Amazonプール商品スレッド投稿: {thread.get('tweet1', '')[:40]}...")
+
+        # 投稿直前URLチェック: 商品直リンクがない・404・検索URLはスキップ
+        amazon_url = product_info.get("amazon_url", "")
+        import re as _re
+        if not amazon_url or "/s?" in amazon_url:
+            print(f"⚠️ 商品直リンクなし（検索URL or 空）→ 投稿スキップ: {amazon_url[:60]}")
+            return False
+        if not test_mode:
+            from fetch_amazon_deals import check_amazon_url_alive
+            if not check_amazon_url_alive(amazon_url):
+                m = _re.search(r'/dp/([A-Z0-9]{10})', amazon_url)
+                if m:
+                    deactivated = db.deactivate_amazon_product_by_asin(m.group(1))
+                    print(f"⚠️ 商品ページが存在しません（ASIN={m.group(1)}）→ Supabaseから{deactivated}件を無効化して投稿スキップ")
+                else:
+                    print(f"⚠️ 商品URLが無効（ASIN不明）→ 投稿スキップ: {amazon_url[:60]}")
+                return False
+
         if test_mode:
             print("\n[DRY RUN] Amazonプールツリー投稿プレビュー:")
             print("── 親ポスト（体験談）──")

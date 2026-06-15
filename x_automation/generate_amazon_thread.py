@@ -58,45 +58,67 @@ ASSOCIATE_DISCLOSURE = "※Amazonアソシエイトに参加しています"
 # ペルソナ: 20〜30代の一人暮らしQOL・収納・時短に特化したWEB雑誌編集長
 # ─────────────────────────────────────────
 
-# Tweet1 に適用する「一人暮らし研究室」スタイルの指示ブロック
+# スレッド全体の構成指示（4ツイート形式）
 _PAS_INSTRUCTION = """
-【Tweet1 構造: 一人暮らし研究室スタイル（厳守）】
+【スレッド構成（4ツイート形式・厳守）】
 
-■ 1行目（フック）: ワンルーム・一人暮らし当事者が「わかる…」と思う主観・ストーリー型の一言
-   フック例の雰囲気（そのまま使わず、商品に合わせて毎回まったく新しい表現で）:
-   「ワンルームの配線問題、これ一発で解決した…」
-   「狭いキッチンが2倍に広く使える神グッズ」
-   「一人暮らし1年目、こんなに収納が増えると思ってなかった」
-   「帰宅後の30分が変わった。そのくらい使える」
+■ Tweet1（フック・共感）— リンク・ハッシュタグ禁止・130文字以内
+  ・1行目: 商品名は伏せるか1〜2語のみ。以下いずれかのペルソナ視点で共感フックを書く
+      ① 効率主義な一人暮らし（時間・手間・コストの最小化を優先する20〜30代）
+      ② テレワーク・デスクワーカー（在宅勤務、デスク環境、集中力に関心）
+  ・フック例の雰囲気（そのまま使わず、商品と今回の切り口に合わせた完全新規表現で）:
+      「デスクの配線、もう無理ってなってた日の話」
+      「在宅ワーク始めて2年。これだけは毎日触るものが変わった」
+      「時短を突き詰めたら、ここに行き着いた」
+      「朝のバタバタが静かになった日のことを書く」
+  ・本文: 「使う前にどんな悩みがあったか」を一人称で語る（スペック・数値禁止）
+  ・スペックは日常言語に変換する:
+      × 5000mAh            →  ○ 丸一日使っても充電切れしなくなった
+      × IPX7防水           →  ○ 風呂上がりに手が濡れたままでも使えた
+      × ノイズキャンセリング→  ○ 隣の部屋の音も仕事の電話も気にならなくなった
+      × USB-C急速充電      →  ○ 朝の支度中にさっと繋いでおくだけで足りる
+  ・末尾（固定・必ず最後の1行）: 「リアルな使用感と詳細リンクはツリーへ↓」
+  ・禁止フレーズ: 「正直ここまで効くとは思ってなかった」「もっと早く買えばよかった」「これ1個で」「絶対おすすめ」
 
-■ 本文: 熱量のある体験レビュー（Experience Review）型
-   ・商品のスペック（何グラム、何ワット、●●対応 等）は一切書かない
-   ・「これを使って生活がどう快適になったか」「どんなストレスが消えたか」を語る
-   ・「ワンルーム」「一人暮らし」「狭い部屋」「時短」「タイパ」の文脈で描写する
-   ・スペックは必ず日常言語に変換する:
-       × 5000mAh            →  ○ 外出中に充電切れの心配がなくなった
-       × IPX7防水           →  ○ 風呂上がりに手が濡れたままでも使えた
-       × ノイズキャンセリング→  ○ 隣の部屋の生活音が気にならなくなった
-       × USB-C急速充電      →  ○ 朝の支度中にさっと充電できるようになった
-   ・感情表現を入れる（禁止フレーズ: 「正直ここまで効くとは思ってなかった」「もっと早く買えばよかった」「これ1個で」） — 毎回まったく異なる言い回しで
-   ・箇条書き（■ ・ ● → ① など）は絶対禁止 — すべて流れる文章にすること
+■ Tweet2（メリット・実体験ストーリー）— 120文字以内
+  ・「使い始めてから生活がどう変わったか」を before/after 形式で語る
+  ・時短・効率化の視点（〇分が△分に、毎朝〜が消えた）or 睡眠・疲労回復の視点も有効
+  ・箇条書き（■ ・ ● → ①）は絶対禁止 — すべて流れる文章で書くこと
 
-■ 末尾の締め（固定文・必ず最後の1行に入れる）:
-   「リアルな使用感と詳細リンクはツリーへ↓」
+■ Tweet3（1割のデメリット・正直な注意点）— 120文字以内
+  ・「あえて言うと…」「1点だけ気になるのが…」というトーンで正直なデメリットを書く
+  ・例: 価格帯・サイズ感・充電頻度・対応環境の制限 など
+  ・「完璧ではないけどトータルでは○」という締めで信頼感を上げる
+  ・箇条書き禁止
 
-── その他ルール ──
-・リンクを一切含めない（絶対厳守）
-・ハッシュタグなし
-・全体で正確に130文字以内（Xは日本語1文字=2単位・上限280単位のため厳守。130文字×2=260単位）
-・超えた場合は本文を削ってでも「リアルな使用感と詳細リンクはツリーへ↓」を残す""".strip()
+■ Tweet4（まとめ＋リンク誘導）— 80文字以内（問いかけ除く）
+  ・「こんな人に特におすすめ」or「総評1行」で購入提案して締める
+  ・URLや「#PR」は書かなくてよい（後から自動付与される）
+  ・最後に返信誘発の問いかけを1つ含める（別途指定）
 
-# Tweet2 に適用する深掘り指示（一人暮らし研究室スタイル）
+── 共通ルール ──
+・宣伝感を完全に消す。独り言・体験談・気づきのトーンを維持する
+・「いかがでしたか？」「ぜひ」「チェック」などの定型フレーズは禁止
+・対話的なトーン（フォロワーと会話するような温度感）を維持する""".strip()
+
+# Tweet2 の詳細指示（メリット体験談）
 _DEEP_DIVE_INSTRUCTION = """
-【Tweet2 構造: 一人暮らし目線の使用体験（箇条書き絶対禁止）】
-・ワンルーム・一人暮らしの具体的な使用シーンで「どのストレスが消えたか」を語る
+【Tweet2 構造: メリット体験談（箇条書き絶対禁止）】
+・ワンルーム・テレワーク環境での具体的な使用シーンで「どのストレスが消えたか」を語る
 ・「〜だったのが、〜になった」という before/after 形式で書く
 ・スペックは日常言語に変換する（Tweet1と同じルール）
-・箇条書き（■ ・ ● → ① など）は絶対禁止 — すべて文章で書くこと
+・時短・効率化、または睡眠・疲労リセット、またはデスク周り整理の視点を活かす
+・箇条書き（■ ・ ● → ① など）は絶対禁止 — すべて流れる文章で書くこと
+・120文字以内""".strip()
+
+# Tweet3 の詳細指示（デメリット・注意点）
+_DEMERIT_INSTRUCTION = """
+【Tweet3 構造: 正直なデメリット・注意点（信頼感向上）】
+・「あえて言うと…」「正直1点だけ気になるのが…」というトーンで書く
+・デメリット例: 価格の高さ・サイズの大きさ・充電の手間・特定環境への依存・対応端末の制限
+・デメリットを認めつつ「トータルでは満足している」という構成で終える
+・極端に否定的にならず「こういう人は注意」という形で具体的な読者ターゲットを絞るとよい
+・箇条書き禁止
 ・120文字以内""".strip()
 
 # Tweet3 用の商品カテゴリ別「返信を誘発する問いかけ」
@@ -156,6 +178,27 @@ _CATEGORY_QUESTIONS: list[tuple[list[str], list[str]]] = [
         [
             "節水グッズって効果を感じてますか？使ったことがある方の感想を聞きたい",
             "光熱費を下げるために実際にやってみたことがあれば教えてください！",
+        ],
+    ),
+    (
+        ["枕", "マットレス", "アイマスク", "耳栓", "睡眠", "ブランケット", "電気毛布", "疲れ", "リカバリー"],
+        [
+            "睡眠グッズって投資する価値あると思いますか？実際に変わった経験があれば聞かせてほしい",
+            "朝の目覚めを改善するためにやってること、何かありますか？",
+        ],
+    ),
+    (
+        ["ケーブル", "配線", "デスク整理", "デスク収納", "モニターアーム", "延長コード", "電源タップ", "コード"],
+        [
+            "デスクの配線整理ってどうやって解決しましたか？おすすめの方法があれば教えてほしい",
+            "テレワーク環境で「これを買ってデスクが変わった」というものがあれば教えてください！",
+        ],
+    ),
+    (
+        ["時短", "タイマー", "レトルト", "冷凍", "ストック", "作り置き", "調理時間"],
+        [
+            "料理や家事の時短で実際に効果があった方法って何ですか？",
+            "平日の食事準備、どうやって効率化してますか？具体的な方法を教えてほしい",
         ],
     ),
 ]
@@ -294,7 +337,7 @@ def _x_units(text: str) -> int:
 
 def validate_thread(thread: dict) -> list:
     """
-    スレッドのコンプライアンスチェック。
+    スレッドのコンプライアンスチェック（4ツイート対応）。
     問題があればメッセージリストを返す（空リスト = OK）
     """
     warnings = []
@@ -304,16 +347,21 @@ def validate_thread(thread: dict) -> list:
     if "http" in t1 or "amzn" in t1:
         warnings.append("❌ tweet1にリンクが含まれています（シャドウバンリスク）")
 
-    # tweet3 に URL・#PR があるか
+    # tweet4 に URL・#PR があるか（tweet3 フォールバックも確認）
+    t4 = thread.get("tweet4", "")
     t3 = thread.get("tweet3", "")
-    if "http" not in t3:
-        warnings.append("❌ tweet3にAmazonリンクが含まれていません（アフィリエイト収益ゼロリスク）")
-    if DISCLOSURE_REQUIRED not in t3:
-        warnings.append(f"❌ tweet3に{DISCLOSURE_REQUIRED}がありません（景表法違反リスク）")
+    link_tweet = t4 if t4 else t3
+    if "http" not in link_tweet:
+        warnings.append("❌ tweet4（またはtweet3）にAmazonリンクが含まれていません（アフィリエイト収益ゼロリスク）")
+    if DISCLOSURE_REQUIRED not in link_tweet:
+        warnings.append(f"❌ 最終ツイートに{DISCLOSURE_REQUIRED}がありません（景表法違反リスク）")
 
     # 文字数チェック（X単位: URL=23、CJK=2、ASCII=1）
-    for key in ("tweet1", "tweet2", "tweet3"):
-        units = _x_units(thread.get(key, ""))
+    for key in ("tweet1", "tweet2", "tweet3", "tweet4"):
+        text = thread.get(key, "")
+        if not text:
+            continue
+        units = _x_units(text)
         if units > 280:
             warnings.append(f"❌ {key}が280単位を超えています（{units}単位）")
 
@@ -397,13 +445,17 @@ def get_product_url(product: dict) -> str:
     # 1. ASIN が分かっているなら直リンクを組み立てる
     asin = product.get("asin")
     if asin:
-        return f"https://www.amazon.co.jp/dp/{asin}/?tag={associate_tag}"
+        return f"https://www.amazon.co.jp/dp/{asin}?tag={associate_tag}"
 
     amazon_url = product.get("amazon_url", "")
     keyword = product.get("search_keyword") or product.get("title", "")
 
-    # 2. URLが空、または検索URL（/s?k=）の場合は ASIN 解決を挟む
-    if (not amazon_url or "/s?k=" in amazon_url) and keyword:
+    # 2. 既存URLが直リンク（/dp/）ならそのまま使う
+    if amazon_url and "/dp/" in amazon_url:
+        return amazon_url
+
+    # 3. URLが空、または検索URL（/s?k=）の場合は ASIN 解決を試みる
+    if keyword:
         try:
             import sys as _sys_ra
             _sys_ra.path.insert(0, str(BASE_DIR))
@@ -412,21 +464,14 @@ def get_product_url(product: dict) -> str:
             if "/dp/" in resolved:
                 print(f"  [get_product_url] ASIN解決で直リンクを生成: {resolved[:60]}")
                 return resolved
-            print(f"  [get_product_url] ⚠️ ASIN解決失敗、検索URLにフォールバック: {resolved[:60]}")
-            amazon_url = resolved
+            # 検索URLへのフォールバックは使わない（コンバージョン率0%の原因）
+            print(f"  [get_product_url] ⚠️ ASIN解決失敗（直リンク取得不可）: {resolved[:60]}")
         except Exception as e:
             print(f"  [get_product_url] ⚠️ ASIN解決エラー: {e}")
 
-    # 3. 既存の amazon_url（直リンク or 解決済み検索URL）があればそれを使う
-    if amazon_url:
-        return amazon_url
-
-    # 4. どうしてもダメな場合の最終セーフティネット
-    from urllib.parse import urlencode, urlunparse
-    query = urlencode({"k": keyword, "tag": associate_tag})
-    fallback_url = urlunparse(("https", "www.amazon.co.jp", "/s", "", query, ""))
-    print(f"  [get_product_url] ⚠️ 最終フォールバック（検索URL）: {fallback_url[:60]}")
-    return fallback_url
+    # 4. 解決できなかった場合は空文字を返す（検索URLで誤魔化さない）
+    print(f"  [get_product_url] ⚠️ URL取得不可（商品をスキップ推奨）")
+    return ""
 
 
 # ─────────────────────────────────────────
@@ -468,12 +513,19 @@ def generate_thread(product: dict, optimized_instruction: str = None) -> dict:
     if api_key:
         thread = _generate_with_gemini(product, api_key, optimized_instruction)
         if thread:
-            thread["tweet3"] = enforce_disclosure(thread["tweet3"], amazon_url)
+            # 4ツイート構成: tweet4 にリンク・開示を付与（tweet3 フォールバック）
+            if thread.get("tweet4"):
+                thread["tweet4"] = enforce_disclosure(thread["tweet4"], amazon_url)
+            else:
+                thread["tweet3"] = enforce_disclosure(thread["tweet3"], amazon_url)
             return thread
 
     # Geminiなし→テンプレート生成（optimized_instructionは無視、template固定）
     thread = _generate_from_template(product)
-    thread["tweet3"] = enforce_disclosure(thread["tweet3"], amazon_url)
+    if thread.get("tweet4"):
+        thread["tweet4"] = enforce_disclosure(thread["tweet4"], amazon_url)
+    else:
+        thread["tweet3"] = enforce_disclosure(thread["tweet3"], amazon_url)
     return thread
 
 
@@ -509,21 +561,25 @@ def _generate_with_gemini(
         # 毎回異なる切り口をGeminiに伝えるためのランダムな視点ヒント
         _perspective_hints = [
             "失敗談から入る（最初は別のものを買って後悔した話）",
-            "具体的な使用シーンの描写から始める（通勤・在宅ワーク・外出先など）",
+            "具体的な使用シーンの描写から始める（在宅ワーク・外出先・就寝前など）",
             "価格に対する驚きから入る（思ったより安かった、コスパ最強だった）",
-            "友人に勧める口調で、実際に試した感想から始める",
-            "購入を迷っていた期間の話から入る（ずっと気になってたけど...）",
+            "購入を迷っていた期間の話から入る（ずっと気になってたけど…）",
             "生活が変わった瞬間を具体的に描写する（あの日から朝の準備が変わった）",
             "比較から入る（前使ってた商品との違いを具体的に）",
             "課題解決の前後を対比させる（〜という問題が、〜で解決した）",
+            "睡眠・疲労リセットの視点から入る（朝の目覚めが変わった話）",
+            "デスク周り・配線整理の悩み解決から入る（テレワーク環境の改善）",
+            "時短・効率化の観点から入る（〇分かかってた作業が△分になった）",
         ]
         import random as _rnd
         perspective = _rnd.choice(_perspective_hints)
 
         prompt = f"""
-{instruction_block}あなたは「一人暮らし研究室」というWEB雑誌の編集長です。20〜30代のワンルーム・一人暮らしの読者に向けて、「QOL（生活の質）向上」「狭い部屋の収納」「時短・タイパ」に特化した商品レビューを発信しています。読者の生活ストレスを解決してくれる商品を、体験談として熱量を持って紹介するのがあなたのスタイルです。ステルスマーケティング防止のため広告・PR投稿には必ず明示しています。
+{instruction_block}あなたは「一人暮らし研究室」というWEB雑誌の編集長です。以下の2つのペルソナのいずれかを意識して執筆してください。
+① 効率主義な一人暮らし（20〜30代・時間・手間・コストの最小化を優先）
+② テレワーク・デスクワーカー（在宅勤務・デスク環境・集中力・睡眠の質に関心）
 
-以下の商品について、ワンルーム住民のエンゲージメントを最大化するスレッド形式（3ツイート）の投稿文を作成してください。
+以下の商品について、ワンルーム住民のエンゲージメントを最大化するスレッド形式（4ツイート）の投稿文を作成してください。
 
 【今回の切り口（必ずこの視点で書く）】
 {perspective}
@@ -540,23 +596,21 @@ def _generate_with_gemini(
 
 {_DEEP_DIVE_INSTRUCTION}
 
-【Tweet3 構造: CTA + 返信誘発】
-・商品リンクへの誘導文を1行（自然な流れで）
+{_DEMERIT_INSTRUCTION}
+
+【Tweet4 構造: まとめ＋リンク誘導＋返信誘発】
+・「こんな人に特におすすめ」or「総評1行」で購入提案して締める
 ・最後に以下の問いかけをそのまま使う（変更不可）:
   「{engagement_q}」
 ・URLや「#PR」は書かなくてよい（後から自動付与される）
 ・80文字以内（問いかけの文字数は含まない）
 
-【全ツイート共通ルール】
-- 「宣伝感」を完全に消す。独り言・体験談・気づきのトーンで書く
-- 「いかがでしたか？」「ぜひ」「チェック」などの定型フレーズは禁止
-- 対話的なトーン（フォロワーと会話するような温度感）を維持する
-
 以下の形式でJSONのみ出力（説明文不要）:
 {{
   "tweet1": "...",
   "tweet2": "...",
-  "tweet3": "..."
+  "tweet3": "...",
+  "tweet4": "..."
 }}
 """
 
@@ -574,19 +628,20 @@ def _generate_with_gemini(
 
         data = json.loads(raw)
 
-        # tweet3 の URL は Gemini に書かせず、コードで安全に組み立てる
+        # tweet4 の URL は Gemini に書かせず、コードで安全に組み立てる
         # Gemini が誤って書いた URL・リンク文字列は除去する
-        t3_body = data.get("tweet3", "").strip()
-        t3_body = _strip_urls(t3_body)
+        t4_body = data.get("tweet4", "").strip()
+        t4_body = _strip_urls(t4_body)
 
         # URL を正規化して末尾に付与
         safe_url = _normalize_url(url)
-        tweet3 = f"{t3_body}\n{safe_url}" if t3_body else safe_url
+        tweet4 = f"{t4_body}\n{safe_url}" if t4_body else safe_url
 
-        # tweet1/tweet2 が X 制限を超えた場合は自動トリム（末尾の締め文を優先して保持）
+        # 各ツイートが X 制限を超えた場合は自動トリム（tweet1 の締め文を優先して保持）
         _CLOSING = "リアルな使用感と詳細リンクはツリーへ↓"
         tweet1_raw = data.get("tweet1", "").strip()
         tweet2_raw = data.get("tweet2", "").strip()
+        tweet3_raw = data.get("tweet3", "").strip()
 
         def _trim_to_limit(text: str, max_units: int = 278) -> str:
             if _x_units(text) <= max_units:
@@ -621,7 +676,8 @@ def _generate_with_gemini(
         return {
             "tweet1": _trim_to_limit(tweet1_raw),
             "tweet2": _trim_to_limit(tweet2_raw),
-            "tweet3": tweet3,
+            "tweet3": _trim_to_limit(tweet3_raw),
+            "tweet4": tweet4,
         }
 
     except Exception as e:
@@ -652,32 +708,42 @@ def _generate_from_template(product: dict) -> dict:
         benefit += f"、{features[1]}ところも想定外だった。" if len(features) >= 2 else "、正直ここまで効くとは思ってなかった。"
 
     tweet1_pool = [
-        f"{hook}\n\n半信半疑で試してみたら、{discount_text}。正直ここまで変わるとは思ってなかった。",
-        f"ずっと迷ってた{title[:22]}{brand_note}、ついに買った。{discount_text}。これが思ってたより全然よかった。",
-        f"一人暮らし始めてから「なんとかしたい」と思ってたこと、{title[:18]}で解決した。{discount_text}。もっと早く買えばよかった。",
-        f"{hook} {discount_text}。正直半信半疑で買ったんだけど、使ってみたら想像以上だった。",
+        f"{hook}\n\n半信半疑で試してみたら、{discount_text}。使う前の自分に教えてやりたい。\nリアルな使用感と詳細リンクはツリーへ↓",
+        f"ずっと迷ってた{title[:22]}{brand_note}、ついに買った。{discount_text}。これが思ってたより全然よかった。\nリアルな使用感と詳細リンクはツリーへ↓",
+        f"一人暮らしで地味に困ってたこと、{title[:18]}で解決した。{discount_text}。\nリアルな使用感と詳細リンクはツリーへ↓",
+        f"{hook} {discount_text}。半信半疑で買ったんだけど、使ってみたら想像以上だった。\nリアルな使用感と詳細リンクはツリーへ↓",
     ]
 
     tweet2_pool = [
-        (f"{benefit}使い始めて数日で「これなしはもう無理」ってなってた。"
-         f"{price}円でこのクオリティは正直コスパ異常だと思う。"),
+        (f"{benefit}使い始めて数日で、これなしには戻れないと気づいた。"
+         f"テレワーク中の集中が変わって、デスク時間が快適になった。"),
         (f"同じような商品を前に買って失敗してたから期待してなかったけど、これは別物だった。{benefit}"),
         (f"{title[:22]}って名前だけ聞くと普通そうだけど、実際使ってみると全然違う。{benefit}"),
-        (f"似たの3つ試した末にたどり着いた。{benefit}"
-         f"使い始めて「もっと早く知りたかった」って素直に思った。"),
+        (f"似たの2〜3個試した末にたどり着いた。{benefit}"),
+    ]
+
+    # tweet3: デメリット・注意点（1割の正直さ）
+    tweet3_pool = [
+        f"あえて言うと、価格帯がやや高めなのは気になる。とはいえそれを差し引いても日常の快適さは上がったと感じてる。安いので済ませたい人には向かないかも。",
+        f"1点だけ気になるのが、対応環境・サイズの確認が必要なこと。購入前にスペックを確認してほしい。ただそれさえ合えば満足度は高い。",
+        f"正直に言うと、最初のセットアップに少し手間がかかった。ただ一度設定してしまえばあとはラク。手軽さを最優先するなら要注意。",
+        f"充電・メンテナンスの頻度が思ったより多かったのが本音。使い方次第だけど、手間を嫌う人は少し考えてからの方がいいかも。",
     ]
 
     tweet1 = _rand.choice(tweet1_pool)
     tweet2 = _rand.choice(tweet2_pool)
-    tweet3 = f"詳細はこちら→ {_normalize_url(url)}\n#PR"
+    tweet3 = _rand.choice(tweet3_pool)
+    tweet4 = f"詳細はこちら→ {_normalize_url(url)}\n#PR"
 
     # 文字数チェック・トリム（X単位: CJK=2、URL=23、ASCII=1）
-    if _x_units(tweet1) > 280:
-        tweet1 = tweet1[:130] + "..."
-    if _x_units(tweet2) > 280:
-        tweet2 = tweet2[:130] + "..."
+    for key, text in [("tweet1", tweet1), ("tweet2", tweet2), ("tweet3", tweet3)]:
+        if _x_units(text) > 280:
+            locals()[key] = text[:130] + "..."
+    tweet1 = tweet1 if _x_units(tweet1) <= 280 else tweet1[:130] + "..."
+    tweet2 = tweet2 if _x_units(tweet2) <= 280 else tweet2[:130] + "..."
+    tweet3 = tweet3 if _x_units(tweet3) <= 280 else tweet3[:130] + "..."
 
-    return {"tweet1": tweet1, "tweet2": tweet2, "tweet3": tweet3}
+    return {"tweet1": tweet1, "tweet2": tweet2, "tweet3": tweet3, "tweet4": tweet4}
 
 
 # ─────────────────────────────────────────
