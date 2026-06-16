@@ -1225,16 +1225,20 @@ def generate_with_gemini(post_type: str, label: str) -> tuple[str, str]:
         "progress": "節約・生活改善の『現在進行形の記録』。上記の実際の数字を使って、試行錯誤の過程をリアルに書く。",
     }
 
-    # product タイプには PAS 法の指示を追加注入する
+    # product タイプにはストーリー型構造を注入する（@single_life_lab スタイル）
     pas_block = ""
     if post_type == "product":
         pas_block = """
-# コピーライティング手法（productタイプ: 必須適用）
-PAS法（Problem → Agitation → Solution）を投稿文の構造として使うこと:
-  P（Problem）   : 読者の具体的な悩みや不便を1〜2行で提示する
-  A（Agitation） : その悩みを放置した場合のリスク・後悔を1行で描写する
-  S（Solution）  : 商品・グッズのベネフィット（使うとどう変わるか）を1行で提示する
-加えて: 数字（価格・割引率・時間・個数・ランキングなど）を必ず1つ入れること。
+# 投稿構造（productタイプ: @single_life_lab スタイル）
+スペックの羅列ではなく「悩み→解決→QOL向上」のストーリーで書くこと:
+  ① 冒頭（2〜3行）: 一人暮らしのあるある悩みを具体的な独り言として描写する
+     「〜が面倒くさい」「〜で困ってた」「〜が続かない」など等身大の言葉で。
+     数字や具体的なシーンを入れると読まれやすい。
+  ② 中間（1〜2行）: 商品・グッズを使って悩みがどう解決したかを体験として書く
+     「〜したら△△になった」という変化の形で。スペック数値より体験の変化を語る。
+  ③ 末尾（1行）: 生活がどう変わったか・QOL向上を感情的な一言で締める
+     「気が楽になった」「時間が浮いた」「もっと早く知りたかった」など。
+数字ルール: 価格・節約額・時間・回数など、具体的な数字を1つ入れること。
 """
 
     prompt = f"""# 役割
@@ -1323,10 +1327,19 @@ def generate_amazon_pool_post() -> dict:
 商品名: {name}
 キーワード: {keywords}
 
-【投稿スタイル: {style['name']}】
+【投稿構造（@single_life_lab スタイル: 必須）】
+① 冒頭（2〜3行）: 「{keywords.split('・')[0]}」に関する一人暮らしのあるある悩みを
+   具体的な独り言として描写する。「〜が面倒くさい」「〜で困ってた」「〜が続かない」など
+   等身大の言葉で。数字や具体的なシーンを入れると読まれやすい。
+② 中間（1〜2行）: {name}を使って悩みが解決した体験を「〜したら△△になった」という
+   変化の形で書く。スペックではなく「どんな不便が消えたか」を語る。
+③ 末尾（1行）: 生活がどう変わったか・QOL向上を感情的な一言で締める。
+   「気が楽になった」「時間が浮いた」「もっと早く知りたかった」などの言葉で。
+
+【投稿スタイルのトーン: {style['name']}】
 {style['desc']}
 
-参考例（このまま使わず、商品に合わせた完全オリジナルの表現で）:
+参考例（構造の参考のみ。商品に合わせた完全オリジナルで書く）:
 {style['example']}
 
 【ルール（厳守）】
@@ -2008,16 +2021,30 @@ def generate_a8_program_post() -> dict:
     # ジャンル推定（few-shot取得・DB保存に使う）
     a8_genre = _infer_genre_from_hashtags(genre_tags)
 
-    # history / cache ともにGemini+ペルソナで毎回新鮮な文体を生成
+    # history / cache ともにGemini+ストーリー型プロンプトで毎回新鮮な文体を生成
     if source in ("history", "cache"):
-        persona = random.choice(_A8_PERSONAS)
-        style_name, style_guide = random.choice(list(_A8_STYLES.items()))
         try:
             from money_agent.gemini_client import generate as _gem_gen
-            _a8_question = random.choice(_ENGAGEMENT_QUESTIONS)
-            # few-shot: 同ジャンルの成功投稿を1件取得してプロンプトに注入
-            few_shot_block = _load_winner_few_shot(genre=a8_genre)
-            _persona_prompt = f"""あなたは次のキャラクターとして X（Twitter）投稿を書いてください。
+
+            # 1. content_prompt（DBのストーリー型テンプレ）を優先使用
+            _db_prompt = None
+            try:
+                from db_client import db as _db_a8_ref
+                _db_prompt = _db_a8_ref.get_content_prompt(ins_id)
+            except Exception:
+                pass
+
+            if _db_prompt:
+                _active_prompt = _db_prompt
+                selected_style = "Gemini/story"
+                print(f"  [A8Post] content_prompt使用 (DB): {ins_id[:30]}")
+            else:
+                # 2. フォールバック: 従来のペルソナ+スタイル方式
+                persona = random.choice(_A8_PERSONAS)
+                style_name, style_guide = random.choice(list(_A8_STYLES.items()))
+                _a8_question   = random.choice(_ENGAGEMENT_QUESTIONS)
+                few_shot_block = _load_winner_few_shot(genre=a8_genre)
+                _active_prompt = f"""あなたは次のキャラクターとして X（Twitter）投稿を書いてください。
 キャラクター: {persona}
 
 以下のアフィリエイト案件について、【{style_name}】スタイルで投稿文を生成してください。
@@ -2027,28 +2054,27 @@ def generate_a8_program_post() -> dict:
 【{style_name}の書き方】
 {style_guide}
 {few_shot_block}
-【コピーライティング手法: PAS法（必須適用）】
-P（Problem）   : 読者が抱える悩みや不便を具体的に1〜2行で提示する
-A（Agitation） : その悩みを放置した場合のリスク・後悔を1行で描写する
-S（Solution）  : サービスのベネフィット（使うとどう変わるか）を1行で提示する
-数字ルール     : 報酬額・割引率・節約できる金額・使用日数など数字を必ず1つ入れる
+【投稿構造（ストーリー型: @single_life_lab スタイル）】
+① 冒頭（2〜3行）: 一人暮らしのあるある悩みを具体的な独り言で描写する
+② 中間（1〜2行）: {name}との出会いで悩みがどう解決したか体験として書く
+③ 末尾（1行）: 生活がどう変わったか・QOL向上を感情的な一言で締める
 
 【末尾の対話要素】
-投稿の最後に「{_a8_question}」を自然に組み込み、フォロワーが返信したくなる雰囲気を作る。
+投稿の最後に「{_a8_question}」を自然に組み込む。
 
 【制約】
 - 80〜120文字以内（URLとハッシュタグは除く）
 - 禁止: 「ぜひ」「おすすめ」「チェック」「絶対」「必ず」「騙されたと思って」
-- 独り言・本音の口コミに見える誠実な口調（体験談型）
-- 誇張・煽りを避け、正直な感想として書く
+- スペックや機能の羅列にせず「使ってどう変わったか」を語る
 - URLとハッシュタグは書かない
-- 対話的なトーン（フォロワーに語りかけるような温度感）を維持する
 - 本文のみ出力（説明不要）"""
-            _result = _gem_gen(_persona_prompt, use_cache=False, temperature=0.95)
-            if _result and len(_result.strip()) >= 30:
-                tweet_body     = _result.strip()[:200]
                 selected_style = f"Gemini/{style_name}"
-                print(f"  [A8Post] Geminiペルソナ生成: style={style_name}, persona={persona[:20]}")
+                print(f"  [A8Post] フォールバックプロンプト使用: style={style_name}")
+
+            _result = _gem_gen(_active_prompt, use_cache=False, temperature=0.95)
+            if _result and len(_result.strip()) >= 30:
+                tweet_body = _result.strip()[:200]
+                print(f"  [A8Post] Gemini生成完了: style={selected_style}")
         except Exception as _e:
             print(f"  [A8Post] Gemini失敗 → テンプレへ: {_e}")
 

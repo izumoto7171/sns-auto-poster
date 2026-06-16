@@ -376,13 +376,30 @@ def post_parent_and_reply(
                 print(f"⚠️ 画像アップロード失敗（テキストのみで親ポスト）: {e}")
                 media_ids = []
 
-        # ── ② 親ポスト投稿 ────────────────────────────
+        # ── ② 親ポスト投稿（402/429 リトライあり）────────────
         parent_kwargs: dict = {"text": parent_text}
         if media_ids:
             parent_kwargs["media_ids"] = media_ids
 
-        resp      = client.create_tweet(**parent_kwargs)
-        parent_id = str(resp.data["id"])
+        parent_id = None
+        for attempt in range(1, _TWEEPY_RETRY_MAX + 1):
+            try:
+                resp      = client.create_tweet(**parent_kwargs)
+                parent_id = str(resp.data["id"])
+                break
+            except Exception as e:
+                should_retry, wait_sec = _is_retryable_tweepy_error(e)
+                if should_retry and attempt < _TWEEPY_RETRY_MAX:
+                    print(f"⚠️ 親ポスト失敗（{attempt}/{_TWEEPY_RETRY_MAX}）: {e}")
+                    print(f"   → {wait_sec}秒後にリトライ...")
+                    time.sleep(wait_sec)
+                else:
+                    print(f"❌ 親ポスト失敗（リトライ上限 or 非リトライ対象）: {e}")
+                    return False
+
+        if not parent_id:
+            return False
+
         print(f"✅ 親ポスト成功: ID={parent_id} | 画像={'あり' if media_ids else 'なし'}")
         print(f"   URL: https://x.com/{os.getenv('X_USERNAME', 'user')}/status/{parent_id}")
 
@@ -394,8 +411,8 @@ def post_parent_and_reply(
             try:
                 time.sleep(2)  # 連投ペナルティ回避
                 reply_resp = client.create_tweet(
-                    text                  = reply_text,
-                    in_reply_to_tweet_id  = parent_id,
+                    text                 = reply_text,
+                    in_reply_to_tweet_id = parent_id,
                 )
                 reply_id = str(reply_resp.data["id"])
                 print(f"✅ 子ポスト（リプライ）成功: ID={reply_id}")
@@ -415,8 +432,31 @@ def post_parent_and_reply(
 # ─────────────────────────────────────────
 # tweepy（公式API v2 + v1.1 media upload）
 # ─────────────────────────────────────────
+_TWEEPY_RETRY_MAX   = 3   # 最大リトライ回数
+_TWEEPY_RETRY_WAIT  = 60  # 429/402 時の待機秒数（レートリミット考慮）
+
+
+def _is_retryable_tweepy_error(e: Exception) -> tuple[bool, int]:
+    """
+    tweepy 例外がリトライ可能か判定する。
+    Returns (リトライすべきか, 待機秒数)
+    - 402 Payment Required : APIクレジット不足。長めに待ってリトライ
+    - 429 Too Many Requests: レートリミット。60秒待ちリトライ
+    - 503 Service Unavailable: X側の一時障害。リトライ
+    """
+    err_str = str(e)
+    if "402" in err_str or "Payment Required" in err_str:
+        return True, _TWEEPY_RETRY_WAIT * 2  # 402は2分待ち
+    if "429" in err_str or "Too Many Requests" in err_str:
+        return True, _TWEEPY_RETRY_WAIT
+    if "503" in err_str or "Service Unavailable" in err_str:
+        return True, 30
+    return False, 0
+
+
 def post_with_tweepy(text: str, image_path: str = "") -> bool:
-    """tweepy（公式API v2）でXに投稿。画像があればv1.1でアップロードして添付。"""
+    """tweepy（公式API v2）でXに投稿。画像があればv1.1でアップロードして添付。
+    402/429/503 は最大 _TWEEPY_RETRY_MAX 回リトライする。"""
     try:
         import tweepy
 
@@ -434,9 +474,9 @@ def post_with_tweepy(text: str, image_path: str = "") -> bool:
         # 画像アップロード（v1.1 API）
         if image_path and os.path.exists(image_path):
             try:
-                auth  = tweepy.OAuth1UserHandler(api_key, api_secret, access_token, access_secret)
+                auth   = tweepy.OAuth1UserHandler(api_key, api_secret, access_token, access_secret)
                 api_v1 = tweepy.API(auth)
-                media = api_v1.media_upload(filename=image_path)
+                media  = api_v1.media_upload(filename=image_path)
                 media_ids = [media.media_id]
                 print(f"画像アップロード成功: media_id={media.media_id}")
             except Exception as e:
@@ -454,12 +494,24 @@ def post_with_tweepy(text: str, image_path: str = "") -> bool:
         if media_ids:
             kwargs["media_ids"] = media_ids
 
-        resp     = client.create_tweet(**kwargs)
-        tweet_id = resp.data["id"]
-        print(f"投稿成功！ Tweet ID: {tweet_id}")
-        global _last_tweet_id
-        _last_tweet_id = str(tweet_id)
-        return True
+        for attempt in range(1, _TWEEPY_RETRY_MAX + 1):
+            try:
+                resp     = client.create_tweet(**kwargs)
+                tweet_id = resp.data["id"]
+                print(f"投稿成功！ Tweet ID: {tweet_id}")
+                global _last_tweet_id
+                _last_tweet_id = str(tweet_id)
+                return True
+            except Exception as e:
+                should_retry, wait_sec = _is_retryable_tweepy_error(e)
+                if should_retry and attempt < _TWEEPY_RETRY_MAX:
+                    print(f"⚠️ tweepy投稿エラー（{attempt}/{_TWEEPY_RETRY_MAX}）: {e}")
+                    print(f"   → {wait_sec}秒後にリトライ...")
+                    time.sleep(wait_sec)
+                else:
+                    print(f"❌ tweepy投稿エラー（リトライ上限 or 非リトライ対象）: {e}")
+                    return False
+        return False
 
     except ImportError:
         print("⚠️ tweepy未インストール")

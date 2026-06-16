@@ -353,6 +353,37 @@ class DBClient:
                 sb.table("amazon_products").update({"is_active": False}).eq("id", oid).execute()
             print(f"  [Pool] 古い商品 {overflow}件 を無効化（プール上限={_AMAZON_POOL_MAX}）")
 
+    def deactivate_amazon_product_by_asin(self, asin: str) -> int:
+        """
+        指定ASINの amazon_products レコードを無効化（is_active=False）する。
+        data JSONB フィールド内の asin キーで検索する。
+
+        Returns:
+            無効化した件数
+        """
+        if not asin:
+            return 0
+        sb = _get_supabase()
+        # is_active=True の全商品を取得し、Python側でASINを照合
+        rows = (
+            sb.table("amazon_products")
+            .select("id, data")
+            .eq("is_active", True)
+            .execute()
+            .data
+        ) or []
+
+        target_ids = [
+            r["id"] for r in rows
+            if (r.get("data") or {}).get("asin") == asin
+        ]
+        for row_id in target_ids:
+            sb.table("amazon_products").update(
+                {"is_active": False}
+            ).eq("id", row_id).execute()
+
+        return len(target_ids)
+
     def get_last_amazon_deal_age_hours(self) -> Optional[float]:
         """
         最新の amazon_products 行の fetched_at からの経過時間（時間）を返す。
@@ -635,6 +666,49 @@ class DBClient:
             "note":       note,
             "updated_at": datetime.now().isoformat(),
         }).execute()
+
+    def get_content_prompt(self, ins_id: str) -> Optional[str]:
+        """
+        affiliate_programs.content_prompt を取得する。
+        未設定または取得失敗は None を返す。
+        """
+        try:
+            rows = (
+                _get_supabase()
+                .table("affiliate_programs")
+                .select("content_prompt")
+                .eq("program_id", ins_id)
+                .limit(1)
+                .execute()
+                .data
+            ) or []
+            if rows:
+                return rows[0].get("content_prompt") or None
+        except Exception:
+            pass
+        return None
+
+    def save_content_prompt(self, ins_id: str, prompt: str) -> None:
+        """
+        ストーリー型投稿プロンプトを affiliate_programs に保存する。
+        既存行は content_prompt のみ update、未存在行は insert。
+        """
+        sb = _get_supabase()
+        now = datetime.now().isoformat()
+        existing = sb.table("affiliate_programs").select("program_id").eq("program_id", ins_id).limit(1).execute().data
+        if existing:
+            sb.table("affiliate_programs").update({
+                "content_prompt":    prompt,
+                "prompt_updated_at": now,
+                "updated_at":        now,
+            }).eq("program_id", ins_id).execute()
+        else:
+            sb.table("affiliate_programs").insert({
+                "program_id":        ins_id,
+                "content_prompt":    prompt,
+                "prompt_updated_at": now,
+                "updated_at":        now,
+            }).execute()
 
     # =========================================================
     # revenue_records — 収益トラッカー

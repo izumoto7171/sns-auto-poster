@@ -145,11 +145,11 @@ def _cooldown_cutoff() -> str:
 def _has_safe_link(program: dict) -> bool:
     """
     X投稿に安全なリンクが確保されているか判定する。
-    hatena_url が設定されていない場合、px.a8.net 生リンクがそのまま露出するため
-    スパム判定リスクが高い → False を返して投稿候補から除外する。
-    hatena_url が設定されていれば True（はてな経由でリンクを隠蔽できる）。
+    - hatena_url あり: はてな記事経由でリンクを隠蔽 → 安全
+    - affiliate_url あり: generate_a8_program_post() 内でBitly短縮される → 安全
+    - 両方なし: px.a8.net 生リンク露出リスクあり → False
     """
-    return bool(program.get("hatena_url"))
+    return bool(program.get("hatena_url") or program.get("affiliate_url"))
 
 
 def select_for_post() -> tuple[dict, str]:
