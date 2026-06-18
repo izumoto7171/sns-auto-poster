@@ -77,7 +77,7 @@ _PAS_INSTRUCTION = """
       × IPX7防水           →  ○ 風呂上がりに手が濡れたままでも使えた
       × ノイズキャンセリング→  ○ 隣の部屋の音も仕事の電話も気にならなくなった
       × USB-C急速充電      →  ○ 朝の支度中にさっと繋いでおくだけで足りる
-  ・末尾（固定・必ず最後の1行）: 「リアルな使用感と詳細リンクはツリーへ↓」
+  ・末尾（固定・必ず最後の1行）: 下記の TWEET1_CTA をそのまま使う（変更・省略禁止）
   ・禁止フレーズ: 「正直ここまで効くとは思ってなかった」「もっと早く買えばよかった」「これ1個で」「絶対おすすめ」
 
 ■ Tweet2（メリット・実体験ストーリー）— 120文字以内
@@ -574,6 +574,24 @@ def _generate_with_gemini(
         import random as _rnd
         perspective = _rnd.choice(_perspective_hints)
 
+        # Tweet1 末尾の CTA: 割引があれば価格urgency付き、なければ通常
+        if discount >= 10:
+            tweet1_cta = f"今{discount}%OFF、詳細はツリーへ↓"
+        elif discount >= 5:
+            tweet1_cta = f"今だけ{discount}%OFF、価格と使用感はツリーへ↓"
+        elif price:
+            tweet1_cta = f"実際の価格（{price}）と使用感はツリーへ↓"
+        else:
+            tweet1_cta = "リアルな使用感と詳細リンクはツリーへ↓"
+
+        # Tweet4: 価格urgencyライン
+        if discount >= 5:
+            price_urgency_line = f"現在{price}{discount_text}で購入可。"
+        elif price:
+            price_urgency_line = f"現在{price}で購入可。"
+        else:
+            price_urgency_line = ""
+
         prompt = f"""
 {instruction_block}あなたは「一人暮らし研究室」というWEB雑誌の編集長です。以下の2つのペルソナのいずれかを意識して執筆してください。
 ① 効率主義な一人暮らし（20〜30代・時間・手間・コストの最小化を優先）
@@ -592,6 +610,9 @@ def _generate_with_gemini(
 - バズりポイント: {why}
 - フックのヒント: {hook}
 
+【Tweet1用CTA（末尾に必ずこの1行をそのまま使う）】
+TWEET1_CTA = 「{tweet1_cta}」
+
 {_PAS_INSTRUCTION}
 
 {_DEEP_DIVE_INSTRUCTION}
@@ -599,7 +620,7 @@ def _generate_with_gemini(
 {_DEMERIT_INSTRUCTION}
 
 【Tweet4 構造: まとめ＋リンク誘導＋返信誘発】
-・「こんな人に特におすすめ」or「総評1行」で購入提案して締める
+・1行目（必須）: {price_urgency_line}「こんな人に特におすすめ」or「総評1行」で購入提案して締める
 ・最後に以下の問いかけをそのまま使う（変更不可）:
   「{engagement_q}」
 ・URLや「#PR」は書かなくてよい（後から自動付与される）
@@ -633,24 +654,32 @@ def _generate_with_gemini(
         t4_body = data.get("tweet4", "").strip()
         t4_body = _strip_urls(t4_body)
 
+        # Tweet4: 価格urgencyがまだ入っていなければ先頭に付与
+        if price_urgency_line and price_urgency_line not in t4_body:
+            t4_body = f"{price_urgency_line}{t4_body}" if t4_body else price_urgency_line
+
         # URL を正規化して末尾に付与
         safe_url = _normalize_url(url)
         tweet4 = f"{t4_body}\n{safe_url}" if t4_body else safe_url
 
         # 各ツイートが X 制限を超えた場合は自動トリム（tweet1 の締め文を優先して保持）
-        _CLOSING = "リアルな使用感と詳細リンクはツリーへ↓"
         tweet1_raw = data.get("tweet1", "").strip()
         tweet2_raw = data.get("tweet2", "").strip()
         tweet3_raw = data.get("tweet3", "").strip()
 
-        def _trim_to_limit(text: str, max_units: int = 278) -> str:
+        # Gemini が CTA を省略した場合は強制付与
+        _CTA_MARKERS = ["ツリーへ↓", "ツリーへ", "詳細はツリー", "使用感と"]
+        has_cta = any(m in tweet1_raw for m in _CTA_MARKERS)
+        if not has_cta:
+            tweet1_raw = f"{tweet1_raw}\n{tweet1_cta}"
+
+        def _trim_to_limit(text: str, closing: str = "", max_units: int = 278) -> str:
             if _x_units(text) <= max_units:
                 return text
-            # 締め文がある場合は保護して前半をトリム
-            if _CLOSING in text:
-                body = text.replace(_CLOSING, "").strip()
-                closing = f"\n{_CLOSING}"
-                avail = max_units - _x_units(closing)
+            if closing and closing in text:
+                body = text.replace(closing, "").strip()
+                close_line = f"\n{closing}"
+                avail = max_units - _x_units(close_line)
                 trimmed_body = ""
                 count = 0
                 for ch in body:
@@ -660,8 +689,7 @@ def _generate_with_gemini(
                         break
                     trimmed_body += ch
                     count += units
-                return trimmed_body + closing
-            # 締め文なし: 単純トリム
+                return trimmed_body + close_line
             result = ""
             count = 0
             for ch in text:
@@ -674,7 +702,7 @@ def _generate_with_gemini(
             return result
 
         return {
-            "tweet1": _trim_to_limit(tweet1_raw),
+            "tweet1": _trim_to_limit(tweet1_raw, closing=tweet1_cta),
             "tweet2": _trim_to_limit(tweet2_raw),
             "tweet3": _trim_to_limit(tweet3_raw),
             "tweet4": tweet4,
@@ -700,6 +728,16 @@ def _generate_from_template(product: dict) -> dict:
     discount_text = f"{discount}%OFFで買えた" if discount >= 5 else (f"{price}円で買えた" if price else "思ってたより安く手に入った")
     brand_note    = f"（{brand}製）" if brand else ""
 
+    # Tweet1末尾CTA: 割引があれば価格urgency付き
+    if discount >= 10:
+        _t1_cta = f"今{discount}%OFF、詳細はツリーへ↓"
+    elif discount >= 5:
+        _t1_cta = f"今だけ{discount}%OFF、価格と使用感はツリーへ↓"
+    elif price:
+        _t1_cta = f"実際の価格（{price}）と使用感はツリーへ↓"
+    else:
+        _t1_cta = "リアルな使用感と詳細リンクはツリーへ↓"
+
     # features を自然な体験談に変換（箇条書き禁止）
     benefit = ""
     if features:
@@ -708,10 +746,10 @@ def _generate_from_template(product: dict) -> dict:
         benefit += f"、{features[1]}ところも想定外だった。" if len(features) >= 2 else "、正直ここまで効くとは思ってなかった。"
 
     tweet1_pool = [
-        f"{hook}\n\n半信半疑で試してみたら、{discount_text}。使う前の自分に教えてやりたい。\nリアルな使用感と詳細リンクはツリーへ↓",
-        f"ずっと迷ってた{title[:22]}{brand_note}、ついに買った。{discount_text}。これが思ってたより全然よかった。\nリアルな使用感と詳細リンクはツリーへ↓",
-        f"一人暮らしで地味に困ってたこと、{title[:18]}で解決した。{discount_text}。\nリアルな使用感と詳細リンクはツリーへ↓",
-        f"{hook} {discount_text}。半信半疑で買ったんだけど、使ってみたら想像以上だった。\nリアルな使用感と詳細リンクはツリーへ↓",
+        f"{hook}\n\n半信半疑で試してみたら、{discount_text}。使う前の自分に教えてやりたい。\n{_t1_cta}",
+        f"ずっと迷ってた{title[:22]}{brand_note}、ついに買った。{discount_text}。これが思ってたより全然よかった。\n{_t1_cta}",
+        f"一人暮らしで地味に困ってたこと、{title[:18]}で解決した。{discount_text}。\n{_t1_cta}",
+        f"{hook} {discount_text}。半信半疑で買ったんだけど、使ってみたら想像以上だった。\n{_t1_cta}",
     ]
 
     tweet2_pool = [
@@ -733,7 +771,10 @@ def _generate_from_template(product: dict) -> dict:
     tweet1 = _rand.choice(tweet1_pool)
     tweet2 = _rand.choice(tweet2_pool)
     tweet3 = _rand.choice(tweet3_pool)
-    tweet4 = f"詳細はこちら→ {_normalize_url(url)}\n#PR"
+
+    # Tweet4: 商品名・価格をリンクツイートに明示してCTRを向上させる
+    price_tag = f" {price}{('（' + str(discount) + '%OFF）') if discount >= 5 else ''}" if price else ""
+    tweet4 = f"{title[:22]}{price_tag} → 詳細・購入はこちら\n{_normalize_url(url)}\n※Amazonアソシエイトに参加しています #PR"
 
     # 文字数チェック・トリム（X単位: CJK=2、URL=23、ASCII=1）
     for key, text in [("tweet1", tweet1), ("tweet2", tweet2), ("tweet3", tweet3)]:

@@ -1365,7 +1365,9 @@ def generate_amazon_pool_post() -> dict:
         return {}
 
     tweet1 = append_hashtags(tweet1, "product")
-    tweet2 = f"詳細・購入はこちら↓\n{url}\n※Amazonアソシエイトに参加しています #PR"
+    # 商品名をリンクツイートに明示してCTRを向上させる
+    name_short = name[:25]
+    tweet2 = f"▶ {name_short}\n詳細・購入はこちら↓\n{url}\n※Amazonアソシエイトに参加しています #PR"
 
     _mark_amazon_product_posted(product)
 
