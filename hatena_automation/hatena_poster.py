@@ -24,6 +24,7 @@ import base64
 import requests
 from datetime import datetime
 from pathlib import Path
+from typing import List, Optional
 
 sys.path.insert(0, str(Path(__file__).parent))
 from hatena_article_generator import generate_article, preview_article
@@ -152,7 +153,7 @@ def post_article(
     category: str = "",
     headless: bool = True,  # 後方互換のために残す（使わない）
     draft: bool = False,
-    tags: list[str] | None = None,
+    tags: Optional[List[str]] = None,
 ) -> str:
     """
     はてなブログAtomPub APIで記事を投稿してURLを返す。

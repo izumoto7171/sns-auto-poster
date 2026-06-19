@@ -27,7 +27,8 @@ jobs:
 
       - name: 依存関係インストール
         run: |
-          pip install google-genai requests pytrends
+          pip install google-genai requests pytrends playwright
+          playwright install chromium --with-deps
 
       - name: 週次トレンドリサーチ実行
         env:
@@ -36,6 +37,23 @@ jobs:
           RAKUTEN_AFFILIATE_ID: ${{ secrets.RAKUTEN_AFFILIATE_ID }}
         run: |
           python3 crawlers/weekly_trend_hunter.py
+
+      - name: A8高単価プログラム自動検索 & 提携申請
+        continue-on-error: true
+        env:
+          A8_MEDIA_ID: ${{ secrets.A8_MEDIA_ID }}
+          A8_PASSWORD: ${{ secrets.A8_PASSWORD }}
+        run: |
+          python3 money_agent/a8_auto_apply.py --discover --count 5 \
+            || echo "[A8自動申請] エラー（続行）"
+
+      - name: GitHub Actions使用量チェック
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 scripts/actions_usage_monitor.py \
+            || echo "[使用量チェック] エラー（続行）"
 
       - name: 結果を JSON にコミット & プッシュ
         if: always()
@@ -49,5 +67,5 @@ jobs:
             x_automation/weekly_amazon_keywords.json \
             x_automation/weekly_rakuten_keywords.json || true
           git diff --staged --quiet || \
-            git commit -m "chore: 週次案件リサーチ更新 $(date +'%Y-%m-%d')"
+            git commit -m "chore: 週次案件リサーチ + A8自動申請更新 $(date +'%Y-%m-%d')"
           git push || true

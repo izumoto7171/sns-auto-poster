@@ -78,7 +78,7 @@ _DEFAULT_CATEGORY = "ガジェット"
 
 
 def _make_dp_url(asin: str) -> str:
-    return f"https://www.amazon.co.jp/dp/{asin}/?tag={ASSOCIATE_TAG}"
+    return f"https://www.amazon.co.jp/dp/{asin}?tag={ASSOCIATE_TAG}"
 
 
 def _detect_category(title: str) -> str:

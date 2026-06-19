@@ -495,6 +495,8 @@ if __name__ == "__main__":
         print(f"現在のジャンル: {state.get('target_genre', '未設定')}")
         from money_agent.approval_flow import load_pending_articles, print_approval_summary
         print_approval_summary(load_pending_articles())
+        from money_agent.geo_verifier import print_geo_kpi_report
+        print_geo_kpi_report()
     else:
         print(f"不明なモード: {mode}")
         sys.exit(1)

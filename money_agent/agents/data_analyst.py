@@ -249,15 +249,22 @@ def run(state: dict) -> dict:
                 "rewrite_instruction": "タイトルに数字を入れ、導入部でSEOキーワードを強化する",
             })
 
+    # GEO KPI: カテゴリ別オファークリック率推定（推定収益/推定PV）
+    geo_kpi = _calc_geo_kpi(posts, category_distribution)
+
     result = {
         "rewrite_queue":         rewrite_queue,
         "skip_genres":           gemini_result.get("skip_genres", []),
-        "best_genre":            gemini_result.get("best_genre", ""),
+        "best_genre":            gemini_result.get("best_genre", "") or geo_kpi.get("top_offer_category", ""),
         "kpi_summary":           gemini_result.get("kpi_summary", ""),
         "action_needed":         len(high_items) > 0,
         "category_distribution": category_distribution,
         "total_articles":        total,
+        "geo_kpi":               geo_kpi,
     }
+
+    # 推奨アクションを人間承認キューに保存（初期は常に要承認）
+    _save_pending_recommendations(result, geo_kpi)
 
     # JSON にキャッシュ保存（analyst.py / CEO がファイル参照する場合のため）
     output_file = BASE_DIR / "data" / "data_analysis.json"
@@ -271,4 +278,145 @@ def run(state: dict) -> dict:
         f"リライト候補: {len(high_items)}件 / "
         f"おすすめジャンル: {result['best_genre'] or '未判定'}"
     )
+    if geo_kpi.get("top_offer_category"):
+        print(
+            f"  [DataAnalyst/GEO] オファークリック率トップ: {geo_kpi['top_offer_category']} "
+            f"(推定 {geo_kpi.get('top_offer_ctr', 0):.2%})"
+        )
     return result
+
+
+def _save_pending_recommendations(result: dict, geo_kpi: dict):
+    """
+    DataAnalystの推奨アクションを「承認待ちキュー」に保存する。
+    人間が data/pending_recommendations.json を確認・承認してから
+    CEO が自動実行するフロー。
+    """
+    pending_file = BASE_DIR / "data" / "pending_recommendations.json"
+
+    # 既存の承認待ちを読み込み
+    existing = []
+    if pending_file.exists():
+        try:
+            existing = json.loads(pending_file.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+
+    # 承認済み（approved=True）はそのまま残す。新規のみ追加
+    approved_ids = {r["id"] for r in existing if r.get("approved")}
+
+    new_entry = {
+        "id": datetime.now().strftime("%Y%m%d_%H%M%S"),
+        "generated_at": datetime.now().isoformat(),
+        "approved": False,
+        "applied": False,
+        "recommendations": {
+            "best_genre":   result.get("best_genre", ""),
+            "skip_genres":  result.get("skip_genres", []),
+            "kpi_summary":  result.get("kpi_summary", ""),
+            "geo_recommendation": geo_kpi.get("recommendation", ""),
+            "top_offer_category": geo_kpi.get("top_offer_category", ""),
+            "high_priority_rewrites": [
+                {"title": r["title"], "instruction": r["rewrite_instruction"]}
+                for r in result.get("rewrite_queue", [])
+                if r.get("rewrite_priority") == "HIGH"
+            ][:3],  # 上位3件のみ表示
+        },
+        "auto_approve_threshold": 3,  # 同じ推奨が3回連続で出たら自動承認
+    }
+
+    # 同じbest_genreが連続して出た回数を数えて自動承認判定
+    same_genre_count = sum(
+        1 for r in existing
+        if r.get("recommendations", {}).get("best_genre") == new_entry["recommendations"]["best_genre"]
+        and not r.get("approved")
+    )
+    if same_genre_count >= new_entry["auto_approve_threshold"] - 1:
+        new_entry["approved"] = True
+        new_entry["auto_approved"] = True
+        print(f"  [DataAnalyst] 自動承認: 「{new_entry['recommendations']['best_genre']}」が"
+              f"{same_genre_count + 1}回連続で推奨されました")
+
+    existing.append(new_entry)
+    # 直近20件のみ保持
+    existing = existing[-20:]
+
+    pending_file.write_text(json.dumps(existing, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    if not new_entry["approved"]:
+        print(
+            f"  [DataAnalyst] 推奨アクションを承認待ちキューに保存しました\n"
+            f"    → data/pending_recommendations.json を確認して承認してください\n"
+            f"    推奨: {new_entry['recommendations']['best_genre'] or '判定中'} / "
+            f"GEO: {geo_kpi.get('recommendation', '')[:50]}"
+        )
+
+
+def _calc_geo_kpi(posts: list[dict], category_dist: dict) -> dict:
+    """
+    GEO の3つの KPI を推定する。
+      - 回答引用率: ローカルの geo_citations.jsonl から算出
+      - CTR (クリック率): 推定 impression / estimated_pv の比
+      - オファークリック率: 推定収益 / (推定PV × 単価) で逆算
+    """
+    # カテゴリ別の推定収益・PVを集計
+    cat_revenue: dict[str, int] = {}
+    cat_pv: dict[str, int] = {}
+    for p in posts:
+        cat = p.get("category", p.get("post_type", "unknown"))
+        cat_revenue[cat] = cat_revenue.get(cat, 0) + p.get("estimated_revenue_30days", 0)
+        cat_pv[cat] = cat_pv.get(cat, 0) + p.get("estimated_pv_30days", 0)
+
+    # オファークリック率 = 推定収益 / (推定PV × カテゴリ平均単価)
+    _unit_prices = {
+        "investment_savings": 8000,
+        "ai_saas":            1500,
+        "dx_tools":           3000,
+        "side_hustle":        2000,
+        "ai_tools":           1200,
+        "productivity":       1000,
+    }
+    offer_ctrs: dict[str, float] = {}
+    for cat, rev in cat_revenue.items():
+        pv = cat_pv.get(cat, 1)
+        price = _unit_prices.get(cat, 1000)
+        if pv > 0 and price > 0:
+            offer_ctrs[cat] = rev / (pv * price)
+
+    top_category = max(offer_ctrs, key=offer_ctrs.get) if offer_ctrs else ""
+
+    # 引用率はローカルログから
+    citation_rate = 0.0
+    try:
+        geo_log = BASE_DIR / "data" / "geo_citations.jsonl"
+        if geo_log.exists():
+            lines = [l for l in geo_log.read_text(encoding="utf-8").splitlines() if l.strip()]
+            if lines:
+                records = [json.loads(l) for l in lines]
+                citation_rate = sum(1 for r in records if r.get("cited_anywhere")) / len(records)
+    except Exception:
+        pass
+
+    return {
+        "top_offer_category": top_category,
+        "top_offer_ctr":      offer_ctrs.get(top_category, 0.0),
+        "offer_ctrs_by_cat":  offer_ctrs,
+        "citation_rate":      citation_rate,
+        "recommendation":     _geo_recommendation(top_category, citation_rate),
+    }
+
+
+def _geo_recommendation(top_category: str, citation_rate: float) -> str:
+    """GEO KPIに基づく次のアクション推奨"""
+    lines = []
+    if citation_rate < 0.1:
+        lines.append("引用率が低い：結論ファーストブロックとJSON-LDの配置を再確認してください")
+    elif citation_rate < 0.3:
+        lines.append(f"引用率改善中：懸念点セクションを `geo_verifier.py tune-concerns` で調整してください")
+    else:
+        lines.append("引用率良好：現在の構成を維持してください")
+
+    if top_category:
+        lines.append(f"オファークリック率が最も高いジャンル「{top_category}」への記事集中を推奨")
+
+    return " / ".join(lines)

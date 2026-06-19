@@ -33,6 +33,20 @@ POST_TYPES = [
     {"type": "rakuten",  "label": "楽天商品紹介",        "weight": 25},
 ]
 
+# 非アフィリエイトタイプ（月〜木のエンゲージメント維持用）
+NON_AFFILIATE_TYPES = [
+    {"type": "x_info",   "label": "生活情報",    "weight": 30},
+    {"type": "useful",   "label": "役立つ情報",  "weight": 25},
+    {"type": "empathy",  "label": "共感・体験",  "weight": 20},
+    {"type": "trivia",   "label": "雑学・ネタ",  "weight": 15},
+    {"type": "progress", "label": "節約進捗",    "weight": 10},
+]
+
+# アフィリエイト系タイプ名（週比率チェック用）
+_AFFILIATE_TYPE_NAMES = frozenset({
+    "a8", "product", "rakuten", "amazon_thread", "amazon_pool", "rakuten_thread",
+})
+
 # deal_selector が使えるかチェック（オプション依存）
 def _get_deal_boosted_types() -> dict[str, float]:
     """
@@ -174,30 +188,62 @@ def load_pool() -> list[dict]:
 # タイプ選択
 # ─────────────────────────────────────────
 
+def _cs_weekly_affiliate_ratio() -> float:
+    """直近7日の投稿ログからアフィリエイト比率を計算（content_selector 内部用）"""
+    recent = load_recent_log(days=7)
+    if not recent:
+        return 0.0
+    count = sum(1 for r in recent if r.get("type") in _AFFILIATE_TYPE_NAMES)
+    return count / len(recent)
+
+
+def _cs_weekday_pool(deal_scores: Optional[dict[str, float]] = None) -> list[dict]:
+    """
+    曜日と週間アフィリエイト比率に基づいて選択対象タイプのプールを返す。
+
+    月〜木: ノンアフィリエイト主軸
+    金〜日: Amazonアフィリエイト主軸
+    セーフティ: 週比率 >= 60% → 強制ノンアフィリエイト
+    """
+    from datetime import datetime as _dt
+    weekday = _dt.now().weekday()  # 0=月 … 4=金 5=土 6=日
+    ratio = _cs_weekly_affiliate_ratio()
+
+    # セーフティ
+    if ratio >= 0.60:
+        return NON_AFFILIATE_TYPES[:]
+
+    # 金〜日: Amazonアフィリエイト主軸
+    if weekday >= 4:
+        cands = []
+        for pt in POST_TYPES:
+            w = pt["weight"] * (deal_scores.get(pt["type"], 1.0) if deal_scores else 1.0)
+            cands.append({**pt, "weight": w})
+        return cands
+
+    # 月〜木: ノンアフィリエイト主軸
+    if ratio < 0.40:
+        # 週比率が低い → affiliate 30% 混入
+        aff = [
+            {**pt, "weight": pt["weight"] * (deal_scores.get(pt["type"], 1.0) if deal_scores else 1.0) * 0.43}
+            for pt in POST_TYPES
+        ]
+        return NON_AFFILIATE_TYPES + aff
+    return NON_AFFILIATE_TYPES[:]
+
+
 def weighted_type_select(
     exclude_types: Optional[list[str]] = None,
     deal_scores: Optional[dict[str, float]] = None,
 ) -> dict:
     """
-    重み付きランダムで投稿タイプを選択。
-    deal_scores が渡された場合、アフィリエイトタイプ（product/a8/rakuten）の
-    重みを deal_selector のスコア比で動的に調整する。
+    曜日別・週比率セーフティ付きで投稿タイプを選択。
+    deal_scores が渡された場合はアフィリエイトタイプの重みを動的調整する。
     """
-    affiliate_types = {"product", "a8", "rakuten"}
-    candidates = [pt for pt in POST_TYPES if pt["type"] not in (exclude_types or [])]
+    pool = _cs_weekday_pool(deal_scores)
+    candidates = [pt for pt in pool if pt["type"] not in (exclude_types or [])]
     if not candidates:
-        candidates = POST_TYPES
-
-    # deal_scores でアフィリエイト重みを上書き
-    if deal_scores:
-        adjusted = []
-        for pt in candidates:
-            if pt["type"] in affiliate_types and pt["type"] in deal_scores:
-                new_weight = pt["weight"] * deal_scores[pt["type"]]
-                adjusted.append({**pt, "weight": new_weight})
-            else:
-                adjusted.append(pt)
-        candidates = adjusted
+        candidates = pool
 
     total = sum(pt["weight"] for pt in candidates)
     r = random.uniform(0, total)

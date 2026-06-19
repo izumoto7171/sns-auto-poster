@@ -55,6 +55,42 @@ _DEFAULT_PLAN: dict = {
 
 # ── データ収集 ────────────────────────────────────────────────
 
+def _load_approved_recommendations() -> dict | None:
+    """
+    data/pending_recommendations.json から最新の「承認済み・未適用」推奨を返す。
+    承認フローを経由したものだけを ActionPlan に反映させる。
+    """
+    pending_file = BASE_DIR / "data" / "pending_recommendations.json"
+    if not pending_file.exists():
+        return None
+    try:
+        records = json.loads(pending_file.read_text(encoding="utf-8"))
+        # 承認済みかつ未適用の最新1件を返す
+        for r in reversed(records):
+            if r.get("approved") and not r.get("applied"):
+                return r
+    except Exception:
+        pass
+    return None
+
+
+def _mark_recommendation_applied(rec_id: str):
+    """推奨アクションを適用済みにマークする"""
+    pending_file = BASE_DIR / "data" / "pending_recommendations.json"
+    if not pending_file.exists():
+        return
+    try:
+        records = json.loads(pending_file.read_text(encoding="utf-8"))
+        for r in records:
+            if r.get("id") == rec_id:
+                r["applied"] = True
+                r["applied_at"] = datetime.now().isoformat()
+                break
+        pending_file.write_text(json.dumps(records, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception:
+        pass
+
+
 def _load_post_logs() -> list[dict]:
     """全プラットフォームの投稿ログを DB から収集"""
     try:
@@ -260,6 +296,18 @@ def run(state: dict, data_analysis: dict | None = None) -> dict:
     print("  [Analyst] データ分析 → ActionPlan 生成中...")
 
     data_analysis = data_analysis or {}
+
+    # DataAnalystの推奨アクションのうち「承認済み」のものを取り込む
+    approved = _load_approved_recommendations()
+    if approved:
+        rec = approved["recommendations"]
+        # 承認済みのbest_genreをdata_analysisに反映
+        if rec.get("best_genre") and not data_analysis.get("best_genre"):
+            data_analysis["best_genre"] = rec["best_genre"]
+        if rec.get("skip_genres") and not data_analysis.get("skip_genres"):
+            data_analysis["skip_genres"] = rec["skip_genres"]
+        print(f"  [Analyst] 承認済み推奨を反映: ジャンル={rec.get('best_genre', '-')}")
+
     posts         = _load_post_logs()
     revenue_data  = _load_revenue_data()
     sc_data       = _load_search_console_data()

@@ -378,7 +378,13 @@ def post_thread_sync(tweets: list, headless: bool = True) -> bool:
 # ─────────────────────────────────────────────────────────
 
 async def post_tweet(text: str, headless: bool = True) -> str | None:
-    """保存済みCookieを使って単体ツイートを投稿する（後方互換）"""
+    """保存済みCookieを使って単体ツイートを投稿する（後方互換）
+
+    Returns:
+        tweet ID文字列（例: "1234567890"）、失敗時は None
+    """
+    username = os.environ.get("X_USERNAME", "")
+
     async with async_playwright() as p:
         browser, context = await _new_context(p, headless=headless)
 
@@ -399,8 +405,18 @@ async def post_tweet(text: str, headless: bool = True) -> str | None:
             await _click_post_button(page, testid="tweetButtonInline")
 
             print("✅ 投稿完了！")
+
+            # tweet IDをプロフィールページから取得
+            tweet_id = None
+            if username:
+                await page.wait_for_timeout(AFTER_POST_MS)
+                tweet_url = await _get_latest_tweet_url(page, username)
+                if tweet_url and "/status/" in tweet_url:
+                    tweet_id = tweet_url.rstrip("/").split("/status/")[-1]
+                    print(f"  tweet ID取得: {tweet_id}")
+
             await browser.close()
-            return "posted"
+            return tweet_id or "posted"
 
         except Exception as e:
             print(f"❌ 投稿エラー: {e}")
@@ -411,14 +427,13 @@ async def post_tweet(text: str, headless: bool = True) -> str | None:
             return None
 
 
-def post(text: str, headless: bool = True) -> bool:
-    """同期版の単体ツイート投稿関数（後方互換）"""
+def post(text: str, headless: bool = True) -> str | None:
+    """同期版の単体ツイート投稿関数。tweet IDを返す（失敗時はNone）"""
     try:
-        result = asyncio.run(post_tweet(text, headless=headless))
-        return result is not None
+        return asyncio.run(post_tweet(text, headless=headless))
     except Exception as e:
         print(f"❌ 投稿エラー: {e}")
-        return False
+        return None
 
 
 # ─────────────────────────────────────────────────────────

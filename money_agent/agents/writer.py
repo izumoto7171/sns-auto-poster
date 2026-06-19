@@ -58,7 +58,7 @@ def _fetch_latest_ai_info(keyword: str) -> dict:
 }}"""
 
         resp = client.models.generate_content(
-            model="gemini-1.5-flash",
+            model="gemini-2.5-flash",
             contents=prompt,
         )
         text = resp.text.strip().lstrip("```json").lstrip("```").rstrip("```").strip()
@@ -108,7 +108,8 @@ def run(state: dict, research: dict) -> dict:
         "keyword_strategy": {
             "recommended_categories": analyst_report.get("top_categories", []),
         },
-        "latest_ai_info": latest_ai_info,  # ai_saas 差別化情報
+        "latest_ai_info": latest_ai_info,
+        "reader_concerns": research.get("reader_concerns", []),  # GEO: 懸念点払拭セクション用
     }
 
     article = generate_seo_article(

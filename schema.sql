@@ -189,6 +189,29 @@ ON CONFLICT (id) DO NOTHING;
 
 
 -- ─────────────────────────────────────────
+-- 11. affiliate_links — Bitly計測リンク管理
+-- ─────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS affiliate_links (
+    id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    original_url  TEXT        NOT NULL,
+    bitly_link    TEXT        UNIQUE,
+    bitly_id      TEXT,
+    platform      TEXT,                               -- 'hatena' | 'x' | 'note' | 'bluesky'
+    campaign_id   TEXT,
+    article_title TEXT,
+    click_count   INT         NOT NULL DEFAULT 0,
+    last_used_at  TIMESTAMPTZ,                        -- クールダウン管理
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
+
+CREATE INDEX IF NOT EXISTS idx_affiliate_links_platform  ON affiliate_links (platform);
+CREATE INDEX IF NOT EXISTS idx_affiliate_links_clicks    ON affiliate_links (click_count DESC);
+CREATE INDEX IF NOT EXISTS idx_affiliate_links_campaign  ON affiliate_links (campaign_id);
+CREATE INDEX IF NOT EXISTS idx_affiliate_links_last_used ON affiliate_links (last_used_at);
+
+
+-- ─────────────────────────────────────────
 -- Row Level Security（必要に応じて有効化）
 -- service_key を使う場合は RLS を bypass するため不要だが、
 -- anon_key を使う場合は以下を有効化してポリシーを設定する

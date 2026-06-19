@@ -580,7 +580,15 @@ def post_with_browser(text: str) -> bool:
     try:
         sys.path.insert(0, os.path.dirname(__file__))
         from x_browser_poster import post as browser_post
-        return browser_post(text, headless=True)
+        result = browser_post(text, headless=True)
+        if result is None:
+            return False
+        # "12345..." のようなIDが返ってきた場合は _last_tweet_id にセット
+        global _last_tweet_id
+        if result and result != "posted":
+            _last_tweet_id = result
+            print(f"  [browser] tweet ID記録: {result}")
+        return True
     except Exception as e:
         print(f"❌ ブラウザ投稿エラー: {e}")
         return False
