@@ -142,11 +142,17 @@ async def _click_post_button(page, testid: str = "tweetButtonInline"):
         f'[data-testid="{testid}"]',
         '[data-testid="tweetButtonInline"]',
         '[data-testid="tweetButton"]',
-        # testidが消えた場合のフォールバック（ボタンのaria-labelで探す）
         'button[aria-label="ポストする"]',
         'button[aria-label="Post"]',
         'button[aria-label="返信"]',
         'button[aria-label="Reply"]',
+        'button[aria-label="ポスト"]',
+        'button[aria-label="post"]',
+        # 2026年以降のUI変更対応
+        'div[role="button"][data-testid="tweetButtonInline"]',
+        'div[role="button"][data-testid="tweetButton"]',
+        'button:has-text("ポストする")',
+        'button:has-text("Post")',
     ]
     post_btn = None
     for sel in selectors:
