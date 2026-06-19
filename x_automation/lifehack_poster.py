@@ -36,11 +36,8 @@ def _upload_and_post(images: list, post_text: str, dry_run: bool) -> bool:
     try:
         import tweepy
 
-        # v1.1（メディアアップロード用）
         auth = tweepy.OAuth1UserHandler(api_key, api_secret, access_token, access_secret)
         api_v1 = tweepy.API(auth)
-
-        # v2（ツイート投稿用）
         client = tweepy.Client(
             consumer_key=api_key,
             consumer_secret=api_secret,
@@ -48,7 +45,6 @@ def _upload_and_post(images: list, post_text: str, dry_run: bool) -> bool:
             access_token_secret=access_secret,
         )
 
-        # 最大4枚まとめてアップロード
         media_ids = []
         tmp_paths = []
         for i, img_bytes in enumerate(images[:4], 1):
@@ -56,19 +52,28 @@ def _upload_and_post(images: list, post_text: str, dry_run: bool) -> bool:
             tmp.write(img_bytes)
             tmp.close()
             tmp_paths.append(tmp.name)
+            try:
+                media = api_v1.media_upload(filename=tmp.name)
+                media_ids.append(media.media_id)
+                print(f"  画像{i}アップロード完了: media_id={media.media_id}")
+                time.sleep(0.5)
+            except Exception as upload_err:
+                err_str = str(upload_err)
+                if "402" in err_str or "Payment Required" in err_str:
+                    print(f"  画像アップロード失敗（APIクレジット不足）: テキストのみで続行")
+                    media_ids = []
+                    break
+                raise
 
-            media = api_v1.media_upload(filename=tmp.name)
-            media_ids.append(media.media_id)
-            print(f"  画像{i}アップロード完了: media_id={media.media_id}")
-            time.sleep(0.5)
+        tweet_kwargs = {"text": post_text}
+        if media_ids:
+            tweet_kwargs["media_ids"] = media_ids
 
-        # 投稿
-        resp = client.create_tweet(text=post_text, media_ids=media_ids)
+        resp = client.create_tweet(**tweet_kwargs)
         tweet_id = resp.data["id"]
         username = os.getenv("X_USERNAME", "user")
         print(f"✅ 投稿完了: https://x.com/{username}/status/{tweet_id}")
 
-        # 一時ファイル削除
         for p in tmp_paths:
             try:
                 os.unlink(p)
@@ -81,6 +86,15 @@ def _upload_and_post(images: list, post_text: str, dry_run: bool) -> bool:
         print("⚠️ tweepy 未インストール: pip install tweepy")
         return False
     except Exception as e:
+        err_str = str(e)
+        if "402" in err_str or "Payment Required" in err_str:
+            print(f"⚠️ tweepy APIクレジット不足 → Playwrightブラウザ投稿にフォールバック")
+            try:
+                from x_browser_poster import post as browser_post
+                return browser_post(post_text)
+            except Exception as browser_err:
+                print(f"❌ ブラウザ投稿も失敗: {browser_err}")
+                return False
         print(f"❌ X投稿エラー: {e}")
         import traceback
         traceback.print_exc()

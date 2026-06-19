@@ -1,7 +1,8 @@
 name: A8新着案件パイプライン
 
 on:
-  # 一時停止中（Geminiクォータをsns-post.ymlに集中させるため）
+  schedule:
+    - cron: '0 15 * * 3'  # 毎週水曜 JST 0:00 — A8新着案件パイプライン
   workflow_dispatch:
     inputs:
       mode:

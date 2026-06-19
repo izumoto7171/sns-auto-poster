@@ -1,7 +1,8 @@
 name: Money Agent (アフィリエイト記事生成)
 
 on:
-  # 一時停止中（Geminiクォータをsns-post.ymlに集中させるため）
+  schedule:
+    - cron: '0 21 * * *'  # 毎日 JST 6:00 — 朝イチで記事生成（sns-postとずらす）
   workflow_dispatch:  # 手動実行ボタン
 
 # git pushに必要な書き込み権限

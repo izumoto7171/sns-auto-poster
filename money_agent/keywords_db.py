@@ -10,16 +10,17 @@ KEYWORD_CATEGORIES = {
         "label": "AIツール紹介",
         "commission_range": "2,000〜10,000円/件",
         "keywords": [
-            {"kw": "ChatGPT 使い方 初心者", "intent": "how-to", "volume": "high"},
-            {"kw": "AIツール おすすめ 2026", "intent": "commercial", "volume": "high"},
-            {"kw": "Gemini 無料 使い方", "intent": "how-to", "volume": "high"},
-            {"kw": "Perplexity AI 使い方 日本語", "intent": "how-to", "volume": "mid"},
-            {"kw": "Claude AI 使い方", "intent": "how-to", "volume": "mid"},
-            {"kw": "AI 画像生成 無料 おすすめ", "intent": "commercial", "volume": "high"},
-            {"kw": "Midjourney 使い方 日本語", "intent": "how-to", "volume": "mid"},
-            {"kw": "Notion AI 使い方", "intent": "how-to", "volume": "mid"},
-            {"kw": "AI 文章生成 ツール 比較", "intent": "commercial", "volume": "mid"},
-            {"kw": "AI 動画生成 無料", "intent": "commercial", "volume": "high"},
+            # volume=high は競合が多い。パイロット期は mid/low + commercial を優先
+            {"kw": "ChatGPT 使い方 初心者", "intent": "how-to", "volume": "high", "competition": "high"},
+            {"kw": "AIツール おすすめ 2026", "intent": "commercial", "volume": "high", "competition": "high"},
+            {"kw": "Gemini 無料 使い方", "intent": "how-to", "volume": "high", "competition": "high"},
+            {"kw": "Perplexity AI 使い方 日本語", "intent": "how-to", "volume": "mid", "competition": "mid"},
+            {"kw": "Claude AI 使い方", "intent": "how-to", "volume": "mid", "competition": "mid"},
+            {"kw": "AI 画像生成 無料 おすすめ", "intent": "commercial", "volume": "high", "competition": "high"},
+            {"kw": "Midjourney 使い方 日本語", "intent": "how-to", "volume": "mid", "competition": "mid"},
+            {"kw": "Notion AI 使い方", "intent": "how-to", "volume": "mid", "competition": "mid"},
+            {"kw": "AI 文章生成 ツール 比較", "intent": "commercial", "volume": "mid", "competition": "mid"},
+            {"kw": "AI 動画生成 無料", "intent": "commercial", "volume": "high", "competition": "high"},
         ]
     },
 
@@ -27,35 +28,59 @@ KEYWORD_CATEGORIES = {
         "label": "AI副業・稼ぎ方",
         "commission_range": "3,000〜50,000円/件",
         "keywords": [
-            {"kw": "AI副業 始め方 初心者", "intent": "commercial", "volume": "high"},
-            {"kw": "副業 月10万 現実的", "intent": "informational", "volume": "high"},
-            {"kw": "在宅 副業 スマホ 稼ぐ", "intent": "commercial", "volume": "high"},
-            {"kw": "AI ライティング 副業", "intent": "commercial", "volume": "mid"},
-            {"kw": "クラウドワークス 始め方", "intent": "how-to", "volume": "high"},
-            {"kw": "ランサーズ 初心者 稼ぎ方", "intent": "how-to", "volume": "mid"},
-            {"kw": "ブログ アフィリエイト 始め方 2026", "intent": "commercial", "volume": "high"},
-            {"kw": "YouTube 収益化 条件 2026", "intent": "informational", "volume": "high"},
-            {"kw": "SNS運用代行 副業 やり方", "intent": "commercial", "volume": "mid"},
-            {"kw": "せどり 副業 初心者 Amazon", "intent": "commercial", "volume": "mid"},
+            {"kw": "AI副業 始め方 初心者", "intent": "commercial", "volume": "high", "competition": "high"},
+            {"kw": "副業 月10万 現実的", "intent": "informational", "volume": "high", "competition": "high"},
+            {"kw": "在宅 副業 スマホ 稼ぐ", "intent": "commercial", "volume": "high", "competition": "high"},
+            {"kw": "AI ライティング 副業", "intent": "commercial", "volume": "mid", "competition": "mid"},
+            {"kw": "クラウドワークス 始め方", "intent": "how-to", "volume": "high", "competition": "high"},
+            {"kw": "ランサーズ 初心者 稼ぎ方", "intent": "how-to", "volume": "mid", "competition": "mid"},
+            {"kw": "ブログ アフィリエイト 始め方 2026", "intent": "commercial", "volume": "high", "competition": "high"},
+            {"kw": "YouTube 収益化 条件 2026", "intent": "informational", "volume": "high", "competition": "high"},
+            {"kw": "SNS運用代行 副業 やり方", "intent": "commercial", "volume": "mid", "competition": "mid"},
+            {"kw": "せどり 副業 初心者 Amazon", "intent": "commercial", "volume": "mid", "competition": "mid"},
         ]
     },
 
     "investment_savings": {
-        "label": "投資・節約（高単価）",
+        "label": "投資・資産形成（高単価）",
         "commission_range": "5,000〜30,000円/件",
         "keywords": [
-            {"kw": "新NISAの始め方 証券会社 比較", "intent": "commercial", "volume": "high"},
-            {"kw": "SBI証券 口座開設 方法", "intent": "how-to", "volume": "high"},
-            {"kw": "楽天証券 メリット デメリット", "intent": "commercial", "volume": "high"},
-            {"kw": "ポイント投資 おすすめ アプリ", "intent": "commercial", "volume": "mid"},
-            {"kw": "クレジットカード おすすめ 2026 還元率", "intent": "commercial", "volume": "high"},
-            {"kw": "電気代 節約 方法 一人暮らし", "intent": "commercial", "volume": "high"},
-            {"kw": "格安SIM おすすめ 2026 比較", "intent": "commercial", "volume": "high"},
-            {"kw": "節約 アプリ おすすめ 無料", "intent": "commercial", "volume": "mid"},
-            {"kw": "iDeCo おすすめ 証券会社 2026", "intent": "commercial", "volume": "high"},
-            {"kw": "iDeCo 松井証券 メリット", "intent": "commercial", "volume": "mid"},
-            {"kw": "iDeCo 始め方 会社員 節税", "intent": "how-to", "volume": "high"},
-            {"kw": "iDeCo 手数料 無料 比較", "intent": "commercial", "volume": "mid"},
+            {"kw": "新NISAの始め方 証券会社 比較", "intent": "commercial", "volume": "high", "competition": "high"},
+            {"kw": "SBI証券 口座開設 方法", "intent": "how-to", "volume": "high", "competition": "high"},
+            {"kw": "楽天証券 メリット デメリット", "intent": "commercial", "volume": "high", "competition": "high"},
+            {"kw": "ポイント投資 おすすめ アプリ", "intent": "commercial", "volume": "mid", "competition": "mid"},
+            {"kw": "iDeCo おすすめ 証券会社 2026", "intent": "commercial", "volume": "high", "competition": "high"},
+            {"kw": "iDeCo 松井証券 メリット", "intent": "commercial", "volume": "mid", "competition": "mid"},
+            {"kw": "iDeCo 始め方 会社員 節税", "intent": "how-to", "volume": "high", "competition": "high"},
+            {"kw": "iDeCo 手数料 無料 比較", "intent": "commercial", "volume": "mid", "competition": "mid"},
+            {"kw": "新NISA 口座開設 おすすめ 2026", "intent": "commercial", "volume": "high", "competition": "high"},
+            {"kw": "楽天証券 SBI証券 比較 2026", "intent": "commercial", "volume": "high", "competition": "mid"},
+        ]
+    },
+
+    "savings_lifestyle": {
+        "label": "節約・生活費削減",
+        "commission_range": "2,000〜10,000円/件",
+        "keywords": [
+            {"kw": "クレジットカード おすすめ 2026 還元率", "intent": "commercial", "volume": "high", "competition": "high"},
+            {"kw": "電気代 節約 方法 一人暮らし", "intent": "commercial", "volume": "high", "competition": "high"},
+            {"kw": "格安SIM おすすめ 2026 比較", "intent": "commercial", "volume": "high", "competition": "high"},
+            {"kw": "節約 アプリ おすすめ 無料", "intent": "commercial", "volume": "mid", "competition": "mid"},
+            {"kw": "電力会社 乗り換え おすすめ 2026", "intent": "commercial", "volume": "mid", "competition": "mid"},
+            {"kw": "家計 見直し 固定費 削減", "intent": "informational", "volume": "mid", "competition": "low"},
+        ]
+    },
+
+    "high_value": {
+        "label": "高単価案件（プログラミング・転職）",
+        "commission_range": "8,000〜50,000円/件",
+        "keywords": [
+            {"kw": "プログラミングスクール おすすめ 2026", "intent": "commercial", "volume": "high", "competition": "high"},
+            {"kw": "未経験 エンジニア転職 スクール 比較", "intent": "commercial", "volume": "mid", "competition": "mid"},
+            {"kw": "副業 プログラミング 稼ぐ方法", "intent": "commercial", "volume": "mid", "competition": "mid"},
+            {"kw": "転職エージェント おすすめ 2026", "intent": "commercial", "volume": "high", "competition": "high"},
+            {"kw": "FX 口座開設 おすすめ 初心者", "intent": "commercial", "volume": "mid", "competition": "high"},
+            {"kw": "確定申告 クラウド会計 おすすめ", "intent": "commercial", "volume": "mid", "competition": "mid"},
         ]
     },
 
@@ -63,11 +88,11 @@ KEYWORD_CATEGORIES = {
         "label": "時短・生産性向上",
         "commission_range": "1,000〜5,000円/件",
         "keywords": [
-            {"kw": "時短 仕事術 AI 活用", "intent": "informational", "volume": "mid"},
-            {"kw": "タスク管理 アプリ おすすめ 2026", "intent": "commercial", "volume": "mid"},
-            {"kw": "Notion 使い方 テンプレート", "intent": "how-to", "volume": "high"},
-            {"kw": "ChatGPT 仕事 活用 具体例", "intent": "informational", "volume": "high"},
-            {"kw": "自動化 ツール 無料 おすすめ", "intent": "commercial", "volume": "mid"},
+            {"kw": "時短 仕事術 AI 活用", "intent": "informational", "volume": "mid", "competition": "mid"},
+            {"kw": "タスク管理 アプリ おすすめ 2026", "intent": "commercial", "volume": "mid", "competition": "mid"},
+            {"kw": "Notion 使い方 テンプレート", "intent": "how-to", "volume": "high", "competition": "high"},
+            {"kw": "ChatGPT 仕事 活用 具体例", "intent": "informational", "volume": "high", "competition": "high"},
+            {"kw": "自動化 ツール 無料 おすすめ", "intent": "commercial", "volume": "mid", "competition": "mid"},
         ]
     },
 
@@ -75,18 +100,61 @@ KEYWORD_CATEGORIES = {
         "label": "DX・業務効率化ツール（中小企業向け）",
         "commission_range": "1,500〜3,000円/件",
         "keywords": [
-            {"kw": "freee 中小企業 クラウド会計", "intent": "commercial", "volume": "mid"},
-            {"kw": "freee 会計 使い方 経営者", "intent": "how-to", "volume": "mid"},
-            {"kw": "マネーフォワード クラウド 中小企業", "intent": "commercial", "volume": "mid"},
-            {"kw": "マネーフォワード 使い方 経営者", "intent": "how-to", "volume": "mid"},
-            {"kw": "Chatwork 社内チャット 中小企業", "intent": "commercial", "volume": "mid"},
-            {"kw": "Chatwork 使い方 社内連絡 効率化", "intent": "how-to", "volume": "mid"},
-            {"kw": "中小企業 DX ツール おすすめ 2026", "intent": "commercial", "volume": "high"},
-            {"kw": "クラウド会計 比較 中小企業", "intent": "commercial", "volume": "mid"},
-            {"kw": "業務効率化 ツール 無料 中小企業", "intent": "commercial", "volume": "mid"},
-            {"kw": "チャットツール 社内 おすすめ 中小企業", "intent": "commercial", "volume": "mid"},
+            {"kw": "freee 中小企業 クラウド会計", "intent": "commercial", "volume": "mid", "competition": "mid"},
+            {"kw": "freee 会計 使い方 経営者", "intent": "how-to", "volume": "mid", "competition": "low"},
+            {"kw": "マネーフォワード クラウド 中小企業", "intent": "commercial", "volume": "mid", "competition": "mid"},
+            {"kw": "マネーフォワード 使い方 経営者", "intent": "how-to", "volume": "mid", "competition": "low"},
+            {"kw": "Chatwork 社内チャット 中小企業", "intent": "commercial", "volume": "mid", "competition": "mid"},
+            {"kw": "Chatwork 使い方 社内連絡 効率化", "intent": "how-to", "volume": "mid", "competition": "low"},
+            {"kw": "中小企業 DX ツール おすすめ 2026", "intent": "commercial", "volume": "high", "competition": "high"},
+            {"kw": "クラウド会計 比較 中小企業", "intent": "commercial", "volume": "mid", "competition": "mid"},
+            {"kw": "業務効率化 ツール 無料 中小企業", "intent": "commercial", "volume": "mid", "competition": "mid"},
+            {"kw": "チャットツール 社内 おすすめ 中小企業", "intent": "commercial", "volume": "mid", "competition": "mid"},
         ]
     }
+}
+
+# ============================================================
+# パイロット検証用「低難易度×高意図」キーワード
+# ニッチで具体的な悩みを含む長尾クエリ
+# 検索ボリュームは少ないが、AI検索に引用されたときのCVRが高い
+# ============================================================
+PILOT_KEYWORDS = {
+    "ai_saas": [
+        {"kw": "ChatGPT Plus 仕事 月2000円 元が取れるか", "intent": "commercial", "volume": "low", "competition": "low"},
+        {"kw": "Notion AI 議事録 自動生成 やり方 設定", "intent": "how-to", "volume": "low", "competition": "low"},
+        {"kw": "Canva Pro 中小企業 デザイナーなし 代替", "intent": "commercial", "volume": "low", "competition": "low"},
+        {"kw": "ChatGPT 見積書 作成 テンプレート 経営者", "intent": "how-to", "volume": "low", "competition": "low"},
+        {"kw": "Notion vs Backlog どちら 中小企業 プロジェクト管理", "intent": "commercial", "volume": "low", "competition": "low"},
+    ],
+    "dx_tools": [
+        {"kw": "個人事業主 確定申告ソフト 比較 freee マネーフォワード", "intent": "commercial", "volume": "low", "competition": "low"},
+        {"kw": "freee 青色申告 初めて 設定 つまずきポイント", "intent": "how-to", "volume": "low", "competition": "low"},
+        {"kw": "マネーフォワード 給与計算 社員3人 費用対効果", "intent": "commercial", "volume": "low", "competition": "low"},
+        {"kw": "Chatwork Slack どちら 5人以下 会社 比較", "intent": "commercial", "volume": "low", "competition": "low"},
+        {"kw": "インボイス制度 対応 クラウド請求書 比較 個人事業主", "intent": "commercial", "volume": "low", "competition": "low"},
+    ],
+    "investment_savings": [
+        {"kw": "iDeCo 会社員 年収400万 節税効果 実際の金額", "intent": "informational", "volume": "low", "competition": "low"},
+        {"kw": "新NISA 積立 月3万 10年後 シミュレーション", "intent": "informational", "volume": "low", "competition": "low"},
+        {"kw": "SBI証券 楽天証券 どちら 2026 乗り換え 手数料", "intent": "commercial", "volume": "low", "competition": "low"},
+        {"kw": "格安SIM IIJmio vs 楽天モバイル 一人暮らし データ通信量", "intent": "commercial", "volume": "low", "competition": "low"},
+        {"kw": "電気代 年間5万削減 実績 電力会社 切り替え", "intent": "commercial", "volume": "low", "competition": "low"},
+    ],
+    "side_hustle": [
+        {"kw": "クラウドワークス 文字単価1円 最初の1件 取り方", "intent": "how-to", "volume": "low", "competition": "low"},
+        {"kw": "AIライティング 副業 月3万 実際の作業時間 本音", "intent": "informational", "volume": "low", "competition": "low"},
+        {"kw": "Lancers 初心者 評価ゼロ 受注 コツ", "intent": "how-to", "volume": "low", "competition": "low"},
+        {"kw": "副業 会社にバレない 住民税 確定申告 対策", "intent": "informational", "volume": "low", "competition": "low"},
+        {"kw": "note 有料記事 最初の1件 売れた 体験談", "intent": "informational", "volume": "low", "competition": "low"},
+    ],
+    "ai_tools": [
+        {"kw": "Perplexity vs ChatGPT 調べ物 どちら 使い分け", "intent": "commercial", "volume": "low", "competition": "low"},
+        {"kw": "Midjourney 商用利用 アフィリエイト画像 規約 確認", "intent": "how-to", "volume": "low", "competition": "low"},
+        {"kw": "Claude 無料プラン 上限 毎日使える 実際の文字数", "intent": "informational", "volume": "low", "competition": "low"},
+        {"kw": "Gemini Advanced 2000円 ChatGPT Plus 比較 仕事用", "intent": "commercial", "volume": "low", "competition": "low"},
+        {"kw": "AI文章生成 オリジナリティ GoogleSEO ペナルティ 対策", "intent": "informational", "volume": "low", "competition": "low"},
+    ],
 }
 
 def _load_affiliate_urls() -> dict:
@@ -275,6 +343,8 @@ CONTENT_AFFILIATE_MAP = {
     "ai_tools": ["canva_pro", "notion", "onamae_domain"],
     "side_hustle": ["crowdworks", "lancers", "onamae_domain"],
     "investment_savings": ["tossy", "rakuten_card", "rakuten_securities", "matsui_ideco"],
+    "savings_lifestyle": ["rakuten_card", "tossy", "matsui_ideco"],
+    "high_value": ["freee_accounting", "moneyforward_cloud", "onamae_domain", "tossy"],
     "productivity": ["notion", "onamae_domain", "canva_pro"],
     "dx_tools": ["freee_accounting", "moneyforward_cloud", "chatwork"],
 }
@@ -324,15 +394,50 @@ def _get_dynamic_keywords() -> list:
         return []
 
 
-def get_next_keyword(used_keywords: list = None, _depth: int = 0, preferred_category: str = None) -> dict:
+def get_next_keyword(
+    used_keywords: list = None,
+    _depth: int = 0,
+    preferred_category: str = None,
+    pilot_mode: bool = False,
+) -> dict:
     """未使用の次のキーワードを選択
 
+    pilot_mode=True: パイロット検証期間用。PILOT_KEYWORDS から「低競合×高意図」を優先選択。
     preferred_category: SNS分析から推奨されたカテゴリ（重みを3倍にする）
     """
     import random
     used = used_keywords or []
     all_kws = []
-    # 静的キーワード
+
+    if pilot_mode:
+        # パイロット期: PILOT_KEYWORDS を優先（なければ通常のlow/midボリュームにフォールバック）
+        for cat_id, kw_list in PILOT_KEYWORDS.items():
+            for kw_data in kw_list:
+                if kw_data["kw"] not in used:
+                    all_kws.append({
+                        "keyword": kw_data["kw"],
+                        "category": cat_id,
+                        "intent": kw_data["intent"],
+                        "volume": kw_data["volume"],
+                        "competition": kw_data.get("competition", "low"),
+                        "is_pilot": True,
+                    })
+
+        if all_kws:
+            # パイロット期の重み: commercial intent > informational > how-to
+            # competition=low を優先（同競合度なら preferredカテゴリを重視）
+            weights = []
+            for kw in all_kws:
+                w = 2  # パイロットキーワードベース重み
+                if kw["intent"] == "commercial": w *= 3
+                elif kw["intent"] == "informational": w *= 2
+                if kw.get("competition") == "low": w *= 2
+                if preferred_category and kw["category"] == preferred_category: w *= 3
+                weights.append(w)
+            return random.choices(all_kws, weights=weights, k=1)[0]
+        # パイロットKW使い切り → 通常モードにフォールバック
+
+    # 通常モード: 静的キーワード
     for cat_id, cat_data in KEYWORD_CATEGORIES.items():
         for kw_data in cat_data["keywords"]:
             if kw_data["kw"] not in used:
@@ -340,34 +445,41 @@ def get_next_keyword(used_keywords: list = None, _depth: int = 0, preferred_cate
                     "keyword": kw_data["kw"],
                     "category": cat_id,
                     "intent": kw_data["intent"],
-                    "volume": kw_data["volume"]
+                    "volume": kw_data["volume"],
+                    "competition": kw_data.get("competition", "mid"),
+                    "is_pilot": False,
                 })
     # 動的キーワード（トレンド収集分）を追加
     for kw_data in _get_dynamic_keywords():
         if kw_data["keyword"] not in used:
             all_kws.append(kw_data)
+
     if not all_kws:
         if _depth >= 1:
-            # 全キーワード使い切り・リセット後も空なら先頭を返す（無限再帰防止）
             all_kws = [
                 {"keyword": kw_data["kw"], "category": cat_id,
-                 "intent": kw_data["intent"], "volume": kw_data["volume"]}
+                 "intent": kw_data["intent"], "volume": kw_data["volume"],
+                 "competition": kw_data.get("competition", "mid")}
                 for cat_id, cat_data in KEYWORD_CATEGORIES.items()
                 for kw_data in cat_data["keywords"]
             ]
             return random.choice(all_kws) if all_kws else {
                 "keyword": "副業", "category": "side_hustle",
-                "intent": "commercial", "volume": "high"
+                "intent": "commercial", "volume": "high", "competition": "high"
             }
-        # 全部使い切ったらリセット（1回のみ）
-        return get_next_keyword([], _depth=_depth + 1, preferred_category=preferred_category)
+        return get_next_keyword([], _depth=_depth + 1,
+                                preferred_category=preferred_category,
+                                pilot_mode=pilot_mode)
 
-    # 商業意図 × 検索ボリューム × SNS推奨カテゴリで重み付け
+    # 商業意図 × 競合度逆数 × SNS推奨カテゴリで重み付け
     weights = []
     for kw in all_kws:
         w = 1
         if kw["intent"] == "commercial": w *= 3
         if kw["volume"] == "high": w *= 2
+        comp = kw.get("competition", "mid")
+        if comp == "low": w *= 2    # 低競合を優遇
+        elif comp == "high": w *= 1  # 高競合は等倍（ペナルティなし）
         if preferred_category and kw["category"] == preferred_category: w *= 3
         weights.append(w)
 

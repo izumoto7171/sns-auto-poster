@@ -313,10 +313,9 @@ jobs:
           git pull --rebase origin main && git push
 
   post-bluesky:
-    name: Bluesky 投稿（一時停止中）
+    name: Bluesky 投稿
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    if: false  # 一時停止
     steps:
       - uses: actions/checkout@v5
 
@@ -339,10 +338,9 @@ jobs:
           python3 bsky_poster.py live
 
   post-hatena:
-    name: はてなブログ 投稿（一時停止中）
+    name: はてなブログ 投稿
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    if: false  # 一時停止
     steps:
       - uses: actions/checkout@v5
 
@@ -379,10 +377,9 @@ jobs:
           python3 hatena_poster.py post
 
   post-note:
-    name: note 投稿（一時停止中）
+    name: note 投稿
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    if: false  # 一時停止
     steps:
       - uses: actions/checkout@v5
 

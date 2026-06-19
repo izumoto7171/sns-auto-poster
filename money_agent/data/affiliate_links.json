@@ -4,14 +4,24 @@
   "_rakuten_note": "楽天アフィリエイトはAPI経由で商品ごとに自動生成（affiliateUrl）。ここでは固定リンクのみ管理",
   "_update_tool": "python3 money_agent/config/update_affiliate.py <program_id> <new_url>",
   "freee_accounting": {
-    "url": "https://px.a8.net/svt/ejp?a8mat=3Z1234+FREEE1+0000+0000A",
-    "status": "pending",
-    "note": "A8.net申請未完了（承認メールなし）。a8.netにログインして申請すること"
+    "url": "https://px.a8.net/svt/ejp?a8mat=4B1DXL+8AVMGI+3SPO+9FDI8Y",
+    "status": "active",
+    "note": "提携承認済み（freee_2026）。EPC: 3.09、報酬: 新規導入1500円〜20000円"
   },
   "moneyforward_cloud": {
-    "url": "https://px.a8.net/svt/ejp?a8mat=3Z1234+MFWD01+0000+0000A",
-    "status": "pending",
-    "note": "A8.net申請未完了（承認メールなし）。a8.netにログインして申請すること"
+    "url": "https://px.a8.net/svt/ejp?a8mat=4B1DXL+8UIXF6+4JGQ+BWVTE",
+    "status": "active",
+    "note": "提携承認済み（mf_kakutei_2026）。EPC: 22.85、報酬: 新規会員登録1500円"
+  },
+  "moneyforward_kaikeigyo": {
+    "url": "https://px.a8.net/svt/ejp?a8mat=4B1DXL+8XI3G2+4JGQ+1NQUK2",
+    "status": "active",
+    "note": "MF開業届。EPC: 15.38、報酬: 新規無料会員登録300円"
+  },
+  "moneyforward_kaikei": {
+    "url": "https://px.a8.net/svt/ejp?a8mat=4B1DXL+987WC2+4JGQ+60WN6",
+    "status": "active",
+    "note": "MF会計。EPC: 3.57、報酬: 新規会員登録700円"
   },
   "chatwork": {
     "url": "https://go.chatwork.com/ja/",

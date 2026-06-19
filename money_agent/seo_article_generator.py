@@ -13,6 +13,14 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from money_agent.keywords_db import get_affiliates_for_category, KEYWORD_CATEGORIES
+from money_agent.geo_enhancer import (
+    build_conclusion_first,
+    build_data_comparison_table,
+    build_concern_section,
+    render_jsonld_block,
+    build_article_jsonld,
+    build_faq_jsonld,
+)
 
 # ============================================================
 # SEO記事テンプレート（カテゴリ × スタイル別）
@@ -101,6 +109,36 @@ ARTICLE_TEMPLATES = {
             "structure": ["dx_hook", "user_worries", "merit", "how_to", "faq", "affiliate_cta", "summary"],
             "tone": "親切なDXアドバイザー・背中を押すスタイル",
             "target": "DX検討中の中小企業経営者"
+        }
+    ],
+
+    "savings_lifestyle": [
+        {
+            "title_format": "【{year}年最新】{keyword}｜本当にお得な選び方を徹底比較",
+            "structure": ["hook", "comparison_table", "detail_review", "how_to", "affiliate_cta", "caution", "summary"],
+            "tone": "節約アドバイザー・データで比較",
+            "target": "生活費を見直したい一人暮らし・ファミリー層"
+        },
+        {
+            "title_format": "{keyword}｜乗り換えて年間いくら節約できるか計算してみた",
+            "structure": ["hook", "comparison_table", "how_to", "affiliate_cta", "faq", "summary"],
+            "tone": "体験談・具体的な節約額を提示",
+            "target": "固定費削減を検討している人"
+        }
+    ],
+
+    "high_value": [
+        {
+            "title_format": "【{year}年版】{keyword}｜現役エンジニアが本音で比較・おすすめランキング",
+            "structure": ["hook", "comparison_table", "detail_review", "how_to_start", "affiliate_cta", "caution", "summary"],
+            "tone": "プロ目線の比較レビュー",
+            "target": "キャリアアップ・スキルアップを目指す社会人"
+        },
+        {
+            "title_format": "{keyword}【失敗しない選び方】｜口コミ・評判を徹底調査",
+            "structure": ["hook", "comparison_table", "pros_cons", "affiliate_cta", "faq", "summary"],
+            "tone": "口コミ・評判ベース",
+            "target": "比較検討段階のユーザー"
         }
     ]
 }
@@ -622,14 +660,28 @@ def _build_latest_news_section(keyword: str, latest_ai_info: dict) -> str:
     return "".join(lines)
 
 
+def _extract_faq_from_body(body: str) -> list[dict]:
+    """記事本文から Q/A ペアを抽出して FAQPage JSON-LD 用データを生成する"""
+    import re
+    faq_items = []
+    # 「**Q: ...」「A: ...」パターンを抽出
+    pattern = re.compile(r'\*\*Q[:：]\s*(.+?)\*\*\s*\nA[:：]\s*(.+?)(?=\n\n|\Z)', re.DOTALL)
+    for m in pattern.finditer(body):
+        question = m.group(1).strip()
+        answer = m.group(2).strip()[:200]  # Schema.orgの推奨長に収める
+        faq_items.append({"question": question, "answer": answer})
+    return faq_items[:5]  # 最大5件
+
+
 def generate_seo_article(keyword: str, category: str,
                          affiliates: list = None,
                          feedback_insights: dict = None) -> dict:
-    """SEO最適化記事を生成"""
+    """GEO最適化SEO記事を生成"""
 
     year = datetime.now().year
     feedback_insights = feedback_insights or {}
     latest_ai_info = feedback_insights.get("latest_ai_info", {})
+    reader_concerns = feedback_insights.get("reader_concerns", [])
 
     # affiliates 引数が渡されなければカテゴリから取得
     if affiliates is None:
@@ -650,6 +702,14 @@ def generate_seo_article(keyword: str, category: str,
     # 記事構造に従ってコンテンツ生成
     body_parts = []
 
+    # GEO: 結論ファースト（AIが要約として抜き出しやすいブロック）
+    body_parts.append(build_conclusion_first(keyword, category, affiliates or []))
+
+    # GEO: 数値データ比較テーブル（AIが引用しやすい構造化データ）
+    comparison_table = build_data_comparison_table(keyword, category, affiliates or [])
+    if comparison_table:
+        body_parts.append(comparison_table)
+
     # 導入文（カテゴリ別に最新性をアピール）
     if category == "ai_saas" and latest_ai_info.get("update_highlight"):
         body_parts.append(f"""この記事では{year}年最新の**{keyword}**について、実際のビジネス活用を中心に解説します。
@@ -660,9 +720,9 @@ def generate_seo_article(keyword: str, category: str,
 
 """)
     elif category == "investment_savings":
-        body_parts.append(f"""この記事では**{keyword}**について、{year}年の最新制度に対応した情報をもとに解説します。
+        body_parts.append(f"""この記事では**{keyword}**について、{year}年の最新情報をもとに徹底比較・解説します。
 
-新NISA・iDeCoの制度改正など、税制優遇ルールは毎年変わります。古い情報のまま口座開設すると損をする可能性があるため、{year}年最新の制度対応情報をまとめました。
+料金・サービス内容・使いやすさなどを総合的に比較し、あなたに最適な選択肢をご紹介します。
 
 初心者の方でも迷わず始められるよう、選び方のポイントから手続きの流れまでわかりやすくお伝えします。
 
@@ -717,7 +777,18 @@ def generate_seo_article(keyword: str, category: str,
             content = generate_section(section, keyword, category, affiliates)
         body_parts.append(content)
 
+    # GEO: 懸念点払拭セクション（「判断」型コンテンツでAI引用率向上）
+    if reader_concerns:
+        body_parts.append(build_concern_section(reader_concerns, keyword, affiliates or []))
+
     body = "".join(body_parts)
+
+    # GEO: JSON-LD Schema.org（Article + FAQPage）を記事末尾に注入
+    faq_items = _extract_faq_from_body(body)
+    schema_objects = [build_article_jsonld(title, keyword)]
+    if faq_items:
+        schema_objects.append(build_faq_jsonld(faq_items))
+    body += "\n\n" + render_jsonld_block(schema_objects) + "\n"
 
     # 免責事項（投資・金融カテゴリは必須、それ以外も共通で付与）
     INVESTMENT_CATEGORIES = {"investment_savings"}
