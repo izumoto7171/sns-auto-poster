@@ -2,8 +2,7 @@ name: Lifestyle Hack Auto Poster
 
 on:
   schedule:
-    - cron: '0 23 * * *'   # 毎日 JST 8:00
-    - cron: '0 13 * * *'   # 毎日 JST 22:00
+    - cron: '0 23 * * *'   # 毎日 JST 8:00（1日1回に削減 — Actions時間節約）
   workflow_dispatch:
 
 jobs:
