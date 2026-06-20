@@ -40,13 +40,28 @@ if env_path.exists():
             os.environ.setdefault(k.strip(), v.strip())
 
 ASSOCIATE_TAG = os.getenv("AMAZON_ASSOCIATE_TAG", "smartearn22-22")
-MAX_PER_RUN   = 5   # 1回の実行で追加する上限
-MAX_POOL_SIZE = 50  # プールの上限件数
+MAX_PER_RUN   = 15  # 1回の実行で追加する上限（カテゴリ増加に対応）
+MAX_POOL_SIZE = 200 # プールの上限件数（全カテゴリ対応）
 
 # 巡回するランキングページ（PCガジェット系を優先）
 RANKING_URLS = [
+    # エレクトロニクス・ガジェット
     "https://www.amazon.co.jp/gp/bestsellers/electronics/2127209051",  # PCアクセサリ
     "https://www.amazon.co.jp/gp/bestsellers/electronics/",            # エレクトロニクス全体
+    # キッチン・食品
+    "https://www.amazon.co.jp/gp/bestsellers/kitchen/",                # キッチン用品
+    "https://www.amazon.co.jp/gp/bestsellers/food-beverage/",          # 食品・飲料
+    # 日用品・生活雑貨
+    "https://www.amazon.co.jp/gp/bestsellers/hpc/",                    # ドラッグストア・ビューティー
+    "https://www.amazon.co.jp/gp/bestsellers/home/",                   # ホーム＆キッチン
+    "https://www.amazon.co.jp/gp/bestsellers/office-products/",        # 文房具・オフィス用品
+    # インテリア・収納
+    "https://www.amazon.co.jp/gp/bestsellers/home-improvement/",       # DIY・工具・ガーデン
+    # スポーツ・アウトドア
+    "https://www.amazon.co.jp/gp/bestsellers/sports/",                 # スポーツ＆アウトドア
+    # セール・タイムセール
+    "https://www.amazon.co.jp/gp/goldbox/",                            # タイムセール
+    "https://www.amazon.co.jp/deals/",                                 # 本日のセール
 ]
 
 # 同期更新する両JSONファイル
@@ -73,8 +88,27 @@ _CATEGORY_MAP = [
     (["スマートプラグ", "スマートスピーカー", "SwitchBot", "Hub", "Alexa", "Google Home"], "スマートホーム"),
     (["マウス", "キーボード", "モニター", "ウェブカメラ", "SSD", "USBハブ", "ドッキング"], "PC周辺機器"),
     (["デスクマット", "ケーブルホルダー", "ケーブル収納", "チェア", "スタンド"],            "デスク環境"),
+    # キッチン・食品
+    (["フライパン", "鍋", "包丁", "まな板", "キッチン", "調理", "レンジ", "トースター", "炊飯"], "キッチン"),
+    (["コーヒー", "プロテイン", "水筒", "タンブラー", "弁当"],                              "食品・飲料"),
+    # 日用品・ドラッグストア
+    (["洗剤", "柔軟剤", "シャンプー", "ボディソープ", "歯ブラシ", "歯磨き"],                "日用品"),
+    (["化粧水", "日焼け止め", "スキンケア", "メンズ美容", "髭剃り", "シェーバー"],          "美容・ケア"),
+    (["サプリ", "ビタミン", "プロテイン", "健康"],                                          "健康"),
+    # 収納・インテリア
+    (["収納", "ラック", "棚", "ボックス", "整理", "山崎実業", "tower", "無印"],              "収納・整理"),
+    (["照明", "ライト", "LED", "デスクライト", "間接照明"],                                 "照明"),
+    (["カーテン", "マット", "クッション", "ブランケット"],                                  "インテリア"),
+    # 掃除・洗濯
+    (["掃除機", "クリーナー", "モップ", "ロボット掃除"],                                    "掃除"),
+    (["洗濯", "乾燥", "ハンガー", "物干し", "アイロン"],                                    "洗濯"),
+    # スポーツ・アウトドア
+    (["ヨガ", "ストレッチ", "ダンベル", "筋トレ", "トレーニング"],                          "フィットネス"),
+    (["キャンプ", "アウトドア", "ランタン", "テント", "チェア"],                             "アウトドア"),
+    # 睡眠
+    (["枕", "マットレス", "布団", "アイマスク", "耳栓", "睡眠"],                            "睡眠"),
 ]
-_DEFAULT_CATEGORY = "ガジェット"
+_DEFAULT_CATEGORY = "生活雑貨"
 
 
 def _make_dp_url(asin: str) -> str:
@@ -178,8 +212,37 @@ def _scrape_ranking_page(url: str) -> list[dict]:
                         except Exception:
                             pass
 
+            # 割引・セール情報を取得
+            discount_pct = 0
+            price_text = ""
+            for price_sel in [
+                "span.a-color-price",
+                "span[data-a-color='price']",
+                "span.p13n-sc-price",
+            ]:
+                price_tag = el.select_one(price_sel)
+                if price_tag:
+                    price_text = price_tag.get_text(strip=True)
+                    break
+            # 割引率の抽出（「-20%」「20%OFF」など）
+            for disc_sel in [
+                "span.savingsPercentage",
+                "span[data-a-badge-color='sx-deal-color']",
+                "span.a-text-bold",
+            ]:
+                disc_tag = el.select_one(disc_sel)
+                if disc_tag:
+                    disc_text = disc_tag.get_text(strip=True)
+                    disc_m = re.search(r'(\d+)\s*%', disc_text)
+                    if disc_m:
+                        discount_pct = int(disc_m.group(1))
+                        break
+
             seen_asins.add(asin)
-            results.append({"asin": asin, "title": title, "image_url": image_url})
+            results.append({
+                "asin": asin, "title": title, "image_url": image_url,
+                "discount_pct": discount_pct, "price_text": price_text,
+            })
             if len(results) >= MAX_PER_RUN * 3:
                 break
 
@@ -194,7 +257,8 @@ def _scrape_ranking_page(url: str) -> list[dict]:
         return []
 
 
-def _build_product(asin: str, title: str, image_url: str = "") -> dict:
+def _build_product(asin: str, title: str, image_url: str = "",
+                    discount_pct: int = 0, price_text: str = "") -> dict:
     """スクレイピング結果から static_products.json 互換の商品辞書を生成する。"""
     category = _detect_category(title)
     keywords = _extract_keywords(title)
@@ -205,9 +269,9 @@ def _build_product(asin: str, title: str, image_url: str = "") -> dict:
         "search_keyword": title[:40],
         "title":          title,
         "brand":          brand,
-        "price":          {"amount": 0, "currency": "JPY", "display": "要確認"},
+        "price":          {"amount": 0, "currency": "JPY", "display": price_text or "要確認"},
         "original_price": {"amount": 0, "display": "要確認"},
-        "discount_rate":  0,
+        "discount_rate":  discount_pct,
         "category":       category,
         "keywords":       keywords,
         "image_url":      image_url,
@@ -278,20 +342,25 @@ def fetch_and_update(dry_run: bool = False) -> bool:
     candidates: list[dict] = []
     seen_in_run: set[str] = set()
 
+    max_per_category = max(3, MAX_PER_RUN // len(RANKING_URLS))
     for url in RANKING_URLS:
-        if len(candidates) >= MAX_PER_RUN:
-            break
         print(f"\n🌐 巡回中: {url[:60]}")
         raw = _scrape_ranking_page(url)
         time.sleep(2)  # サーバー負荷軽減
 
+        added_this_cat = 0
         for item in raw:
             asin = item["asin"]
             if asin in existing_asins or asin in seen_in_run:
                 continue
             seen_in_run.add(asin)
-            candidates.append(_build_product(asin, item["title"], item.get("image_url", "")))
-            if len(candidates) >= MAX_PER_RUN:
+            candidates.append(_build_product(
+                asin, item["title"], item.get("image_url", ""),
+                discount_pct=item.get("discount_pct", 0),
+                price_text=item.get("price_text", ""),
+            ))
+            added_this_cat += 1
+            if added_this_cat >= max_per_category:
                 break
 
     if not candidates:

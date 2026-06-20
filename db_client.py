@@ -23,7 +23,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 # 商品プールの最大保持件数（ローリングプール）
-_AMAZON_POOL_MAX = 30
+_AMAZON_POOL_MAX = 200
 
 # ─────────────────────────────────────────
 # モジュールレベル シングルトン
@@ -299,6 +299,10 @@ class DBClient:
                 product = json.loads(product)
             product["intent_score"]  = r.get("intent_score",  product.get("intent_score",  50))
             product["context_boost"] = r.get("context_boost", product.get("context_boost", 0))
+            # 割引商品はスコアを加算して優先選択されやすくする
+            discount = product.get("discount_rate", 0)
+            if discount > 0:
+                product["intent_score"] += discount * 2
             result.append(product)
 
         # 加重ランダムシャッフル: intent_score が高いほど先頭に来やすいが、毎回順序が変わる

@@ -1,515 +1,5 @@
 [
   {
-    "asin": "B0B96T9CBY",
-    "search_keyword": "Anker 電源タップ 延長コード USB-C 6口 雷ガード",
-    "title": "Anker 電源タップ 6口+USB-C付き 雷ガード 2m延長コード",
-    "brand": "Anker",
-    "price": {
-      "amount": 2980,
-      "currency": "JPY",
-      "display": "¥2,980"
-    },
-    "original_price": {
-      "amount": 3980,
-      "display": "¥3,980"
-    },
-    "discount_rate": 25,
-    "category": "ガジェット",
-    "keywords": [
-      "電源タップ",
-      "デスク周り",
-      "便利ガジェット",
-      "テレワーク"
-    ],
-    "features": [
-      "コンセント6口 + USB-C/A同時充電対応",
-      "雷サージ保護で機器を守る",
-      "2m延長コードでデスク周りをスッキリ整理"
-    ],
-    "why_viral": "新生活のタコ足配線を一発解決。新社会人の定番買い",
-    "story_hook": "引っ越して最初に後悔したのが、コンセントの少なさだった。",
-    "user_problem": "コンセントが足りなくてデスクがごちゃごちゃ",
-    "amazon_url": "https://www.amazon.co.jp/dp/B0B96T9CBY/?tag=smartearn22-22",
-    "source": "static",
-    "image_url": ""
-  },
-  {
-    "asin": "B09V7C9V8B",
-    "search_keyword": "衣類圧縮袋 掃除機不要 トラベル 収納 大容量 引越し",
-    "title": "掃除機不要の衣類圧縮袋 10枚セット（引越し・クローゼット整理）",
-    "brand": "Storage Works",
-    "price": {
-      "amount": 1980,
-      "currency": "JPY",
-      "display": "¥1,980"
-    },
-    "original_price": {
-      "amount": 2980,
-      "display": "¥2,980"
-    },
-    "discount_rate": 33,
-    "category": "ガジェット",
-    "keywords": [
-      "旅行グッズ",
-      "便利グッズ",
-      "衣類圧縮袋",
-      "収納"
-    ],
-    "features": [
-      "掃除機不要・くるくる丸めるだけで圧縮",
-      "S/M/L/XL 4サイズ10枚入り",
-      "クローゼット・引越し・旅行全対応"
-    ],
-    "why_viral": "新生活の荷物整理に必ず役立つ。引越し前後の需要が爆発",
-    "story_hook": "服の量は変わっていないのに、クローゼットが2倍広くなった。",
-    "user_problem": "収納が少なくて服がクローゼットに入らない",
-    "amazon_url": "https://www.amazon.co.jp/dp/B09V7C9V8B/?tag=smartearn22-22",
-    "source": "static",
-    "image_url": ""
-  },
-  {
-    "asin": "B0B247R68G",
-    "search_keyword": "TP-Link スマートプラグ Wi-Fi Alexa Google Home 対応 節電",
-    "title": "TP-Link スマートプラグ Wi-Fi対応 Amazon Alexa/Google Home連携",
-    "brand": "TP-Link",
-    "price": {
-      "amount": 1490,
-      "currency": "JPY",
-      "display": "¥1,490"
-    },
-    "original_price": {
-      "amount": 1990,
-      "display": "¥1,990"
-    },
-    "discount_rate": 25,
-    "category": "スマートホーム",
-    "keywords": [
-      "スマートホーム",
-      "節電",
-      "ガジェット",
-      "Alexa"
-    ],
-    "features": [
-      "スマホから遠隔ON/OFF・タイマー設定",
-      "Alexa/Google Home音声操作対応",
-      "電力使用量のモニタリング機能付き"
-    ],
-    "why_viral": "1,500円でスマートホーム入門。一人暮らし防犯にも使える",
-    "story_hook": "外出先から「あ、消し忘れた」が二度とない生活になった。",
-    "user_problem": "家電の消し忘れが不安・電気代を節約したい",
-    "amazon_url": "https://www.amazon.co.jp/dp/B0B247R68G/?tag=smartearn22-22",
-    "source": "static",
-    "image_url": ""
-  },
-  {
-    "asin": "B0C1Z8R7Y2",
-    "search_keyword": "Anker Soundcore Liberty 4 NC ワイヤレスイヤホン ノイキャン",
-    "title": "Anker Soundcore Liberty 4 NC ワイヤレスイヤホン",
-    "brand": "Anker Soundcore",
-    "price": {
-      "amount": 7990,
-      "currency": "JPY",
-      "display": "¥7,990"
-    },
-    "original_price": {
-      "amount": 9990,
-      "display": "¥9,990"
-    },
-    "discount_rate": 20,
-    "category": "オーディオ",
-    "keywords": [
-      "イヤホン",
-      "オーディオ",
-      "Anker",
-      "ノイズキャンセリング"
-    ],
-    "features": [
-      "アクティブノイズキャンセリング搭載",
-      "最大10時間再生・外音取り込みモード対応",
-      "1万円以下で最強クラスのコスパ"
-    ],
-    "why_viral": "通勤・テレワーク・勉強。新生活のあらゆるシーンに刺さる",
-    "story_hook": "電車の中で「仕事モード」に切り替えられるようになった。",
-    "user_problem": "通勤・通学中に集中できない・騒音が気になる",
-    "amazon_url": "https://www.amazon.co.jp/dp/B0C1Z8R7Y2/?tag=smartearn22-22",
-    "source": "static",
-    "image_url": ""
-  },
-  {
-    "asin": "B0C2V5Y6K9",
-    "search_keyword": "Baseus GaN 67W USB-C 急速充電器 窒化ガリウム コンパクト 新生活",
-    "title": "Baseus 67W GaN USB-C 急速充電器（窒化ガリウム採用）",
-    "brand": "Baseus",
-    "price": {
-      "amount": 2480,
-      "currency": "JPY",
-      "display": "¥2,480"
-    },
-    "original_price": {
-      "amount": 3280,
-      "display": "¥3,280"
-    },
-    "discount_rate": 24,
-    "category": "充電・バッテリー",
-    "keywords": [
-      "充電器",
-      "スマホアクセサリー",
-      "ガジェット",
-      "時短"
-    ],
-    "features": [
-      "GaN採用で純正より小型・軽量",
-      "67W急速充電・PC/スマホ/タブレット同時充電",
-      "新生活の充電環境をこれ1台で完結"
-    ],
-    "why_viral": "純正より小さくて速い。新社会人の必携アイテム",
-    "story_hook": "充電器の数を3つから1つに減らした話。",
-    "user_problem": "デバイスが増えて充電器が足りない",
-    "amazon_url": "https://www.amazon.co.jp/dp/B0C2V5Y6K9/?tag=smartearn22-22",
-    "source": "static",
-    "image_url": ""
-  },
-  {
-    "asin": "B0B566Y7N4",
-    "search_keyword": "CIO NovaPort TRIO 65W 3ポート GaN充電器 USB-C",
-    "title": "CIO NovaPort TRIO 65W 3ポート GaN充電器",
-    "brand": "CIO",
-    "price": {
-      "amount": 3980,
-      "currency": "JPY",
-      "display": "¥3,980"
-    },
-    "original_price": {
-      "amount": 5280,
-      "display": "¥5,280"
-    },
-    "discount_rate": 25,
-    "category": "充電・バッテリー",
-    "keywords": [
-      "充電器",
-      "GaN",
-      "USB-C",
-      "デスク周り"
-    ],
-    "features": [
-      "GaN採用コンパクト設計で持ち運び楽々",
-      "USB-C×2+USB-A 3ポート同時充電",
-      "最大65W急速充電でPC・スマホ・タブレット対応"
-    ],
-    "why_viral": "3ポートあればカバン1個で全デバイス充電完結。旅行・出張に最強",
-    "story_hook": "出張先でケーブル3本持ち歩くの、もうやめた。",
-    "user_problem": "出張中に複数デバイスを充電したい",
-    "amazon_url": "https://www.amazon.co.jp/dp/B0B566Y7N4/?tag=smartearn22-22",
-    "source": "static",
-    "image_url": ""
-  },
-  {
-    "asin": "B0BY8S8G7R",
-    "search_keyword": "山崎実業 マグネット ケーブルホルダー デスク 収納",
-    "title": "山崎実業 マグネット ケーブルホルダー デスク収納",
-    "brand": "山崎実業",
-    "price": {
-      "amount": 1290,
-      "currency": "JPY",
-      "display": "¥1,290"
-    },
-    "original_price": {
-      "amount": 1650,
-      "display": "¥1,650"
-    },
-    "discount_rate": 22,
-    "category": "デスク環境",
-    "keywords": [
-      "デスク周り",
-      "ケーブル整理",
-      "収納",
-      "テレワーク"
-    ],
-    "features": [
-      "マグネットで簡単設置・取り外し自由",
-      "ケーブル3本同時収納可能",
-      "スチール・マグネット対応壁面に最適"
-    ],
-    "why_viral": "デスクのケーブルごちゃごちゃが1分で解決。Instaで映えるデスクに",
-    "story_hook": "机の上のケーブル地獄、1,000円で終わった。",
-    "user_problem": "デスクのケーブルが散らかって汚い",
-    "amazon_url": "https://www.amazon.co.jp/dp/B0BY8S8G7R/?tag=smartearn22-22",
-    "source": "static",
-    "image_url": ""
-  },
-  {
-    "asin": "B07W59K48K",
-    "search_keyword": "ロジクール Pebble M350 ワイヤレスマウス 静音 Bluetooth",
-    "title": "ロジクール Pebble M350 静音ワイヤレスマウス",
-    "brand": "Logicool",
-    "price": {
-      "amount": 3080,
-      "currency": "JPY",
-      "display": "¥3,080"
-    },
-    "original_price": {
-      "amount": 3880,
-      "display": "¥3,880"
-    },
-    "discount_rate": 21,
-    "category": "PC周辺機器",
-    "keywords": [
-      "マウス",
-      "ワイヤレス",
-      "テレワーク",
-      "PC周辺機器"
-    ],
-    "features": [
-      "静音クリックで会議中も気を遣わない",
-      "Bluetooth+USBレシーバー対応でデバイスを選ばない",
-      "最大18ヶ月電池寿命でランニングコスト最小"
-    ],
-    "why_viral": "静音設計+コンパクト。在宅ワーカーが全員持っていいレベル",
-    "story_hook": "カフェで仕事するようになってから、静音マウスの必要性を知った。",
-    "user_problem": "マウスの音が気になる・持ち運びが不便",
-    "amazon_url": "https://www.amazon.co.jp/dp/B07W59K48K/?tag=smartearn22-22",
-    "source": "static",
-    "image_url": ""
-  },
-  {
-    "asin": "B099DN8ZKK",
-    "search_keyword": "エレコム 電源タップ タワー型 8個口 雷サージ 個別スイッチ",
-    "title": "エレコム 電源タップ タワー型 8個口 個別スイッチ付",
-    "brand": "ELECOM",
-    "price": {
-      "amount": 3580,
-      "currency": "JPY",
-      "display": "¥3,580"
-    },
-    "original_price": {
-      "amount": 4980,
-      "display": "¥4,980"
-    },
-    "discount_rate": 28,
-    "category": "デスク環境",
-    "keywords": [
-      "電源タップ",
-      "デスク周り",
-      "テレワーク",
-      "便利グッズ"
-    ],
-    "features": [
-      "縦型タワー設計でデスクスペースを節約",
-      "個別スイッチ付き8個口で節電も簡単",
-      "雷ガード・過電流保護搭載"
-    ],
-    "why_viral": "デスク下に置けるタワー型が話題。縦に積むから場所を取らない",
-    "story_hook": "電源タップ、横置きをやめたら机が広くなった。",
-    "user_problem": "電源タップが場所を取ってデスクが狭い",
-    "amazon_url": "https://www.amazon.co.jp/dp/B099DN8ZKK/?tag=smartearn22-22",
-    "source": "static",
-    "image_url": ""
-  },
-  {
-    "asin": "B08Y8M78F2",
-    "search_keyword": "Anker Magnetic Cable Holder マグネット ケーブルホルダー",
-    "title": "Anker Magnetic Cable Holder マグネット式ケーブルホルダー",
-    "brand": "Anker",
-    "price": {
-      "amount": 1490,
-      "currency": "JPY",
-      "display": "¥1,490"
-    },
-    "original_price": {
-      "amount": 1990,
-      "display": "¥1,990"
-    },
-    "discount_rate": 25,
-    "category": "デスク環境",
-    "keywords": [
-      "デスク周り",
-      "ケーブル整理",
-      "Anker",
-      "テレワーク"
-    ],
-    "features": [
-      "マグネット式でケーブルをピタッと固定",
-      "デスク天板に貼り付けるだけで即セット",
-      "充電ケーブル・イヤホンケーブル対応"
-    ],
-    "why_viral": "充電ケーブルが床に落ちなくなる。一度使うと手放せないガジェット",
-    "story_hook": "充電ケーブル、落としたくない人に伝えたい。",
-    "user_problem": "ケーブルが毎回机から落ちる",
-    "amazon_url": "https://www.amazon.co.jp/dp/B08Y8M78F2/?tag=smartearn22-22",
-    "source": "static",
-    "image_url": ""
-  },
-  {
-    "asin": "B0C5D2S476",
-    "search_keyword": "バッファロー 外付けSSD 1TB 小型 USB3.2 高速",
-    "title": "バッファロー 外付けSSD 1TB 小型 USB3.2 Gen2",
-    "brand": "BUFFALO",
-    "price": {
-      "amount": 9980,
-      "currency": "JPY",
-      "display": "¥9,980"
-    },
-    "original_price": {
-      "amount": 14800,
-      "display": "¥14,800"
-    },
-    "discount_rate": 33,
-    "category": "PC周辺機器",
-    "keywords": [
-      "SSD",
-      "外付けSSD",
-      "PC周辺機器",
-      "テレワーク"
-    ],
-    "features": [
-      "読み取り最大600MB/s高速転送",
-      "コンパクト・軽量でポケットに入るサイズ",
-      "TV録画・Mac/Windows両対応"
-    ],
-    "why_viral": "スマホ動画・写真の保存場所問題を一発解決。テレワーカーの必需品",
-    "story_hook": "「容量不足」という通知、もう出なくなった。",
-    "user_problem": "パソコンのストレージが足りない",
-    "amazon_url": "https://www.amazon.co.jp/dp/B0C5D2S476/?tag=smartearn22-22",
-    "source": "static",
-    "image_url": ""
-  },
-  {
-    "asin": "B085698Z8H",
-    "search_keyword": "イトーキ サリダ YL9 オフィスチェア ヘッドレスト メッシュ",
-    "title": "イトーキ サリダ YL9 メッシュオフィスチェア ヘッドレスト付",
-    "brand": "イトーキ",
-    "price": {
-      "amount": 19800,
-      "currency": "JPY",
-      "display": "¥19,800"
-    },
-    "original_price": {
-      "amount": 24800,
-      "display": "¥24,800"
-    },
-    "discount_rate": 20,
-    "category": "デスク環境",
-    "keywords": [
-      "オフィスチェア",
-      "テレワーク",
-      "腰痛対策",
-      "デスク環境"
-    ],
-    "features": [
-      "3D可動ヘッドレスト付き高機能チェア",
-      "メッシュ素材で通気性抜群・夏も快適",
-      "座面高・リクライニング・肘掛け全調整可"
-    ],
-    "why_viral": "在宅ワーク2年目で腰を壊してから気づいた、椅子の重要性",
-    "story_hook": "テレワークで腰痛になって初めて、椅子の値段を後悔した。",
-    "user_problem": "テレワークで腰痛・肩こりが悪化している",
-    "amazon_url": "https://www.amazon.co.jp/dp/B085698Z8H/?tag=smartearn22-22",
-    "source": "static",
-    "image_url": ""
-  },
-  {
-    "asin": "B005UIF2D4",
-    "search_keyword": "キングジム デスクマット レザフェス A3 合皮",
-    "title": "キングジム デスクマット レザフェス A3サイズ",
-    "brand": "キングジム",
-    "price": {
-      "amount": 2980,
-      "currency": "JPY",
-      "display": "¥2,980"
-    },
-    "original_price": {
-      "amount": 3850,
-      "display": "¥3,850"
-    },
-    "discount_rate": 23,
-    "category": "デスク環境",
-    "keywords": [
-      "デスクマット",
-      "デスク周り",
-      "テレワーク",
-      "インテリア"
-    ],
-    "features": [
-      "合皮素材で高級感があり汚れに強い",
-      "マウスパッド兼用でデスク全体を保護",
-      "A3サイズで広い作業スペースを確保"
-    ],
-    "why_viral": "デスクマットを敷くだけで仕事部屋が5倍おしゃれになる",
-    "story_hook": "デスクに革マットを敷いたら、仕事のモチベが上がった。",
-    "user_problem": "デスクに傷がつく・見た目が安っぽい",
-    "amazon_url": "https://www.amazon.co.jp/dp/B005UIF2D4/?tag=smartearn22-22",
-    "source": "static",
-    "image_url": ""
-  },
-  {
-    "asin": "B0BVMN9H6D",
-    "search_keyword": "スイッチボット Hub 2 スマートリモコン 温湿度 Matter",
-    "title": "SwitchBot Hub 2 スマートリモコン 温湿度センサー付",
-    "brand": "SwitchBot",
-    "price": {
-      "amount": 6980,
-      "currency": "JPY",
-      "display": "¥6,980"
-    },
-    "original_price": {
-      "amount": 8980,
-      "display": "¥8,980"
-    },
-    "discount_rate": 22,
-    "category": "スマートホーム",
-    "keywords": [
-      "スマートホーム",
-      "スマート家電",
-      "Alexa",
-      "IoT"
-    ],
-    "features": [
-      "赤外線家電をスマホで遠隔操作",
-      "温湿度センサー内蔵で部屋の環境を見える化",
-      "Matter対応・Alexa/Google/Siri連携"
-    ],
-    "why_viral": "エアコン・テレビ・照明を全部スマホで管理。帰宅前予約が便利すぎる",
-    "story_hook": "帰宅する前にエアコンをONする生活が普通になった。",
-    "user_problem": "家電のリモコンが多くて管理が大変",
-    "amazon_url": "https://www.amazon.co.jp/dp/B0BVMN9H6D/?tag=smartearn22-22",
-    "source": "static",
-    "image_url": ""
-  },
-  {
-    "asin": "B07B959W3D",
-    "search_keyword": "コクヨ バッグインバッグ カハ-BR31D A4 仕切り",
-    "title": "コクヨ バッグインバッグ カハ-BR31D A4対応",
-    "brand": "コクヨ",
-    "price": {
-      "amount": 1980,
-      "currency": "JPY",
-      "display": "¥1,980"
-    },
-    "original_price": {
-      "amount": 2750,
-      "display": "¥2,750"
-    },
-    "discount_rate": 28,
-    "category": "ガジェット",
-    "keywords": [
-      "バッグインバッグ",
-      "収納",
-      "ビジネスバッグ",
-      "整理整頓"
-    ],
-    "features": [
-      "A4サイズ対応・仕切りが豊富で中身を整理",
-      "バッグの中のごちゃごちゃをそのまま移動可能",
-      "ポケット多数でケーブル・文具をすっきり整理"
-    ],
-    "why_viral": "カバンを変えるたびに全部移し替える手間がゼロになる",
-    "story_hook": "カバンの中身の移し替え、もうしなくていい方法がある。",
-    "user_problem": "カバンの中がごちゃごちゃで物が見つからない",
-    "amazon_url": "https://www.amazon.co.jp/dp/B07B959W3D/?tag=smartearn22-22",
-    "source": "static",
-    "image_url": ""
-  },
-  {
     "asin": "B08PTPTMH5",
     "search_keyword": "KIOXIA(キオクシア) 旧東芝メモリ microSD 128GB UHS-I",
     "title": "KIOXIA(キオクシア) 旧東芝メモリ microSD 128GB UHS-I Class10 (最大読出速度100MB/s) Nintendo Switch動作確認済 国内サポート正規品 メーカー保証5年 KLMEA128G",
@@ -1698,5 +1188,1093 @@
     "amazon_url": "https://www.amazon.co.jp/dp/B0875NB89J/?tag=smartearn22-22",
     "source": "fetched",
     "fetched_at": "2026-06-11T04:00:49.455815"
+  },
+  {
+    "asin": "B08PTN7WJ6",
+    "search_keyword": "KIOXIA(キオクシア)【日本製】SDカード 128GB SDXC UHS-I",
+    "title": "KIOXIA(キオクシア)【日本製】SDカード 128GB SDXC UHS-I Class10 読出速度100MB/s 国内正規品 メーカー保証5年 KLNEA128G",
+    "brand": "KIOXIA",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥3,131"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "生活雑貨",
+    "keywords": [
+      "KIOXIA",
+      "キオクシア",
+      "日本製",
+      "SDカード"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/71TfR+L7NxL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B08PTN7WJ6?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-20T11:31:01.675297"
+  },
+  {
+    "asin": "B0BHYR4YDG",
+    "search_keyword": "BSTOEM 純正 iphone 充電ケーブル【2025正規MFi認証品】 1.",
+    "title": "BSTOEM 純正 iphone 充電ケーブル【2025正規MFi認証品】 1.8m*3本 ライトニングケーブル usb to lightningコード 2.4A急速充電＆高速データ転送 高耐久 断線防止 あいふおん充電コード for iphone",
+    "brand": "BSTOEM",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥799"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "充電・バッテリー",
+    "keywords": [
+      "BSTOEM",
+      "純正",
+      "iphone",
+      "充電ケーブル"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/61Nd0VUO-YL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0BHYR4YDG?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-20T11:31:01.675492"
+  },
+  {
+    "asin": "B0G43V371R",
+    "search_keyword": "for iphone 充電ケーブル 純正 1M+2M 2本セット 【2026新版",
+    "title": "for iphone 充電ケーブル 純正 1M+2M 2本セット 【2026新版 MFI認証】USB A -ライトニングケーブル 急速充電 データ転送 高耐久 断線防止 アイフォン 充電コード for iPhone 14/13/12/11/Mini/",
+    "brand": "for",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥799"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "充電・バッテリー",
+    "keywords": [
+      "for",
+      "iphone",
+      "充電ケーブル",
+      "純正"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/61MD9dV7JKL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0G43V371R?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-20T11:31:01.675537"
+  },
+  {
+    "asin": "B07PLX342V",
+    "search_keyword": "UGREEN USB Type C ケーブル 【PD対応 60W 急速充電】US",
+    "title": "UGREEN USB Type C ケーブル 【PD対応 60W 急速充電】USB C iPhone 充電ケーブル タイプC USBケーブル 根元強化 断線防止 iPhone 17/16/15シリーズ MacBook Pro/Air iPad Pro",
+    "brand": "UGREEN",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥678"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "充電・バッテリー",
+    "keywords": [
+      "UGREEN",
+      "USB",
+      "Type",
+      "ケーブル"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/71U9WVoGotL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B07PLX342V?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-20T11:31:01.675582"
+  },
+  {
+    "asin": "B0DZ7WF87P",
+    "search_keyword": "Apple 11 インチ iPad (A16): 11 インチモデル、Liqui",
+    "title": "Apple 11 インチ iPad (A16): 11 インチモデル、Liquid Retina ディスプレイ、128GB、Wi-Fi 6、12MP フロント/12MP バックカメラ、Touch ID、一日中使えるバ ッテリー - シルバー",
+    "brand": "Apple",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥56,364"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "生活雑貨",
+    "keywords": [
+      "Apple",
+      "11",
+      "インチ",
+      "iPad"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/616FFqht2sL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0DZ7WF87P?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-20T11:31:01.675665"
+  },
+  {
+    "asin": "B08K2CHMWK",
+    "search_keyword": "ロジクール ワイヤレスキーボード K295GP 静音 耐水 キーボード 無線 U",
+    "title": "ロジクール ワイヤレスキーボード K295GP 静音 耐水 キーボード 無線 Unifying K295 windows chrome グラファイト 国内正規品",
+    "brand": "ロジクール",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥3,018"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "PC周辺機器",
+    "keywords": [
+      "ロジクール",
+      "ワイヤレスキーボード",
+      "K295GP",
+      "静音"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/61t1h-+MvfL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B08K2CHMWK?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-20T11:31:01.675705"
+  },
+  {
+    "asin": "B0F6V25HTL",
+    "search_keyword": "Anker Zolo USB-C & USB-A ケーブル 1.0m ブラック ",
+    "title": "Anker Zolo USB-C & USB-A ケーブル 1.0m ブラック USB-IF認証 高耐久ナイロン素材採用 iPhone 17 / 16 / 15 / Galaxy Google Pixel 各種対応",
+    "brand": "Anker",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥790"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "収納・整理",
+    "keywords": [
+      "Anker",
+      "Zolo",
+      "USB-C",
+      "USB-A"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/61yfuiUaQ0L._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0F6V25HTL?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-20T11:31:01.675765"
+  },
+  {
+    "asin": "B00TMYO5CO",
+    "search_keyword": "バッファロー USBメモリ 64GB USB3.2(Gen1)/3.1(Gen ",
+    "title": "バッファロー USBメモリ 64GB USB3.2(Gen1)/3.1(Gen 1)/3.0/2.0 RUF3-K64GA-BK/N",
+    "brand": "バッファロー",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥1,982"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "生活雑貨",
+    "keywords": [
+      "バッファロー",
+      "USBメモリ",
+      "64GB",
+      "USB3.2"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/51KbFr5AACL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B00TMYO5CO?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-20T11:31:01.675832"
+  },
+  {
+    "asin": "B0CTQ3TBV5",
+    "search_keyword": "エプソン 純正 インクカートリッジ メダマヤキ 4色パック MED-4CL",
+    "title": "エプソン 純正 インクカートリッジ メダマヤキ 4色パック MED-4CL",
+    "brand": "エプソン",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥3,981"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "生活雑貨",
+    "keywords": [
+      "エプソン",
+      "純正",
+      "インクカートリッジ",
+      "メダマヤキ"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/4180849RyuL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0CTQ3TBV5?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-20T11:31:01.675892"
+  },
+  {
+    "asin": "B0CDWRJ32Q",
+    "search_keyword": "【Amazon.co.jp限定】TP-Link WiFi ルーター 無線LAN ",
+    "title": "【Amazon.co.jp限定】TP-Link WiFi ルーター 無線LAN WiFi6 AX1800 規格 1201 + 574Mbps WPA3 EasyMesh 対応 メーカー保証3年 Archer AX23V",
+    "brand": "",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥4,980"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "生活雑貨",
+    "keywords": [
+      "Amazon.co.jp限定",
+      "TP-Link",
+      "WiFi",
+      "ルーター"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/41h+GBl05wL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0CDWRJ32Q?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-20T11:31:01.675972"
+  },
+  {
+    "asin": "B09SZ1Y5G6",
+    "search_keyword": "キヤノン Canon 純正 インクカートリッジ BC-365XL ブラック 大容",
+    "title": "キヤノン Canon 純正 インクカートリッジ BC-365XL ブラック 大容量タイプ BC-365XL",
+    "brand": "キヤノン",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥2,936"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "収納・整理",
+    "keywords": [
+      "キヤノン",
+      "Canon",
+      "純正",
+      "インクカートリッジ"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/51wGWY1cGeL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B09SZ1Y5G6?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-20T11:31:01.676022"
+  },
+  {
+    "asin": "B0B9N3QSL3",
+    "search_keyword": "UGREEN USB Type C 変換アダプター USB3.2 Gen1 高速",
+    "title": "UGREEN USB Type C 変換アダプター USB3.2 Gen1 高速転送 タイプC 2個セット Thunderbolt 3 OTG対応 iPhone 15 Pro Max MacBook Pro 2021 MacBook Air 2022",
+    "brand": "UGREEN",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥599"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "充電・バッテリー",
+    "keywords": [
+      "UGREEN",
+      "USB",
+      "Type",
+      "変換アダプター"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/61DCiauYJ8L._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0B9N3QSL3?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-20T11:31:01.676074"
+  },
+  {
+    "asin": "B07XPMR5CW",
+    "search_keyword": "バッファロー USB ハブ USB3.0 スリム設計 4ポート バスパワー 軽量",
+    "title": "バッファロー USB ハブ USB3.0 スリム設計 4ポート バスパワー 軽量 Windows Mac PS4 PS5 Chromebook 対応 テレワーク 在宅勤務 BSH4U125U3BK",
+    "brand": "バッファロー",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥860"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "生活雑貨",
+    "keywords": [
+      "バッファロー",
+      "USB",
+      "ハブ",
+      "USB3.0"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/51gETPrA-WL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B07XPMR5CW?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-20T11:31:01.676151"
+  },
+  {
+    "asin": "B0GY76SN2T",
+    "search_keyword": "Void Gaming GENESIS コントローラー pc ゲームパッド 無線",
+    "title": "Void Gaming GENESIS コントローラー pc ゲームパッド 無線 有線 対応 ポーリングレート 2000Hz TMR 10個のカスタムボタン ゲームコントローラー ゲーミングコントローラー",
+    "brand": "Void",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥12,980"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "生活雑貨",
+    "keywords": [
+      "Void",
+      "Gaming",
+      "GENESIS",
+      "コントローラー"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/515QqcIKcsL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0GY76SN2T?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-20T11:31:01.676226"
+  },
+  {
+    "asin": "B07M6Y7355",
+    "search_keyword": "EMEET Webカメラ HD1080P 200万画素 90°広角 ウェブカメラ",
+    "title": "EMEET Webカメラ HD1080P 200万画素 90°広角 ウェブカメラ ストリーミング 内蔵マイクパソコン用カメラ オンライン会議用 自動光補正 EMEETLINK利用可能 1/4インチ三脚穴 Windows10/11 MacOS 10.1",
+    "brand": "EMEET",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥1,998"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "PC周辺機器",
+    "keywords": [
+      "EMEET",
+      "Webカメラ",
+      "HD1080P",
+      "200万画素"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/61F+5bd0PUL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B07M6Y7355?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-20T11:31:27.223893"
+  },
+  {
+    "asin": "B0FNKF966P",
+    "search_keyword": "対応 iPhone17 ガラスフィルム 2枚 + レンズフィルム 2枚 6.3イ",
+    "title": "対応 iPhone17 ガラスフィルム 2枚 + レンズフィルム 2枚 6.3インチ 【ガイド枠付き 日本旭硝子製】 対応 いphone17 フィルム iphone 17 用 保護フィルム ケース カバー 高透過率 硬度9H 飛散防止 3D 高感度タ",
+    "brand": "対応",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥599"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "生活雑貨",
+    "keywords": [
+      "対応",
+      "iPhone17",
+      "ガラスフィルム",
+      "2枚"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/71UEoTDg6pL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0FNKF966P?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-20T11:31:30.349459"
+  },
+  {
+    "asin": "B003N17VG4",
+    "search_keyword": "ホーリック アンテナケーブル S-4C-FB同軸 3m 【4K8K放送(3224",
+    "title": "ホーリック アンテナケーブル S-4C-FB同軸 3m 【4K8K放送(3224MHz)/BS/CS/地デジ/CATV 対応】 HSマーク登録 ホワイト L字差込式/ネジ式コネクタ HAT30-921LS",
+    "brand": "ホーリック",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥620"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "生活雑貨",
+    "keywords": [
+      "ホーリック",
+      "アンテナケーブル",
+      "S-4C-FB同軸",
+      "3m"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/51HWC04sDhL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B003N17VG4?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-20T11:31:30.349672"
+  },
+  {
+    "asin": "B086WCH4FH",
+    "search_keyword": "タオル研究所 [ボリュームリッチ] #003 フェイスタオル チャコールグレー ",
+    "title": "タオル研究所 [ボリュームリッチ] #003 フェイスタオル チャコールグレー 5枚セット ホテル仕様 厚手 ふかふか ボリューム 高速吸水 耐久性 綿100% 480GSM JapanTechnology",
+    "brand": "タオル研究所",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥1,890"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "生活雑貨",
+    "keywords": [
+      "タオル研究所",
+      "ボリュームリッチ",
+      "#003",
+      "フェイスタオル"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/81+VzDSocIL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B086WCH4FH?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-20T11:31:33.564282"
+  },
+  {
+    "asin": "B0CPL3QTJD",
+    "search_keyword": "ブリタ カートリッジ 浄水器 ポット型 交換用 4個入 PFOS/PFOA除去試",
+    "title": "ブリタ カートリッジ 浄水器 ポット型 交換用 4個入 PFOS/PFOA除去試験済 マクストラプロ カートリッジ ピュアパフォーマンス ポリプロピレン ポリエチレンテレフタレート 【日本正規品】 ホワイト",
+    "brand": "ブリタ",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥4,290"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "生活雑貨",
+    "keywords": [
+      "ブリタ",
+      "カートリッジ",
+      "浄水器",
+      "ポット型"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/71EtoHIqcbL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0CPL3QTJD?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-20T11:31:33.564395"
+  },
+  {
+    "asin": "B0BFKKVLSQ",
+    "search_keyword": "シモジマ(Shimojima) HEIKO PP食パン袋半斤用 300枚（100",
+    "title": "シモジマ(Shimojima) HEIKO PP食パン袋半斤用 300枚（100枚x3束） ヘイコー パン袋 におい袋",
+    "brand": "シモジマ",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥1,200"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "生活雑貨",
+    "keywords": [
+      "シモジマ",
+      "Shimojima",
+      "HEIKO",
+      "PP食パン袋半斤用"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/61k+FQflDvL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0BFKKVLSQ?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-20T11:31:33.564451"
+  },
+  {
+    "asin": "B08TV9VDR7",
+    "search_keyword": "【Amazon.co.jp限定】 い・ろ・は・す 2L PET ラベルレス ×8",
+    "title": "【Amazon.co.jp限定】 い・ろ・は・す 2L PET ラベルレス ×8本",
+    "brand": "",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥1,001"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "生活雑貨",
+    "keywords": [
+      "Amazon.co.jp限定",
+      "2L",
+      "PET",
+      "ラベルレス"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/614b6h2S6NL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B08TV9VDR7?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-20T11:31:36.785254"
+  },
+  {
+    "asin": "B084T9C6WD",
+    "search_keyword": "い・ろ・は・す ラベルレス 560ml × 24本 水 天然水",
+    "title": "い・ろ・は・す ラベルレス 560ml × 24本 水 天然水",
+    "brand": "",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥1,655"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "生活雑貨",
+    "keywords": [
+      "ラベルレス",
+      "560ml",
+      "24本",
+      "天然水"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/61RCHoMTGKL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B084T9C6WD?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-20T11:31:36.785351"
+  },
+  {
+    "asin": "B092D5HM5S",
+    "search_keyword": "by Amazon 天然水 ラベルレス 500ml ×24本 富士山の天然水 バ",
+    "title": "by Amazon 天然水 ラベルレス 500ml ×24本 富士山の天然水 バナジウム含有 水 ミネラルウォーター ペットボトル 静岡県産 500ミリリットル (Smart Basic)",
+    "brand": "by",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥1,347"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "生活雑貨",
+    "keywords": [
+      "by",
+      "Amazon",
+      "天然水",
+      "ラベルレス"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/51hwXLaE-8L._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B092D5HM5S?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-20T11:31:36.785450"
+  },
+  {
+    "asin": "B0C6X64277",
+    "search_keyword": "REYS レイズ ホエイ プロテイン 山澤 礼明 監修 1kg 国内製造 ビタミ",
+    "title": "REYS レイズ ホエイ プロテイン 山澤 礼明 監修 1kg 国内製造 ビタミン7種配合 WPCプロテイン ぷろていん ホエイプロテイン (カフェオレ風味)",
+    "brand": "REYS",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥5,280"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "食品・飲料",
+    "keywords": [
+      "REYS",
+      "レイズ",
+      "ホエイ",
+      "プロテイン"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/71L89PGVtpL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0C6X64277?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-20T11:31:40.045113"
+  },
+  {
+    "asin": "B0C57YGXRJ",
+    "search_keyword": "【大容量】ワイドハイター ＥＸパワー洗剤にちょい足しで、汚れ・ニオイの元をはがし",
+    "title": "【大容量】ワイドハイター ＥＸパワー洗剤にちょい足しで、汚れ・ニオイの元をはがしとる！おしゃれ着・赤ちゃん服にもOK！詰替用２４０0ml",
+    "brand": "",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥1,227"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "日用品",
+    "keywords": [
+      "大容量",
+      "ワイドハイター",
+      "ＥＸパワー洗剤にちょい足しで、汚れ",
+      "ニオイの元をはがしとる！おしゃれ着"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/81KPCkY+tmL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0C57YGXRJ?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-20T11:31:40.045191"
+  },
+  {
+    "asin": "B06Y28T78Z",
+    "search_keyword": "CREO クレオワンデーUVモイスト 30枚 1箱 （1日使い捨て コンタクトレ",
+    "title": "CREO クレオワンデーUVモイスト 30枚 1箱 （1日使い捨て コンタクトレンズ ）【BC】8.7 【PRW】-3.00",
+    "brand": "CREO",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥1,820"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "生活雑貨",
+    "keywords": [
+      "CREO",
+      "クレオワンデーUVモイスト",
+      "30枚",
+      "1箱"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/51o2UEF2KmL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B06Y28T78Z?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-20T11:31:40.045266"
+  },
+  {
+    "asin": "B07V56TSR6",
+    "search_keyword": "エイプリル(April) PaperOne コピー用紙 A4 500枚 高白色コ",
+    "title": "エイプリル(April) PaperOne コピー用紙 A4 500枚 高白色コピー用紙 紙厚0.09mm大量印刷向き カーボンニュートラル認証 PEFC認証",
+    "brand": "エイプリル",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥449"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "生活雑貨",
+    "keywords": [
+      "エイプリル",
+      "April",
+      "PaperOne",
+      "コピー用紙"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/715qPFi+9kL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B07V56TSR6?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-20T11:31:45.888751"
+  },
+  {
+    "asin": "B00LUKK0IQ",
+    "search_keyword": "エイピーピー・ジャパン(APPJ) APP 高白色 ホワイトコピー用紙 A4 白",
+    "title": "エイピーピー・ジャパン(APPJ) APP 高白色 ホワイトコピー用紙 A4 白色度93% 紙厚0.09mm 2500枚(500枚×5冊) PEFC認証",
+    "brand": "エイピーピー",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥2,864"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "生活雑貨",
+    "keywords": [
+      "エイピーピー",
+      "ジャパン",
+      "APPJ",
+      "APP"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/61zVLFyjckL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B00LUKK0IQ?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-20T11:31:45.888933"
+  },
+  {
+    "asin": "B0GWYXJ4X4",
+    "search_keyword": "クーリア シール ボンボンドロップシール フロッキー いぬいぬふわふわ 0126",
+    "title": "クーリア シール ボンボンドロップシール フロッキー いぬいぬふわふわ 01269",
+    "brand": "クーリア",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "要確認"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "生活雑貨",
+    "keywords": [
+      "クーリア",
+      "シール",
+      "ボンボンドロップシール",
+      "フロッキー"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/81gOB7QarmL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0GWYXJ4X4?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-20T11:31:45.889035"
+  },
+  {
+    "asin": "B08718BS5B",
+    "search_keyword": "[スワンズ] 日本製 スイミングゴーグル 子供用 6歳~12歳 ネームプレート付",
+    "title": "[スワンズ] 日本製 スイミングゴーグル 子供用 6歳~12歳 ネームプレート付き くもり止め SJ-24 UVカット キッズ ジュニア プール 海 海水浴 水泳 授業 教室",
+    "brand": "",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥872"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "生活雑貨",
+    "keywords": [
+      "スワンズ",
+      "日本製",
+      "スイミングゴーグル",
+      "子供用"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/61e5pHZX+LS._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B08718BS5B?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-20T11:31:52.228980"
+  },
+  {
+    "asin": "B089FTTBG8",
+    "search_keyword": "ロゴス(LOGOS) 倍速凍結・氷点下パック シリーズ 長時間保冷 保冷剤 防災",
+    "title": "ロゴス(LOGOS) 倍速凍結・氷点下パック シリーズ 長時間保冷 保冷剤 防災 日本製",
+    "brand": "ロゴス",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥1,126"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "生活雑貨",
+    "keywords": [
+      "ロゴス",
+      "LOGOS",
+      "倍速凍結",
+      "氷点下パック"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/5145DY6Ns8L._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B089FTTBG8?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-20T11:31:52.229072"
+  },
+  {
+    "asin": "B07XL9FL8T",
+    "search_keyword": "【Amazon.co.jp限定】 プリマソーレ ヨガマット 10mm 15mm ",
+    "title": "【Amazon.co.jp限定】 プリマソーレ ヨガマット 10mm 15mm トレーニングマット 厚め 抗菌 幅広 エクササイズマット フィットネス ピラティス 筋トレ yoga",
+    "brand": "",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥1,710"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "インテリア",
+    "keywords": [
+      "Amazon.co.jp限定",
+      "プリマソーレ",
+      "ヨガマット",
+      "10mm"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/616t+sXfT5L._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B07XL9FL8T?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-20T11:31:52.229146"
   }
 ]

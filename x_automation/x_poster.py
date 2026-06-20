@@ -884,14 +884,14 @@ def post_now(force_type: str = None, test_mode: bool = False) -> bool:
         print("❌ Amazon商品取得完全失敗、投稿スキップ")
         return False
 
-    # Amazonプールタイプはスレッド投稿（tweet1=本文、tweet2=アフィリエイトURL）
-    if post["type"] == "amazon_pool" and post.get("thread", {}).get("tweet2"):
+    # Amazonプールタイプ: OGPカード型（本文にリンク含む1ツイート投稿）
+    if post["type"] == "amazon_pool" and post.get("thread"):
         thread       = post["thread"]
         product_info = post.get("product", {})
-        print(f"Amazonプール商品スレッド投稿: {thread.get('tweet1', '')[:40]}...")
+        print(f"Amazonプール商品投稿（OGPカード型）: {thread.get('tweet1', '')[:40]}...")
 
         # 投稿直前URLチェック: 商品直リンクがない・404・検索URLはスキップ
-        amazon_url = product_info.get("amazon_url", "")
+        amazon_url = product_info.get("amazon_url", "") or product_info.get("url", "") or post.get("url", "")
         import re as _re
         if not amazon_url or "/s?" in amazon_url:
             print(f"⚠️ 商品直リンクなし（検索URL or 空）→ 投稿スキップ: {amazon_url[:60]}")
@@ -907,42 +907,30 @@ def post_now(force_type: str = None, test_mode: bool = False) -> bool:
                     print(f"⚠️ 商品URLが無効（ASIN不明）→ 投稿スキップ: {amazon_url[:60]}")
                 return False
 
+        tweet_text = thread.get("tweet1", "")
+
         if test_mode:
-            print("\n[DRY RUN] Amazonプールツリー投稿プレビュー:")
-            print("── 親ポスト（体験談）──")
-            print(thread.get("tweet1", ""))
-            print("── 子ポスト（アフィリエイトリプライ）──")
-            print(thread.get("tweet2", ""))
+            print("\n[DRY RUN] Amazonプール投稿プレビュー（OGPカード型）:")
+            print(tweet_text)
             success    = True
             image_path = ""
         else:
-            image_path = _generate_review_image(product_info)
-            if not image_path:
-                image_path = _download_image_from_url(product_info.get("image_url", ""))
-
-            tweet1_text = thread.get("tweet1", "")
-            reply_text  = thread.get("tweet2", "")
-
-            success = post_parent_and_reply(tweet1_text, image_path, reply_text)
+            # OGPカード型: リンクが本文に含まれるので画像なしで投稿（OGPカードが表示される）
+            image_path = ""
+            success = post_with_tweepy(tweet_text)
             if not success:
-                print("⚠️ tweepy失敗、ブラウザスレッド投稿にフォールバック")
-                success = post_amazon_thread(thread)
-
-            if image_path and os.path.exists(image_path):
-                try:
-                    os.remove(image_path)
-                except Exception:
-                    pass
+                print("⚠️ tweepy失敗、ブラウザ投稿にフォールバック")
+                success = post_with_browser(tweet_text)
 
         save_log({
             "datetime":      datetime.now().isoformat(),
             "type":          "amazon_pool",
             "label":         "Amazon商品紹介（プール）",
-            "chars":         len(thread.get("tweet1", "")),
-            "text":          thread.get("tweet1", ""),
+            "chars":         len(tweet_text),
+            "text":          tweet_text,
             "success":       success,
             "mode":          "dry_run" if test_mode else "live",
-            "has_image":     bool(image_path) if not test_mode else False,
+            "has_image":     False,
             "genre":         "gadget",
             "writing_style": "amazon_pool",
             "posted_at_hour": datetime.now().hour,

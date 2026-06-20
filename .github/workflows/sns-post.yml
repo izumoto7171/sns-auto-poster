@@ -2,8 +2,7 @@ name: SNS Auto Post
 
 on:
   schedule:
-    - cron: '0 23 * * *'   # JST 8:00  ← 朝ピーク
-    - cron: '0 3 * * *'    # JST 12:00 ← 楽天ルーム投稿
+    - cron: '0 23 * * *'   # JST 8:00 ← 朝ピーク
     - cron: '0 13 * * *'   # JST 22:00 ← 夜の余暇時間
   workflow_dispatch:        # 手動実行ボタン
 
@@ -432,7 +431,7 @@ jobs:
     permissions:
       contents: write
     # JST 12:00（UTC 3:00）のみ実行（1日1商品）
-    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 3 * * *'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     steps:
       - uses: actions/checkout@v5
 

@@ -1218,63 +1218,49 @@ def generate_with_gemini(post_type: str, label: str) -> tuple[str, str]:
 """
 
     type_instructions = {
-        "useful":   "一人暮らし男性向け・節約・時短料理・生活術・便利グッズに関する役立つ情報投稿",
-        "empathy":  "一人暮らしでの失敗談・体験談・生活改善への共感を呼ぶ投稿",
-        "trivia":   "食費・家電・節約・生活コストに関する意外な雑学・ネタ投稿",
-        "product":  "一人暮らし向けの家電・生活グッズを体験談・比較として自然に紹介する投稿（直接的な広告表現は禁止）",
+        "useful":   "一人暮らしの生活が「ちょい良くなる」情報。節約・時短料理・収納・便利グッズなど",
+        "empathy":  "一人暮らしの「あるある」失敗談・体験談。共感から入って解決策を添える",
+        "trivia":   "一人暮らしに役立つ意外な雑学・豆知識。「え、そうなの？」と思わせる切り口",
+        "product":  "一人暮らし向け商品の体験談。スペックではなく「どう生活が変わったか」を語る",
         "progress": "節約・生活改善の『現在進行形の記録』。上記の実際の数字を使って、試行錯誤の過程をリアルに書く。",
     }
 
-    # product タイプにはストーリー型構造を注入する（@single_life_lab スタイル）
-    pas_block = ""
-    if post_type == "product":
-        pas_block = """
-# 投稿構造（productタイプ: @single_life_lab スタイル）
-スペックの羅列ではなく「悩み→解決→QOL向上」のストーリーで書くこと:
-  ① 冒頭（2〜3行）: 一人暮らしのあるある悩みを具体的な独り言として描写する
-     「〜が面倒くさい」「〜で困ってた」「〜が続かない」など等身大の言葉で。
-     数字や具体的なシーンを入れると読まれやすい。
-  ② 中間（1〜2行）: 商品・グッズを使って悩みがどう解決したかを体験として書く
-     「〜したら△△になった」という変化の形で。スペック数値より体験の変化を語る。
-  ③ 末尾（1行）: 生活がどう変わったか・QOL向上を感情的な一言で締める
-     「気が楽になった」「時間が浮いた」「もっと早く知りたかった」など。
-数字ルール: 価格・節約額・時間・回数など、具体的な数字を1つ入れること。
-"""
-
     prompt = f"""# 役割
-あなたはSNSマーケティングとコピーライティングの専門家です。
-X（Twitter）でクリック率（CTR）が高く、かつ「人間味」のある投稿文を1つ作成してください。
+あなたは @single_life_lab（一人暮らしラボ）風のXアカウント運営者です。
+20〜30代の一人暮らし男性に向けて、友人に話すような自然体の投稿を書いてください。
+
+# お手本（@single_life_lab の実際の投稿トーン）
+- 「甘いもの苦手な人への手土産、ずっと正解がわからなかったけどやっと見つけたかも...。」
+- 「在宅ワーク、暑くて集中力切れがち。「環境を整える」のが結局1番コスパ良い」
+- 「ベランダで「1人キャンプ」してると、近くにいながら遠くに行った気分になる。一人暮らしの特権かも」
+
+# 文体ルール（最重要）
+- 「〜がち」「〜かも」「〜だった」「〜してる」など、独り言・つぶやき調
+- 「です・ます」は絶対に使わない
+- 「おすすめ」「ぜひ」「いかがでしたか」「必見」など広告っぽい言葉は禁止
+- 句読点少なめ、体言止めや「...」「。」で余韻を残す
+- 数字を1つは入れる（価格・時間・回数など）
 
 # 入力情報
 - キーワード: {target_keyword}
-- 投稿スタイル: {style_name}
 - 投稿タイプ: {label}（{type_instructions.get(post_type, '')}）
 {progress_context}
-# 選択されたスタイルのガイドライン（必ず適用）
-【{style_name}スタイル】
-{style_guide}
-{pas_block}
 {feedback_context}
 
+# 投稿構造
+① 冒頭（1〜2行）: 一人暮らしの「あるある」な悩み・場面を独り言として描写
+   → 読んだ人が「わかる」と思う共感フックで始める
+② 中間（1〜3行）: 解決策・発見・体験を語る
+   → 「〜したら△△になった」「〜で解決した」という変化の形で
+③ 末尾（1行）: 感情的な一言で締める
+   → 「もっと早く知りたかった」「一人暮らしの特権かも」「これで終わりにしよ」など
+
 # 制約条件（厳守）
-- 文字数は100文字〜140文字以内（ハッシュタグ除く）
-- 改行を活用して縦読みしやすくする
-- 「いかがでしたか？」「ぜひ」などの定型文は一切禁止
-- 語尾・言い回しを毎回崩して自然な口調にする
-- 広告・宣伝っぽい表現は使わない
-- URLは不要（別で追加する）
-- ハッシュタグは不要（別で追加する）
-- 最後は「{cta}」で締める
-- 対話的なトーン（フォロワーと会話するような温度感）を維持する
-
-# 構造
-1行目：強烈なフック（{style_name}スタイルの書き出し）
-↓（空行）
-中間：共感・情報・体験談（箇条書きOK）
-↓（空行）
-最終行：{cta}
-
-投稿文のみ出力してください。前置き・説明・タイトルは不要。"""
+- 文字数は80文字〜130文字以内（ハッシュタグ除く）
+- 改行を活用して読みやすくする
+- URLは含めない（別で追加する）
+- ハッシュタグは含めない（別で追加する）
+- 投稿文のみ出力。前置き・説明・タイトルは不要"""
 
     # SNS投稿は毎回新鮮な内容にするためキャッシュなし・temperature動的適用
     text = gemini_generate(prompt, use_cache=False, temperature=temperature)
@@ -1307,7 +1293,15 @@ def generate_amazon_pool_post() -> dict:
     # 未投稿商品を優先
     history_keys = {e["key"] for e in _load_amazon_product_history()}
     not_posted = [p for p in available if p.get("asin", "") not in history_keys]
-    if not_posted:
+    candidates = not_posted if not_posted else available
+
+    # 割引・キャンペーン商品を優先（discount_rate > 0 の商品を先に選ぶ）
+    on_sale = [p for p in candidates if p.get("discount_rate", 0) > 0]
+    if on_sale:
+        on_sale.sort(key=lambda p: p.get("discount_rate", 0), reverse=True)
+        product = on_sale[0]
+        print(f"  [AmazonPool] 割引商品を優先選択: {product['name'][:40]} ({product.get('discount_rate', 0)}%OFF)")
+    elif not_posted:
         product = random.choice(not_posted)
         print(f"  [AmazonPool] 未投稿商品を選択: {product['name'][:40]}")
     else:
@@ -1318,38 +1312,41 @@ def generate_amazon_pool_post() -> dict:
     name     = product["name"]
     url      = product["url"]
     keywords = "・".join(product.get("keywords", [])[:3])
+    discount = product.get("discount_rate", 0)
+
+    # 割引情報をプロンプトに含める
+    discount_info = ""
+    if discount > 0:
+        discount_info = f"\n割引情報: 現在{discount}%OFF"
 
     # 口コミ・体験談スタイルをランダム選択
     style = random.choice(_AMAZON_POOL_STYLES)
 
-    prompt = f"""あなたは一人暮らしの20〜30代男性です。Amazonで実際に購入した商品の体験談をXに投稿します。
+    prompt = f"""あなたは @single_life_lab 風の一人暮らしXアカウント運営者です。
+Amazonで見つけた商品を、友人に教えるような自然体のトーンで投稿します。
 
 商品名: {name}
-キーワード: {keywords}
+キーワード: {keywords}{discount_info}
 
-【投稿構造（@single_life_lab スタイル: 必須）】
-① 冒頭（2〜3行）: 「{keywords.split('・')[0]}」に関する一人暮らしのあるある悩みを
-   具体的な独り言として描写する。「〜が面倒くさい」「〜で困ってた」「〜が続かない」など
-   等身大の言葉で。数字や具体的なシーンを入れると読まれやすい。
-② 中間（1〜2行）: {name}を使って悩みが解決した体験を「〜したら△△になった」という
-   変化の形で書く。スペックではなく「どんな不便が消えたか」を語る。
-③ 末尾（1行）: 生活がどう変わったか・QOL向上を感情的な一言で締める。
-   「気が楽になった」「時間が浮いた」「もっと早く知りたかった」などの言葉で。
+# お手本トーン（@single_life_lab の実際の投稿）
+- 「甘いもの苦手な人への手土産、ずっと正解がわからなかったけどやっと見つけたかも...。」
+- 「在宅ワーク、暑くて集中力切れがち。「環境を整える」のが結局1番コスパ良い」
 
-【投稿スタイルのトーン: {style['name']}】
-{style['desc']}
+# 投稿構造
+① 冒頭（1〜2行）: 一人暮らしの「あるある」な悩み・場面を独り言で
+   → 「〜がち」「〜で困ってた」「〜がずっと面倒だった」など
+② 中間（1〜2行）: この商品でどう変わったか、体験として語る
+   → スペックではなく「どんな不便が消えたか」
+③ 末尾（1行）: 感情的な一言で締める
+   → 「もっと早く知りたかった」「これで解決した」「一人暮らしの正解かも」など
 
-参考例（構造の参考のみ。商品に合わせた完全オリジナルで書く）:
-{style['example']}
-
-【ルール（厳守）】
-- 100〜130文字以内
-- スペックの数値は書かず「使ってどう変わったか」「どんな不便が消えたか」を語る
-- 「おすすめ」「ぜひ」「絶対」「騙されたと思って」などの広告臭は禁止
-- 一人暮らし・節約・生活改善の文脈で書く
-- URLは含めない（リプライに分ける）
+# ルール（厳守）
+- 80〜120文字以内
+- 「です・ます」禁止。独り言・つぶやき調で
+- 「おすすめ」「ぜひ」「絶対」「騙されたと思って」など広告臭は禁止
+- URLは含めない（別で追加する）
 - ハッシュタグは含めない
-- 末尾に対話的な問いかけを1つ入れる（例:「同じ悩みある人いる？」「使ってる人いたら教えて」）
+- 末尾に「pr」を付ける（小文字で自然に）
 - JSON形式のみ返す: {{"tweet1": "..."}}"""
 
     try:
@@ -1364,10 +1361,8 @@ def generate_amazon_pool_post() -> dict:
     if not tweet1:
         return {}
 
-    tweet1 = append_hashtags(tweet1, "product")
-    # 商品名をリンクツイートに明示してCTRを向上させる
-    name_short = name[:25]
-    tweet2 = f"▶ {name_short}\n詳細・購入はこちら↓\n{url}\n※Amazonアソシエイトに参加しています #PR"
+    # OGPカード型: 本文 + リンクを1ツイートにまとめる（@single_life_lab 方式）
+    tweet1_with_link = f"{tweet1}\n{url}"
 
     _mark_amazon_product_posted(product)
 
@@ -1375,8 +1370,8 @@ def generate_amazon_pool_post() -> dict:
         "type":    "amazon_pool",
         "label":   "Amazon商品紹介（プール）",
         "product": product,
-        "thread":  {"tweet1": tweet1, "tweet2": tweet2},
-        "text":    tweet1,
+        "thread":  {"tweet1": tweet1_with_link, "tweet2": ""},
+        "text":    tweet1_with_link,
         "url":     url,
         "chars":   len(tweet1),
     }
@@ -2041,37 +2036,31 @@ def generate_a8_program_post() -> dict:
                 selected_style = "Gemini/story"
                 print(f"  [A8Post] content_prompt使用 (DB): {ins_id[:30]}")
             else:
-                # 2. フォールバック: 従来のペルソナ+スタイル方式
-                persona = random.choice(_A8_PERSONAS)
-                style_name, style_guide = random.choice(list(_A8_STYLES.items()))
-                _a8_question   = random.choice(_ENGAGEMENT_QUESTIONS)
-                few_shot_block = _load_winner_few_shot(genre=a8_genre)
-                _active_prompt = f"""あなたは次のキャラクターとして X（Twitter）投稿を書いてください。
-キャラクター: {persona}
+                # 2. フォールバック: @single_life_lab 統一スタイル
+                _active_prompt = f"""あなたは @single_life_lab 風の一人暮らしXアカウント運営者です。
+以下のサービスを体験した感想を、友人に話すようなトーンで投稿してください。
 
-以下のアフィリエイト案件について、【{style_name}】スタイルで投稿文を生成してください。
 サービス名: {name}
 報酬・特典: {reward}
 
-【{style_name}の書き方】
-{style_guide}
-{few_shot_block}
-【投稿構造（ストーリー型: @single_life_lab スタイル）】
-① 冒頭（2〜3行）: 一人暮らしのあるある悩みを具体的な独り言で描写する
-② 中間（1〜2行）: {name}との出会いで悩みがどう解決したか体験として書く
-③ 末尾（1行）: 生活がどう変わったか・QOL向上を感情的な一言で締める
+# お手本トーン（@single_life_lab の実際の投稿）
+- 「甘いもの苦手な人への手土産、ずっと正解がわからなかったけどやっと見つけたかも...。」
+- 「在宅ワーク、暑くて集中力切れがち。「環境を整える」のが結局1番コスパ良い」
 
-【末尾の対話要素】
-投稿の最後に「{_a8_question}」を自然に組み込む。
+# 投稿構造
+① 冒頭（1〜2行）: 一人暮らしの「あるある」な悩みを独り言で
+② 中間（1〜2行）: {name}で悩みがどう解決したか体験として語る
+③ 末尾（1行）: 感情的な一言で締める
 
-【制約】
-- 80〜120文字以内（URLとハッシュタグは除く）
-- 禁止: 「ぜひ」「おすすめ」「チェック」「絶対」「必ず」「騙されたと思って」
-- スペックや機能の羅列にせず「使ってどう変わったか」を語る
+# ルール（厳守）
+- 80〜120文字以内（URLとハッシュタグ除く）
+- 「です・ます」禁止。独り言・つぶやき調で
+- 禁止: 「ぜひ」「おすすめ」「チェック」「絶対」「必ず」
+- 句読点少なめ、「...」や体言止めで余韻を残す
 - URLとハッシュタグは書かない
 - 本文のみ出力（説明不要）"""
-                selected_style = f"Gemini/{style_name}"
-                print(f"  [A8Post] フォールバックプロンプト使用: style={style_name}")
+                selected_style = "Gemini/single_life_lab"
+                print(f"  [A8Post] フォールバックプロンプト使用: style=single_life_lab")
 
             _result = _gem_gen(_active_prompt, use_cache=False, temperature=0.95)
             if _result and len(_result.strip()) >= 30:
