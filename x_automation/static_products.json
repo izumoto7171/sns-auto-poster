@@ -3406,5 +3406,617 @@
     "amazon_url": "https://www.amazon.co.jp/dp/B0FVFB98CC?tag=smartearn22-22",
     "source": "fetched",
     "fetched_at": "2026-06-20T15:04:14.112314"
+  },
+  {
+    "asin": "B014I8SSD0",
+    "search_keyword": "Amazonベーシック HDMI ケーブル ハイスピード 4K ARC対応 1.",
+    "title": "Amazonベーシック HDMI ケーブル ハイスピード 4K ARC対応 1.8m(タイプAオス - タイプAオス)ブラック",
+    "brand": "Amazon",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥807"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "収納・整理",
+    "keywords": [
+      "Amazonベーシック",
+      "HDMI",
+      "ケーブル",
+      "ハイスピード"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/71cd+PYIrqL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B014I8SSD0?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-21T00:00:01.169340"
+  },
+  {
+    "asin": "B0FCXY1FB2",
+    "search_keyword": "【デザイン受賞シリーズ！】ESR iPhone 17 ケース MagSafe対応",
+    "title": "【デザイン受賞シリーズ！】ESR iPhone 17 ケース MagSafe対応 3倍米軍MIL規格 カメラボタン付き 隠しスタンド 調整可能 ワイヤレス充電 エアガードコーナー 耐衝撃 傷防止 軽量 マグネットスマホケース 高耐久性 Qi2.2対応",
+    "brand": "",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥2,065"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "充電・バッテリー",
+    "keywords": [
+      "デザイン受賞シリーズ！",
+      "ESR",
+      "iPhone",
+      "17"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/71oVwOe5eYL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0FCXY1FB2?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-21T00:00:01.169374"
+  },
+  {
+    "asin": "B0DBYYNTNR",
+    "search_keyword": "【フルカバー保護】Puptoya アップルウォッチ 防水 カバー Apple W",
+    "title": "【フルカバー保護】Puptoya アップルウォッチ 防水 カバー Apple Watch Series 6 5 4 SE3 SE2 対応 44mm ケース 2 in 1 前後の保護 PC+ガラス素材 高透過率 装着簡単 脱落しやすい 耐衝撃 iWat",
+    "brand": "",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥998"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "生活雑貨",
+    "keywords": [
+      "フルカバー保護",
+      "Puptoya",
+      "アップルウォッチ",
+      "防水"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/812-hewlOzL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0DBYYNTNR?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-21T00:00:01.169410"
+  },
+  {
+    "asin": "B08WP8TZ42",
+    "search_keyword": "タオル研究所 [軽さの理由] #006 フェイスタオル ほうじ茶色 ウォームグレ",
+    "title": "タオル研究所 [軽さの理由] #006 フェイスタオル ほうじ茶色 ウォームグレー 5枚セット 速乾 薄手 絞りやすい 高速吸水 耐久性 綿100% 305GSM JapanTechnology",
+    "brand": "タオル研究所",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥1,491"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "生活雑貨",
+    "keywords": [
+      "タオル研究所",
+      "軽さの理由",
+      "#006",
+      "フェイスタオル"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/712VDY0ySiL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B08WP8TZ42?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-21T00:00:03.948656"
+  },
+  {
+    "asin": "B0BBFRWQKR",
+    "search_keyword": "スクラビングバブル (Scrubbing Bubbles) 流せるトイレブラシ ",
+    "title": "スクラビングバブル (Scrubbing Bubbles) 流せるトイレブラシ フローラルソープの香り 付け替え用 (36個) 掃除 洗剤 使い捨て シート 道具 用具 黒ずみ まとめ買い",
+    "brand": "スクラビング",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥1,144"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "日用品",
+    "keywords": [
+      "スクラビングバブル",
+      "Scrubbing",
+      "Bubbles",
+      "流せるトイレブラシ"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/81L6jTpzBHL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0BBFRWQKR?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-21T00:00:03.948696"
+  },
+  {
+    "asin": "B0D9XZ5MQF",
+    "search_keyword": "【食洗機対応モデル】 サーモス 水筒 真空断熱ケータイマグ 500ml ブラック",
+    "title": "【食洗機対応モデル】 サーモス 水筒 真空断熱ケータイマグ 500ml ブラックジェイド 飲み口外せてお手入れ簡単 軽量タイプ ワンタッチオープン ステンレス ボトル 保温保冷 JNL-S500 BK-J",
+    "brand": "",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥2,327"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "食品・飲料",
+    "keywords": [
+      "食洗機対応モデル",
+      "サーモス",
+      "水筒",
+      "真空断熱ケータイマグ"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/41akLAS8YrL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0D9XZ5MQF?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-21T00:00:03.948719"
+  },
+  {
+    "asin": "B092D5BYY2",
+    "search_keyword": "by Amazon 炭酸水 ラベルレス 500ml ×24本 強炭酸水 ペットボ",
+    "title": "by Amazon 炭酸水 ラベルレス 500ml ×24本 強炭酸水 ペットボトル 500ミリリットル (Smart Basic)",
+    "brand": "by",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥1,353"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "生活雑貨",
+    "keywords": [
+      "by",
+      "Amazon",
+      "炭酸水",
+      "ラベルレス"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/613Mg0ULyvL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B092D5BYY2?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-21T00:00:06.620872"
+  },
+  {
+    "asin": "B0CG5X5MT4",
+    "search_keyword": "【Amazon.co.jp限定】 伊藤園 磨かれて、澄みきった日本の水 2L 8",
+    "title": "【Amazon.co.jp限定】 伊藤園 磨かれて、澄みきった日本の水 2L 8本 ラベルレス [ ケース ] [ 水 ] [ ペットボトル ] [ 箱買い ] [ ストック ] [ 水分補給 ]",
+    "brand": "",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥952"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "生活雑貨",
+    "keywords": [
+      "Amazon.co.jp限定",
+      "伊藤園",
+      "磨かれて、澄みきった日本の水",
+      "2L"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/81+0OaUMSSL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0CG5X5MT4?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-21T00:00:06.620919"
+  },
+  {
+    "asin": "B09TVVN5VN",
+    "search_keyword": "コカ・コーラ やかんの麦茶 from 爽健美茶 ラベルレス 650mlPET×2",
+    "title": "コカ・コーラ やかんの麦茶 from 爽健美茶 ラベルレス 650mlPET×24本",
+    "brand": "コカ・コーラ",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥1,673"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "生活雑貨",
+    "keywords": [
+      "コカ",
+      "コーラ",
+      "やかんの麦茶",
+      "from"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/61z9YsjGKqL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B09TVVN5VN?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-21T00:00:06.620944"
+  },
+  {
+    "asin": "B0CBB3P48C",
+    "search_keyword": "NANOX one(ナノックスワン) プロ 詰替メガジャンボ1730g パウダリ",
+    "title": "NANOX one(ナノックスワン) プロ 詰替メガジャンボ1730g パウダリーソープ 菌の根幹まで遺伝子レベル洗浄で最高峰の洗浄・消臭力 洗濯洗剤 色変化防止 抗菌 ウイルス除去 洗濯槽のニオイ抑制 ダメージケア ジェル",
+    "brand": "NANOX",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥1,572"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "日用品",
+    "keywords": [
+      "NANOX",
+      "one",
+      "ナノックスワン",
+      "プロ"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/81tMEitCt1L._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0CBB3P48C?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-21T00:00:09.303046"
+  },
+  {
+    "asin": "B07K3DVT9B",
+    "search_keyword": "LISTERINE(リステリン) トータルケアプラス 1000ml+100mlセ",
+    "title": "LISTERINE(リステリン) トータルケアプラス 1000ml+100mlセット マウスウォッシュ 液体歯磨 原因菌殺菌(アルコール含む) 医薬部外品 薬用 クリーンミント味 【Amazon.co.jp限定】",
+    "brand": "LISTERINE",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥933"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "PC周辺機器",
+    "keywords": [
+      "LISTERINE",
+      "リステリン",
+      "トータルケアプラス",
+      "1000ml+100mlセット"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/61JrphFRC7L._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B07K3DVT9B?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-21T00:00:09.303080"
+  },
+  {
+    "asin": "B00516RULK",
+    "search_keyword": "NATUREMADE(ネイチャーメイド) 大塚製薬スーパーマルチビタミン&ミネラ",
+    "title": "NATUREMADE(ネイチャーメイド) 大塚製薬スーパーマルチビタミン&ミネラル 120粒 120日分",
+    "brand": "NATUREMADE",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥2,780"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "健康",
+    "keywords": [
+      "NATUREMADE",
+      "ネイチャーメイド",
+      "大塚製薬スーパーマルチビタミン&ミネラル",
+      "120粒"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/615P5vMV8wL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B00516RULK?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-21T00:00:09.303105"
+  },
+  {
+    "asin": "B0GCHXD9BC",
+    "search_keyword": "エアダスター 電動エアダスター 最強力ブロワー【超強力暴風· 吹くだけで完全清掃",
+    "title": "エアダスター 電動エアダスター 最強力ブロワー【超強力暴風· 吹くだけで完全清掃 · LEDライト】300000RPM高速回転 最大風速120m/s 4段階風量調整 5種類ノズル付き 洗車 小型 軽量 Type-C充電式 車内清掃/PC掃除/キーボー",
+    "brand": "エアダスター",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥2,978"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "充電・バッテリー",
+    "keywords": [
+      "エアダスター",
+      "電動エアダスター",
+      "最強力ブロワー",
+      "超強力暴風·"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/71S+nRp4TqL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0GCHXD9BC?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-21T00:00:14.473026"
+  },
+  {
+    "asin": "B0BT5262DV",
+    "search_keyword": "ぺんてる シャープ芯 ぺんてるアイン 0.5mm HB 3個 XC285HB-3",
+    "title": "ぺんてる シャープ芯 ぺんてるアイン 0.5mm HB 3個 XC285HB-3P",
+    "brand": "",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥449"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "生活雑貨",
+    "keywords": [
+      "ぺんてる",
+      "シャープ芯",
+      "ぺんてるアイン",
+      "0.5mm"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/61ICA4y3IUL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0BT5262DV?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-21T00:00:14.473077"
+  },
+  {
+    "asin": "B0BCK3V2X6",
+    "search_keyword": "アオビホ(Aoviho) ノートパソコンスタンド PCホルダー 折りたたみ式 人",
+    "title": "アオビホ(Aoviho) ノートパソコンスタンド PCホルダー 折りたたみ式 人間工学 無段階高さ&角度調整可能 猫背＆姿勢改善 放熱対策 滑り止め 在宅仕事 つくえ 机 省スペース 軽量アルミ製 ZOOM会議 Macbook Air/Macbook",
+    "brand": "アオビホ",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥2,429"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "デスク環境",
+    "keywords": [
+      "アオビホ",
+      "Aoviho",
+      "ノートパソコンスタンド",
+      "PCホルダー"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/51qAU2BxTDL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0BCK3V2X6?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-21T00:00:14.473102"
+  },
+  {
+    "asin": "B0D7ZNXC61",
+    "search_keyword": "[SZSL] スイムゴーグル おおわく 高品位 防水 曇り止め ダイビングゴーグ",
+    "title": "[SZSL] スイムゴーグル おおわく 高品位 防水 曇り止め ダイビングゴーグル 大人用 フィットネスモデル",
+    "brand": "",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥748"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "生活雑貨",
+    "keywords": [
+      "SZSL",
+      "スイムゴーグル",
+      "おおわく",
+      "高品位"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/51L4jJeakNL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0D7ZNXC61?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-21T00:00:19.638011"
+  },
+  {
+    "asin": "B0CRHF2WG4",
+    "search_keyword": "【雑誌Tarzan掲載 × 柔道整復師監修】 膝サポーター 薄手 スポーツ しっ",
+    "title": "【雑誌Tarzan掲載 × 柔道整復師監修】 膝サポーター 薄手 スポーツ しっかり固定 V字ベルト 膝パット 膝固定 メッシュ 蒸れない 高通気性 ランニング 登山 ゴルフ 日常生活 RELAXEE リラクシー ひざごこち (M)",
+    "brand": "",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥1,899"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "生活雑貨",
+    "keywords": [
+      "雑誌Tarzan掲載",
+      "柔道整復師監修",
+      "膝サポーター",
+      "薄手"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/81h8zZheiXL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0CRHF2WG4?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-21T00:00:19.638070"
+  },
+  {
+    "asin": "B0B459NXC1",
+    "search_keyword": "Rela Kino インソール [理学療法士監修] 衝撃吸収 アーチサポート 土",
+    "title": "Rela Kino インソール [理学療法士監修] 衝撃吸収 アーチサポート 土踏まず 中敷き メンズ レディース (M:26-27, ハイクオリティ)",
+    "brand": "Rela",
+    "price": {
+      "amount": 0,
+      "currency": "JPY",
+      "display": "￥2,280"
+    },
+    "original_price": {
+      "amount": 0,
+      "display": "要確認"
+    },
+    "discount_rate": 0,
+    "category": "生活雑貨",
+    "keywords": [
+      "Rela",
+      "Kino",
+      "インソール",
+      "理学療法士監修"
+    ],
+    "image_url": "https://images-fe.ssl-images-amazon.com/images/I/71UDH153gzL._AC_UL300_SR300,200_.jpg",
+    "features": [
+      "Amazonランキング上位の人気商品",
+      "詳細はAmazonページを確認"
+    ],
+    "why_viral": "ランキング急上昇中のガジェット。注目度が高い",
+    "story_hook": "Amazonで今売れてるやつ、試してみた。",
+    "user_problem": "話題のガジェットを手に入れたい",
+    "amazon_url": "https://www.amazon.co.jp/dp/B0B459NXC1?tag=smartearn22-22",
+    "source": "fetched",
+    "fetched_at": "2026-06-21T00:00:19.638104"
   }
 ]
