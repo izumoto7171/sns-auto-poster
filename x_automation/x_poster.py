@@ -408,16 +408,21 @@ def post_parent_and_reply(
 
         # ── ③ 子ポスト（リプライ）投稿 ──────────────────
         if reply_text and parent_id:
+            reply_ok = False
             try:
-                time.sleep(2)  # 連投ペナルティ回避
+                time.sleep(2)
                 reply_resp = client.create_tweet(
                     text                 = reply_text,
                     in_reply_to_tweet_id = parent_id,
                 )
                 reply_id = str(reply_resp.data["id"])
                 print(f"✅ 子ポスト（リプライ）成功: ID={reply_id}")
+                reply_ok = True
             except Exception as e:
-                print(f"⚠️ 子ポスト失敗（親ポストは成功済み・ログのみ）: {e}")
+                print(f"⚠️ 子ポスト tweepy 失敗: {e}")
+
+            if not reply_ok:
+                _browser_reply_fallback(parent_id, reply_text)
 
         return True
 
@@ -426,6 +431,50 @@ def post_parent_and_reply(
         return False
     except Exception as e:
         print(f"❌ 親ポスト失敗: {e}")
+        return False
+
+
+# ─────────────────────────────────────────
+# ブラウザ経由リプライフォールバック
+# ─────────────────────────────────────────
+def _browser_reply_fallback(parent_tweet_id: str, reply_text: str) -> bool:
+    """tweepy で子ポスト（リプライ）が失敗した場合に Playwright で投稿する"""
+    username = os.getenv("X_USERNAME", "")
+    if not username:
+        print("⚠️ X_USERNAME 未設定のためブラウザリプライをスキップ")
+        return False
+    tweet_url = f"https://x.com/{username}/status/{parent_tweet_id}"
+    print(f"🌐 ブラウザでリプライ投稿にフォールバック: {tweet_url}")
+    try:
+        import asyncio
+        from x_browser_poster import _new_context, _load_cookies, _reply_to_tweet
+        from playwright.async_api import async_playwright
+
+        async def _do_reply():
+            async with async_playwright() as p:
+                browser, context = await _new_context(p, headless=True)
+                try:
+                    if not await _load_cookies(context):
+                        await browser.close()
+                        return False
+                    page = await context.new_page()
+                    await _reply_to_tweet(page, tweet_url, reply_text)
+                    await browser.close()
+                    return True
+                except Exception as e:
+                    print(f"❌ ブラウザリプライ失敗: {e}")
+                    try:
+                        await browser.close()
+                    except Exception:
+                        pass
+                    return False
+
+        result = asyncio.run(_do_reply())
+        if result:
+            print("✅ ブラウザリプライ成功（アフィリエイトURL投稿完了）")
+        return result
+    except Exception as e:
+        print(f"❌ ブラウザリプライフォールバック失敗: {e}")
         return False
 
 
@@ -658,8 +707,9 @@ def post_value_thread(post_type: str = "useful") -> bool:
     if not success1 or not tweet2:
         return success1
 
-    # tweet2: tweepy でリプライ（twikit は daily limit 344 頻発のためスキップ）
+    # tweet2: tweepy でリプライ → 失敗時はブラウザフォールバック
     if _last_tweet_id:
+        reply_ok = False
         try:
             import tweepy
             api_key       = os.getenv("X_API_KEY")
@@ -676,10 +726,14 @@ def post_value_thread(post_type: str = "useful") -> bool:
                 time.sleep(2)
                 client.create_tweet(text=tweet2, in_reply_to_tweet_id=_last_tweet_id)
                 print("✅ tweet2リプライ成功（tweepy）")
+                reply_ok = True
             else:
-                print("⚠️ X APIキー未設定のためtweet2リプライをスキップ")
+                print("⚠️ X APIキー未設定")
         except Exception as e:
-            print(f"⚠️ tweet2リプライ失敗（無視）: {e}")
+            print(f"⚠️ tweet2リプライ tweepy 失敗: {e}")
+
+        if not reply_ok:
+            _browser_reply_fallback(_last_tweet_id, tweet2)
     else:
         print("⚠️ tweet1のID未取得のためtweet2リプライをスキップ")
 
