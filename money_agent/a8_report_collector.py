@@ -347,6 +347,14 @@ def collect():
         report = aggregate_results(results, report)
         save_report(report)
         print(f"集計完了: {len(results)}件の成果データを保存")
+
+        # 成約データを記事に紐付け & 実績CVR算出
+        try:
+            from money_agent.conversion_tracker import update_conversions, calculate_actual_cvr
+            update_conversions()
+            calculate_actual_cvr()
+        except Exception as e:
+            print(f"[A8Report] ConversionTracker呼び出しエラー: {e}")
     else:
         print("新しい成果データなし")
 

@@ -133,17 +133,17 @@ def _build_feedback_context(insights: dict, platform: str = "x") -> str:
 # 投稿タイプの定義と重み
 # ─────────────────────────────────────────
 POST_TYPES = [
-    {"type": "a8",       "label": "A8アフィリエイト",    "weight": 40},
-    {"type": "product",  "label": "Amazon商品紹介",      "weight": 35},
-    {"type": "rakuten",  "label": "楽天商品紹介",        "weight": 25},
+    {"type": "a8",       "label": "A8アフィリエイト",    "weight": 15},
+    {"type": "product",  "label": "Amazon商品紹介",      "weight": 15},
+    {"type": "rakuten",  "label": "楽天商品紹介",        "weight": 0},
 ]
 
-# 非アフィリエイトタイプ（月〜木のエンゲージメント維持用）
+# 非アフィリエイトタイプ — アフィリ30% : 有益コンテンツ70% でフォロワー獲得重視
 NON_AFFILIATE_TYPES = [
-    {"type": "useful",   "label": "役立つ情報",  "weight": 35},
-    {"type": "empathy",  "label": "共感・体験",  "weight": 30},
-    {"type": "trivia",   "label": "雑学・ネタ",  "weight": 20},
-    {"type": "progress", "label": "節約進捗",    "weight": 15},
+    {"type": "useful",   "label": "役立つ情報",  "weight": 30},
+    {"type": "empathy",  "label": "共感・体験",  "weight": 25},
+    {"type": "trivia",   "label": "雑学・ネタ",  "weight": 10},
+    {"type": "progress", "label": "節約進捗",    "weight": 5},
 ]
 
 # アフィリエイト系タイプ名（週比率チェック用）

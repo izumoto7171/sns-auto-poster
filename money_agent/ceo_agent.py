@@ -60,6 +60,8 @@ from db_client import db
 
 # ── 設定 ──────────────────────────────────────────────────────
 NUM_WRITERS = 3   # 並列ライター数
+# QUALITY_MODE=false でテンプレートモードにロールバック可能
+QUALITY_MODE = os.environ.get("QUALITY_MODE", "true").lower() in ("true", "1", "yes")
 
 _DEFAULT_STATE = {
     "total_articles": 0,
