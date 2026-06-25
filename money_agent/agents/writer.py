@@ -9,6 +9,7 @@
 """
 import json
 import os
+from datetime import datetime
 from pathlib import Path
 
 BASE_DIR = Path(__file__).parent.parent
@@ -77,7 +78,6 @@ def _fetch_latest_info(keyword: str, category: str) -> dict:
   "caution": "使用上の注意点・見落としがちなデメリット（1文）"
 }}"""
 
-        from datetime import datetime
         resp = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=prompt,
