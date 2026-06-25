@@ -1,0 +1,8 @@
+{
+  "_description": "アクティブカテゴリの管理。conversion_tracker.py が月次で自動更新。手動変更も可。",
+  "_updated": "2026-06-25",
+  "active_categories": ["dx_tools", "ai_saas", "investment_savings"],
+  "inactive_categories": ["side_hustle", "productivity", "ai_tools", "savings_lifestyle", "high_value"],
+  "selection_basis": "初期設定: 低競合×高単価を優先。実績データ蓄積後に自動更新される",
+  "auto_update": true
+}

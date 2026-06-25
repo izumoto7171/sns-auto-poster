@@ -44,8 +44,8 @@ from gemini_client import generate as gemini_generate, strip_code_block
 
 # ── CVRスコア算出 ─────────────────────────────────────────────
 
-# カテゴリ別CVR推定係数（単価×成約率で正規化）
-_CVR_BY_CATEGORY: dict[str, float] = {
+# デフォルトのCVR推定係数（実績データがない場合のフォールバック）
+_DEFAULT_CVR: dict[str, float] = {
     "証券口座":           3.0,
     "AIツール・SaaS":     2.5,
     "DX・業務効率化ツール": 2.0,
@@ -53,14 +53,50 @@ _CVR_BY_CATEGORY: dict[str, float] = {
     "クレジットカード":   1.5,
     "副業・在宅ワーク":   1.2,
     "FX口座":             1.0,
+    # keywords_db.py のカテゴリ名にも対応
+    "investment_savings":  3.0,
+    "ai_saas":             2.5,
+    "ai_tools":            2.0,
+    "dx_tools":            2.0,
+    "savings_lifestyle":   1.5,
+    "side_hustle":         1.2,
+    "high_value":          2.5,
+    "productivity":        1.0,
 }
+
+
+def _load_actual_cvr() -> dict[str, float]:
+    """
+    conversion_tracker.py が算出した実績CVRを読み込む。
+    なければデフォルト値にフォールバック。
+    """
+    cvr_file = BASE_DIR / "data" / "actual_cvr.json"
+    if cvr_file.exists():
+        try:
+            data = json.loads(cvr_file.read_text(encoding="utf-8"))
+            categories = data.get("categories", {})
+            actual = {}
+            for cat, info in categories.items():
+                coeff = info.get("cvr_coefficient", 0)
+                if coeff > 0:
+                    actual[cat] = coeff
+            if actual:
+                print(f"  [DataAnalyst] 実績CVR読み込み: {len(actual)}カテゴリ")
+                return {**_DEFAULT_CVR, **actual}
+        except Exception as e:
+            print(f"  [DataAnalyst] 実績CVR読み込みエラー: {e}")
+    return _DEFAULT_CVR
+
+
+# 実績データがあればそちらを使い、なければデフォルト
+_CVR_BY_CATEGORY: dict[str, float] = _load_actual_cvr()
 
 
 def _calc_cvr_score(post: dict) -> float:
     """記事の推定CVRスコアを算出（高いほど良い）"""
     score = 1.0
 
-    # カテゴリ別係数
+    # カテゴリ別係数（実績データ優先）
     category = post.get("category", post.get("post_type", ""))
     score *= _CVR_BY_CATEGORY.get(category, 1.0)
 

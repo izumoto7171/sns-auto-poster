@@ -52,16 +52,22 @@ def _merge_params(url: str, new_params: dict) -> str:
     return urlunparse(parsed._replace(query=urlencode(merged)))
 
 
-def add_a8_sid(url: str, platform: str) -> str:
+def add_a8_sid(url: str, platform: str, keyword: str = "") -> str:
     """
     A8.netトラッキングURLにa8sidサブIDを付与する。
-    A8管理画面のレポート → 「サブID」列で platform_YYYYMMDD ごとの成約数が見える。
-    例: &a8sid=htn_20260411
+    A8管理画面のレポート → 「サブID」列で platform_YYYYMMDD_kwhash ごとの成約数が見える。
+    keywordが指定されていれば、ハッシュを含めて記事との逆引きを可能にする。
+    例: &a8sid=htn_20260411_a1b2c3d4
     """
     if not url:
         return url
     pid = PLATFORM_IDS.get(platform, platform)
-    sid = f"{pid}_{_today()}"
+    if keyword:
+        import hashlib
+        kw_hash = hashlib.md5(keyword.encode()).hexdigest()[:8]
+        sid = f"{pid}_{_today()}_{kw_hash}"
+    else:
+        sid = f"{pid}_{_today()}"
     return _merge_params(url, {"a8sid": sid})
 
 
@@ -96,18 +102,18 @@ def add_utm(url: str, platform: str, campaign: str = "auto") -> str:
     })
 
 
-def tag_affiliate_link(url: str, platform: str) -> str:
+def tag_affiliate_link(url: str, platform: str, keyword: str = "") -> str:
     """
     URLの種類を自動判別してトラッキングパラメータを付与するメイン関数。
 
-    - px.a8.net → a8sid付与（A8レポートで計測）
+    - px.a8.net → a8sid付与（A8レポートで計測）+ keyword含むハッシュ
     - amazon.co.jp / amazon.com → sub1付与
     - その他（ブログURL等）→ UTM付与
     """
     if not url:
         return url
     if "px.a8.net" in url or ("a8.net" in url and "a8mat" in url):
-        return add_a8_sid(url, platform)
+        return add_a8_sid(url, platform, keyword=keyword)
     if "amazon.co.jp" in url or "amazon.com" in url or "amzn" in url:
         return add_amazon_sub(url, platform)
     return add_utm(url, platform)

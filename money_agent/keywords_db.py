@@ -394,6 +394,21 @@ def _get_dynamic_keywords() -> list:
         return []
 
 
+def _load_active_categories() -> list:
+    """genre_strategy.json からアクティブカテゴリを読み込む"""
+    import os
+    strategy_file = os.path.join(os.path.dirname(__file__), "data", "genre_strategy.json")
+    try:
+        with open(strategy_file, encoding="utf-8") as f:
+            data = json.load(f)
+        active = data.get("active_categories", [])
+        if active:
+            return active
+    except Exception:
+        pass
+    return []  # 空リスト = 全カテゴリ有効
+
+
 def get_next_keyword(
     used_keywords: list = None,
     _depth: int = 0,
@@ -404,14 +419,21 @@ def get_next_keyword(
 
     pilot_mode=True: パイロット検証期間用。PILOT_KEYWORDS から「低競合×高意図」を優先選択。
     preferred_category: SNS分析から推奨されたカテゴリ（重みを3倍にする）
+
+    genre_strategy.json にアクティブカテゴリが設定されていれば、そのカテゴリのみから選択する。
     """
     import random
     used = used_keywords or []
     all_kws = []
 
+    # アクティブカテゴリの制約
+    active_cats = _load_active_categories()
+
     if pilot_mode:
         # パイロット期: PILOT_KEYWORDS を優先（なければ通常のlow/midボリュームにフォールバック）
         for cat_id, kw_list in PILOT_KEYWORDS.items():
+            if active_cats and cat_id not in active_cats:
+                continue
             for kw_data in kw_list:
                 if kw_data["kw"] not in used:
                     all_kws.append({
@@ -437,8 +459,10 @@ def get_next_keyword(
             return random.choices(all_kws, weights=weights, k=1)[0]
         # パイロットKW使い切り → 通常モードにフォールバック
 
-    # 通常モード: 静的キーワード
+    # 通常モード: 静的キーワード（アクティブカテゴリのみ）
     for cat_id, cat_data in KEYWORD_CATEGORIES.items():
+        if active_cats and cat_id not in active_cats:
+            continue
         for kw_data in cat_data["keywords"]:
             if kw_data["kw"] not in used:
                 all_kws.append({
