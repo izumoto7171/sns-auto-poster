@@ -78,6 +78,7 @@ def _fetch_latest_info(keyword: str, category: str) -> dict:
   "caution": "使用上の注意点・見落としがちなデメリット（1文）"
 }}"""
 
+        from datetime import datetime
         resp = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=prompt,
