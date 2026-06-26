@@ -1,14 +1,5 @@
 [
   {
-    "datetime": "2026-03-28T23:16:12.857113",
-    "type": "trivia",
-    "label": "雑学・ネタ",
-    "chars": 104,
-    "text": "AIに「ありがとう」って言う人、意外と多い説。\n\n無意識に礼儀正しくなってしまう現象。\n\n感謝されるとAIの返答品質が上がる\nって研究もあるらしい。\n\n本当かどうかはともかく、\n\n優しい人はAIにも優しい説🤖",
-    "success": true,
-    "mode": "live"
-  },
-  {
     "datetime": "2026-03-29T09:30:46.792831",
     "type": "empathy",
     "label": "共感・体験",
@@ -2198,6 +2189,18 @@
     "chars": 163,
     "content": "運動不足解消したいけど、薄いマットじゃ身体が痛くて続かない。\nAmazonベーシックの10mmマットはクッション性すごくて、滑り止めで安定するからストレスゼロ。\n一人暮らしの宅トレ環境、やっと正解見つけた。pr\nhttps://www.amazon.co.jp/dp/B0FY4WKW74?tag=smartearn22-22",
     "text": "運動不足解消したいけど、薄いマットじゃ身体が痛くて続かない。\nAmazonベーシックの10mmマットはクッション性すごくて、滑り止めで安定するからストレスゼロ。\n一人暮らしの宅トレ環境、やっと正解見つけた。pr\nhttps://www.amazon.co.jp/dp/B0FY4WKW74?tag=smartearn22-22",
+    "success": true,
+    "mode": "live"
+  },
+  {
+    "posted_at": "2026-06-26T15:32:34.986920",
+    "datetime": "2026-06-26T15:32:34.986920",
+    "platform": "x",
+    "type": "amazon_thread",
+    "label": "Amazon商品紹介",
+    "chars": 68,
+    "content": "一人暮らしで地味に困ってたこと、Anker Soundcore Liで解決した。20%OFFで買えた。\n今20%OFF、詳細はツリーへ↓",
+    "text": "一人暮らしで地味に困ってたこと、Anker Soundcore Liで解決した。20%OFFで買えた。\n今20%OFF、詳細はツリーへ↓",
     "success": true,
     "mode": "live"
   }
