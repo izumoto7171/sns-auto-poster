@@ -1,13 +1,16 @@
 """
 Amazonアソシエイト商品プール
 
-静的マスターデータ + static_products.json（ランキング自動収集分）を統合して
+DB（amazon_products）+ static_products.json + amazon_deals.json を統合して
 PRODUCT_POOL として公開する。
+ハードコード商品は廃止し、product_rotator.py が毎日生成する商品を使う。
 """
 
 import json
 import os
+import sys
 from pathlib import Path
+from urllib.parse import quote
 
 _ROOT_DIR = Path(__file__).parent.parent
 _env_path = _ROOT_DIR / ".env"
@@ -20,77 +23,98 @@ if _env_path.exists():
 
 _TAG = os.getenv("AMAZON_ASSOCIATE_TAG", "smartearn22-22")
 
-_STATIC_PRODUCTS = [
-    {
-        "asin": "B000P4D5HG",
-        "name": "Hario V60 コーヒードリッパー 02 透明 VD-02T",
-        "url": f"https://www.amazon.co.jp/dp/B000P4D5HG?tag={_TAG}",
-        "keywords": ["コーヒー", "ドリッパー", "在宅ワーク", "カフェ"],
-    },
-    {
-        "asin": "B01C4ZHXQ2",
-        "name": "Kalita ウェーブドリッパー WDS-185 ステンレス製 燕職人手作り 2〜4人用",
-        "url": f"https://www.amazon.co.jp/dp/B01C4ZHXQ2?tag={_TAG}",
-        "keywords": ["コーヒー", "ドリッパー", "ステンレス", "日本製"],
-    },
-    {
-        "asin": "B0000AN3QI",
-        "name": "Bialetti ビアレッティ モカエキスプレス 直火式コーヒーメーカー 3カップ",
-        "url": f"https://www.amazon.co.jp/dp/B0000AN3QI?tag={_TAG}",
-        "keywords": ["コーヒー", "直火式", "エスプレッソ", "イタリア"],
-    },
-    {
-        "asin": "B075K39RTZ",
-        "name": "ネスプレッソ エッセンサ ミニ C30-BK-W カプセル式コーヒーメーカー",
-        "url": f"https://www.amazon.co.jp/dp/B075K39RTZ?tag={_TAG}",
-        "keywords": ["コーヒー", "カプセル式", "時短", "一人暮らし"],
-    },
-    {
-        "asin": "B082L3B1NB",
-        "name": "ポーレックス コーヒーミル2 セラミック 手挽き 日本製",
-        "url": f"https://www.amazon.co.jp/dp/B082L3B1NB?tag={_TAG}",
-        "keywords": ["コーヒー", "ミル", "手挽き", "日本製"],
-    },
-    {
-        "asin": "B0051OOM68",
-        "name": "BODUM ボダム CHAMBORD フレンチプレス コーヒーメーカー 350ml",
-        "url": f"https://www.amazon.co.jp/dp/B0051OOM68?tag={_TAG}",
-        "keywords": ["コーヒー", "フレンチプレス", "簡単", "一人暮らし"],
-    },
-]
+
+def _make_url(p: dict) -> str:
+    """ASIN直リンクまたは検索URLを返す"""
+    asin = p.get("asin", "").strip()
+    if asin and len(asin) == 10:
+        return f"https://www.amazon.co.jp/dp/{asin}?tag={_TAG}"
+    url = p.get("amazon_url", "")
+    if url:
+        return url
+    keyword = p.get("search_keyword", p.get("name", p.get("title", "")))
+    if keyword:
+        return f"https://www.amazon.co.jp/s?k={quote(keyword)}&tag={_TAG}"
+    return ""
 
 
-def _load_dynamic_products() -> list:
-    """static_products.json からランキング収集済み商品を読み込む"""
-    json_paths = [
-        Path(__file__).parent / "static_products.json",
-        _ROOT_DIR / "data" / "static_products.json",
-    ]
-    for jp in json_paths:
-        if jp.exists():
-            try:
-                with open(jp, encoding="utf-8") as f:
-                    data = json.load(f)
-                products = []
-                for p in data:
-                    asin = p.get("asin", "")
-                    if not asin:
-                        continue
-                    products.append({
-                        "asin": asin,
-                        "name": p.get("title", p.get("name", "")),
-                        "url": p.get("amazon_url", f"https://www.amazon.co.jp/dp/{asin}?tag={_TAG}"),
-                        "keywords": p.get("keywords", []),
-                        "discount_rate": p.get("discount_rate", 0),
-                        "image_url": p.get("image_url", ""),
-                    })
-                return products
-            except Exception:
-                continue
+def _normalize(p: dict) -> dict:
+    """各ソースの商品データを統一フォーマットに変換"""
+    return {
+        "asin": p.get("asin", "").strip(),
+        "name": p.get("title", p.get("name", "")),
+        "url": _make_url(p),
+        "keywords": p.get("keywords", []),
+        "search_keyword": p.get("search_keyword", ""),
+        "discount_rate": p.get("discount_rate", 0),
+        "image_url": p.get("image_url", ""),
+        "category": p.get("category", ""),
+        "why_viral": p.get("why_viral", ""),
+        "story_hook": p.get("story_hook", ""),
+    }
+
+
+def _dedup_key(p: dict) -> str:
+    """重複排除用キー（ASIN優先、なければ search_keyword / name）"""
+    asin = p.get("asin", "").strip()
+    if asin:
+        return f"asin:{asin}"
+    return f"kw:{p.get('search_keyword', '') or p.get('name', '')}"
+
+
+def _load_from_db() -> list:
+    """Supabase amazon_products テーブルから読み込む"""
+    try:
+        sys.path.insert(0, str(_ROOT_DIR))
+        from db_client import db
+        rows = db.get_amazon_deals(max_age_hours=24 * 30)
+        if rows:
+            return [_normalize(r) for r in rows]
+    except Exception:
+        pass
     return []
 
 
-# 静的 + 動的を統合（ASIN重複は静的を優先）
-_dynamic = _load_dynamic_products()
-_static_asins = {p["asin"] for p in _STATIC_PRODUCTS}
-PRODUCT_POOL = _STATIC_PRODUCTS + [p for p in _dynamic if p["asin"] not in _static_asins]
+def _load_from_json() -> list:
+    """static_products.json / amazon_deals.json からフォールバック読み込み"""
+    json_paths = [
+        Path(__file__).parent / "static_products.json",
+        _ROOT_DIR / "data" / "static_products.json",
+        Path(__file__).parent / "amazon_deals.json",
+        _ROOT_DIR / "data" / "amazon_deals.json",
+    ]
+    products = []
+    seen = set()
+    for jp in json_paths:
+        if not jp.exists():
+            continue
+        try:
+            with open(jp, encoding="utf-8") as f:
+                data = json.load(f)
+            for p in data:
+                norm = _normalize(p)
+                key = _dedup_key(norm)
+                if key not in seen and norm["url"]:
+                    seen.add(key)
+                    products.append(norm)
+        except Exception:
+            continue
+    return products
+
+
+def _build_pool() -> list:
+    """DB → JSON の順で商品を収集し、重複排除して返す"""
+    pool = []
+    seen = set()
+
+    for source_fn in (_load_from_db, _load_from_json):
+        for p in source_fn():
+            key = _dedup_key(p)
+            if key not in seen and p["url"]:
+                seen.add(key)
+                pool.append(p)
+
+    return pool
+
+
+PRODUCT_POOL = _build_pool()
