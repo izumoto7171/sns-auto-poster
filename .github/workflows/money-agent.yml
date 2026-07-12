@@ -444,3 +444,45 @@ jobs:
           git add money_agent/rakuten_article_log.json money_agent/hatena_drafts/ || true
           git diff --staged --quiet || git commit -m "chore: 楽天アフィリエイト記事更新 $(date +'%Y-%m-%d')"
           git pull --rebase origin main && git push || true
+
+  # ============================================================
+  # 🛒 Amazonアフィリエイト記事生成（毎日 JST 6:00、楽天と同時実行）
+  # ============================================================
+  amazon-affiliate:
+    name: 🛒 Amazonアフィリエイト記事
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Python セットアップ
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 依存関係インストール
+        run: pip install google-genai python-dotenv requests supabase
+
+      - name: Amazonアフィリエイト記事生成
+        env:
+          GEMINI_API_KEY:       ${{ secrets.GEMINI_API_KEY }}
+          AMAZON_ACCESS_KEY:    ${{ secrets.AMAZON_ACCESS_KEY }}
+          AMAZON_SECRET_KEY:    ${{ secrets.AMAZON_SECRET_KEY }}
+          AMAZON_ASSOCIATE_TAG: ${{ secrets.AMAZON_ASSOCIATE_TAG }}
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          HATENA_ID:            ${{ secrets.HATENA_ID }}
+          HATENA_BLOG_ID:       ${{ secrets.HATENA_BLOG_ID }}
+          HATENA_API_KEY:       ${{ secrets.HATENA_API_KEY }}
+        run: |
+          python3 money_agent/amazon_product_article.py --count 2
+
+      - name: ログをコミット
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add money_agent/data/amazon_article_log.json money_agent/hatena_drafts/ || true
+          git diff --staged --quiet || git commit -m "chore: Amazonアフィリエイト記事更新 $(date +'%Y-%m-%d')"
+          git pull --rebase origin main && git push || true
