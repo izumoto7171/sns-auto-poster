@@ -91,9 +91,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add money_agent/feedback_insights.json \
-                  money_agent/analytics_history.json \
-                  money_agent/data/genre_analysis_report.json || true
+          # feedback_insights / analytics_history は Supabase 保存のためファイル追加は不要
+          # （git add は存在しないパスが混ざると全体が失敗する）
+          git add money_agent/data/genre_analysis_report.json || true
           git diff --staged --quiet || \
             git commit -m "chore: SNS分析 + ジャンル別収益レポート更新 $(date +'%Y-%m-%d')"
           git push || true

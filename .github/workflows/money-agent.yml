@@ -117,12 +117,11 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add \
-            money_agent/agent_state.json \
-            money_agent/approved.json \
-            money_agent/pending/ \
-            money_agent/posted/ \
-            || true
+          # 注意: git add は存在しないパスが1つでもあると全体が失敗するため、1パスずつ実行する
+          git add money_agent/data/agent_state.json || true
+          git add money_agent/data/approved.json || true
+          git add money_agent/data/pending/ || true
+          git add money_agent/posted/ || true
           git diff --staged --quiet || git commit -m "chore: CEOエージェント実行ログ更新 $(date +'%Y-%m-%d %H:%M')"
           git pull --rebase origin main && git push || true
 
@@ -430,6 +429,7 @@ jobs:
           RAKUTEN_APP_ID:       ${{ secrets.RAKUTEN_APP_ID }}
           RAKUTEN_ACCESS_KEY:   ${{ secrets.RAKUTEN_ACCESS_KEY }}
           RAKUTEN_AFFILIATE_ID: ${{ secrets.RAKUTEN_AFFILIATE_ID }}
+          RAKUTEN_ORIGIN:       ${{ secrets.RAKUTEN_ORIGIN }}
           HATENA_ID:            ${{ secrets.HATENA_ID }}
           HATENA_BLOG_ID:       ${{ secrets.HATENA_BLOG_ID }}
           HATENA_API_KEY:       ${{ secrets.HATENA_API_KEY }}
@@ -441,7 +441,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add money_agent/rakuten_article_log.json money_agent/hatena_drafts/ || true
+          # 注意: git add は存在しないパスが1つでもあると全体が失敗するため、1パスずつ実行する
+          git add money_agent/data/rakuten_article_log.json || true
+          git add money_agent/hatena_drafts/ || true
           git diff --staged --quiet || git commit -m "chore: 楽天アフィリエイト記事更新 $(date +'%Y-%m-%d')"
           git pull --rebase origin main && git push || true
 
@@ -483,6 +485,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add money_agent/data/amazon_article_log.json money_agent/hatena_drafts/ || true
+          # 注意: git add は存在しないパスが1つでもあると全体が失敗するため、1パスずつ実行する
+          git add money_agent/data/amazon_article_log.json || true
+          git add money_agent/hatena_drafts/ || true
           git diff --staged --quiet || git commit -m "chore: Amazonアフィリエイト記事更新 $(date +'%Y-%m-%d')"
           git pull --rebase origin main && git push || true

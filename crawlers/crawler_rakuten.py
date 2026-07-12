@@ -26,7 +26,9 @@ RAKUTEN_APP_ID       = os.environ.get("RAKUTEN_APP_ID", "")
 RAKUTEN_ACCESS_KEY   = os.environ.get("RAKUTEN_ACCESS_KEY", "")
 RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID", "")
 RAKUTEN_SEARCH_URL   = "https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20220601"
-RAKUTEN_ORIGIN       = os.environ.get("RAKUTEN_ORIGIN", "")
+# RAKUTEN_ORIGIN 未設定時はブログURLをデフォルト値として使用（アプリ登録済みOrigin）
+# 楽天OpenAPIはリファラー制限を Origin + Referer 両ヘッダーで検証する
+RAKUTEN_ORIGIN       = os.environ.get("RAKUTEN_ORIGIN", "") or "https://smart-earn-life.hateblo.jp"
 
 
 def fetch_products(genre_id: str, hits: int = 10) -> list:
@@ -69,7 +71,7 @@ def fetch_products(genre_id: str, hits: int = 10) -> list:
         res = requests.get(
             RAKUTEN_SEARCH_URL,
             params=params,
-            headers={"Origin": RAKUTEN_ORIGIN},
+            headers={"Origin": RAKUTEN_ORIGIN, "Referer": RAKUTEN_ORIGIN.rstrip("/") + "/"},
             timeout=15,
         )
         res.raise_for_status()
@@ -125,6 +127,7 @@ def fetch_products_by_keyword(keyword: str, hits: int = 10) -> list:
 
     params: dict = {
         "applicationId": RAKUTEN_APP_ID,
+        "accessKey":     RAKUTEN_ACCESS_KEY,
         "keyword":       keyword,
         "sort":          "-reviewCount",
         "hits":          hits,
@@ -138,7 +141,7 @@ def fetch_products_by_keyword(keyword: str, hits: int = 10) -> list:
         res = requests.get(
             RAKUTEN_SEARCH_URL,
             params=params,
-            headers={"Origin": RAKUTEN_ORIGIN},
+            headers={"Origin": RAKUTEN_ORIGIN, "Referer": RAKUTEN_ORIGIN.rstrip("/") + "/"},
             timeout=15,
         )
         res.raise_for_status()

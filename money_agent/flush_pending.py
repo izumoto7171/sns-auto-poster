@@ -145,6 +145,14 @@ def flush(count: int = MAX_FLUSH, dry_run: bool = False):
         title = article.get("title", "タイトルなし")
         pending_since = article.get("pending_since", "")[:10]
 
+        # 重複投稿ガード: posted/ に同名ファイルがあれば投稿せず pending から除去する
+        # （コミット漏れ等で pending に残留した投稿済み記事を再投稿しないための保険）
+        if (POSTED_DIR / filepath.name).exists():
+            print(f"  [Flush] 投稿済み検出（スキップ・postedへ移動）: {title[:40]}")
+            _move_to_posted(filepath)
+            flush_result["skipped"].append({"keyword": keyword, "title": title, "reason": "already_posted"})
+            continue
+
         print(f"\n  [{flushed + 1}] {keyword}")
         print(f"       タイトル : {title[:50]}")
         print(f"       保存日   : {pending_since}")
@@ -208,7 +216,8 @@ def flush(count: int = MAX_FLUSH, dry_run: bool = False):
         log_entry = {
             "date": today,
             "keyword": keyword,
-            "results": results,
+            "ok_platforms": ok_platforms,
+            "ng_platforms": ng_platforms,
             "flushed_at": datetime.datetime.now().isoformat(),
             "source": "flush_pending",
         }
