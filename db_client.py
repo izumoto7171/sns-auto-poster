@@ -892,6 +892,7 @@ class DBClient:
             .eq("product_key", product_key)
             .eq("post_type", post_type)
             .gte("created_at", cutoff)
+            .order("created_at", desc=True)  # 複数行あっても必ず最新を返す
             .limit(1)
             .execute()
             .data
@@ -917,6 +918,8 @@ class DBClient:
         生成済みテキストをキャッシュに保存する。
         同一 (product_key, post_type) は上書き（upsert）。
         """
+        # on_conflict 未指定だと主キー(id)基準のupsertになり、既存の
+        # (product_key, post_type) と UNIQUE 制約が衝突して INSERT が失敗する
         _get_supabase().table("content_cache").upsert({
             "product_key":    product_key,
             "source":         source,
@@ -926,7 +929,7 @@ class DBClient:
             "created_at":     datetime.now().isoformat(),
             "last_used_at":   None,
             "use_count":      0,
-        }).execute()
+        }, on_conflict="product_key,post_type").execute()
 
     def cleanup_content_cache(self, max_age_days: int = 7) -> int:
         """

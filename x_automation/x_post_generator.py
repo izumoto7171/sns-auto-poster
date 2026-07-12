@@ -1287,27 +1287,26 @@ def generate_amazon_pool_post() -> dict:
     if not PRODUCT_POOL:
         return {}
 
-    # クールダウンフィルタリング（既存ロジックを流用）
+    # クールダウンフィルタリング
+    # _filter_amazon_cooldown は「未投稿 → 最古投稿」順にソート済みで返すため、
+    # 先頭から1商品ずつ順番に使えばプール全体をローテーションできる。
+    # （旧実装は「割引率最大の商品」を決定的に選んでいたため、同じ商品ばかり
+    #   投稿される問題があった）
     available = _filter_amazon_cooldown(PRODUCT_POOL)
+    if not available:
+        return {}
 
-    # 未投稿商品を優先
-    history_keys = {e["key"] for e in _load_amazon_product_history()}
-    not_posted = [p for p in available if p.get("asin", "") not in history_keys]
-    candidates = not_posted if not_posted else available
-
-    # 割引・キャンペーン商品を優先（discount_rate > 0 の商品を先に選ぶ）
-    on_sale = [p for p in candidates if p.get("discount_rate", 0) > 0]
+    # 先頭グループ（未投稿・最古投稿の上位3件）から選ぶ。
+    # 完全な先頭固定にしないのは、投稿失敗時に同じ商品へ連続で当たり続けるのを
+    # 避けるため。3件以内のゆらぎならローテーション性は保たれる。
+    head_group = available[:3]
+    on_sale = [p for p in head_group if p.get("discount_rate", 0) > 0]
     if on_sale:
-        on_sale.sort(key=lambda p: p.get("discount_rate", 0), reverse=True)
         product = on_sale[0]
-        print(f"  [AmazonPool] 割引商品を優先選択: {product['name'][:40]} ({product.get('discount_rate', 0)}%OFF)")
-    elif not_posted:
-        product = random.choice(not_posted)
-        print(f"  [AmazonPool] 未投稿商品を選択: {product['name'][:40]}")
+        print(f"  [AmazonPool] ローテーション選択（割引優先）: {product['name'][:40]} ({product.get('discount_rate', 0)}%OFF)")
     else:
-        pool_size = max(3, len(available) // 3)
-        product = random.choice(available[:pool_size])
-        print(f"  [AmazonPool] 最古投稿グループから選択: {product['name'][:40]}")
+        product = random.choice(head_group)
+        print(f"  [AmazonPool] ローテーション選択: {product['name'][:40]}")
 
     name     = product["name"]
     url      = product["url"]
