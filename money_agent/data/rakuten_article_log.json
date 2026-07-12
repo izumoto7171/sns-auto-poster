@@ -25,5 +25,23 @@
     "products": 12,
     "posted_at": "2026-04-16T20:11:01.394479",
     "success": true
+  },
+  {
+    "genre_id": "100804",
+    "name": "キッチン用品・調理器具",
+    "title": "【2026年版】一人暮らし男性におすすめキッチン用品・調理器具ランキングTOP10",
+    "url": "file:///home/runner/work/sns-auto-poster/sns-auto-poster/money_agent/hatena_drafts/20260712_214237__2026年版_一人暮らし男性におすすめキッチン用品・調理器.md",
+    "products": 12,
+    "posted_at": "2026-07-12T21:42:37.433804",
+    "success": true
+  },
+  {
+    "genre_id": "215783",
+    "name": "家電・生活家電",
+    "title": "【2026年版】一人暮らしにおすすめ家電・生活家電ランキングTOP10｜コスパ重視",
+    "url": "file:///home/runner/work/sns-auto-poster/sns-auto-poster/money_agent/hatena_drafts/20260712_214259__2026年版_一人暮らしにおすすめ家電・生活家電ランキング.md",
+    "products": 12,
+    "posted_at": "2026-07-12T21:42:59.095490",
+    "success": true
   }
 ]
