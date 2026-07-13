@@ -151,6 +151,10 @@ def post(article: dict, draft: bool = False) -> str:
     category  = article.get("category", "副業")
     body_html = markdown_to_html(article.get("body", ""))
 
+    # category は呼び出し元によって str / list の両方が渡ってくるため正規化する
+    categories = (category if isinstance(category, list) else [category]) + list(tags)
+    categories = [str(c) for c in categories if c]
+
     if not HATENA_ID or not HATENA_BLOG_ID:
         msg = "HATENA_ID / HATENA_BLOG_ID 未設定"
         print(f"[Hatena] {msg} → ローカルに下書き保存")
@@ -166,15 +170,19 @@ def post(article: dict, draft: bool = False) -> str:
         _log_to_db(article, success=False, error_message=msg)
         return f"file://{path}"
 
-    categories_xml = "\n    ".join(f'<category term="{t}" />' for t in [category] + tags)
+    # XML特殊文字のエスケープ必須。エスケープしないと本文中のアフィリエイトURLに
+    # 含まれる & などで「400 XML Parse Failed」になる（楽天URLで顕在化）
+    from xml.sax.saxutils import escape, quoteattr
+
+    categories_xml = "\n    ".join(f'<category term={quoteattr(t)} />' for t in categories)
     draft_xml      = "<app:draft>yes</app:draft>" if draft else "<app:draft>no</app:draft>"
 
     atom_xml = f"""<?xml version="1.0" encoding="utf-8"?>
 <entry xmlns="http://www.w3.org/2005/Atom"
        xmlns:app="http://www.w3.org/2007/app">
-  <title>{title}</title>
+  <title>{escape(title)}</title>
   <author><name>{HATENA_ID}</name></author>
-  <content type="text/html">{body_html}</content>
+  <content type="text/html">{escape(body_html)}</content>
   {categories_xml}
   <app:control>
     {draft_xml}
