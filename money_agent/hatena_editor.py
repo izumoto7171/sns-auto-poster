@@ -176,12 +176,15 @@ def _update_entry(entry_id: str, title: str, body_html: str) -> bool:
         "Authorization": _auth_header(),
         "Content-Type":  "application/atom+xml; charset=utf-8",
     }
+    # XML特殊文字のエスケープ必須（& を含むアフィリエイトURLで 400 XML Parse Failed になる）
+    from xml.sax.saxutils import escape
+
     atom_xml = f"""<?xml version="1.0" encoding="utf-8"?>
 <entry xmlns="http://www.w3.org/2005/Atom"
        xmlns:app="http://www.w3.org/2007/app">
-  <title>{title}</title>
+  <title>{escape(title)}</title>
   <author><name>{HATENA_ID}</name></author>
-  <content type="text/html">{body_html}</content>
+  <content type="text/html">{escape(body_html)}</content>
   <app:control>
     <app:draft>no</app:draft>
   </app:control>

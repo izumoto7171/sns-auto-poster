@@ -171,17 +171,22 @@ def post_article(
         path = _save_as_draft({"title": title, "body": body, "category": category, "tags": tags or []})
         return f"file://{path}"
 
+    # XML特殊文字のエスケープ必須。エスケープしないと本文中のアフィリエイトURLに
+    # 含まれる & などで「400 XML Parse Failed」になる（money_agent/hatena_atomapi.pyと同修正）
+    from xml.sax.saxutils import escape, quoteattr
+
     body_html       = markdown_to_html(body)
     all_tags        = [category] + (tags or []) if category else (tags or [])
-    categories_xml  = "\n    ".join(f'<category term="{t}" />' for t in all_tags)
+    all_tags        = [str(t) for t in all_tags if t]
+    categories_xml  = "\n    ".join(f'<category term={quoteattr(t)} />' for t in all_tags)
     draft_xml       = "<app:draft>yes</app:draft>" if draft else "<app:draft>no</app:draft>"
 
     atom_xml = f"""<?xml version="1.0" encoding="utf-8"?>
 <entry xmlns="http://www.w3.org/2005/Atom"
        xmlns:app="http://www.w3.org/2007/app">
-  <title>{title}</title>
+  <title>{escape(title)}</title>
   <author><name>{hatena_id}</name></author>
-  <content type="text/html">{body_html}</content>
+  <content type="text/html">{escape(body_html)}</content>
   {categories_xml}
   <app:control>
     {draft_xml}
