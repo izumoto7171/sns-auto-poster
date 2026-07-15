@@ -66,6 +66,12 @@ jobs:
           X_API_SECRET: ${{ secrets.X_API_SECRET }}
           X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
           X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+          # twikit / ブラウザフォールバック用（tweepy 402時に使用）
+          X_COOKIES: ${{ secrets.X_COOKIES }}
+          X_BROWSER_COOKIES: ${{ secrets.X_BROWSER_COOKIES }}
+          X_EMAIL: ${{ secrets.X_EMAIL }}
+          X_USERNAME: ${{ secrets.X_USERNAME }}
+          X_PASSWORD: ${{ secrets.X_PASSWORD }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
