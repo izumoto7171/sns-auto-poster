@@ -123,7 +123,7 @@ jobs:
           git add money_agent/data/pending/ || true
           git add money_agent/posted/ || true
           git diff --staged --quiet || git commit -m "chore: CEOエージェント実行ログ更新 $(date +'%Y-%m-%d %H:%M')"
-          git pull --rebase origin main && git push || true
+          git pull --rebase --autostash origin main && git push || true
 
       - name: 実行サマリー出力
         if: always()
@@ -401,7 +401,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add money_agent/dynamic_keywords.json || true
           git diff --staged --quiet || git commit -m "chore: トレンドキーワード自動更新 $(date +'%Y-%m-%d')"
-          git pull --rebase origin main && git push || true
+          git pull --rebase --autostash origin main && git push || true
 
   # ============================================================
   # 🛒 楽天アフィリエイト記事生成（週3回 月水金 JST 4:00）
@@ -445,7 +445,7 @@ jobs:
           git add money_agent/data/rakuten_article_log.json || true
           git add money_agent/hatena_drafts/ || true
           git diff --staged --quiet || git commit -m "chore: 楽天アフィリエイト記事更新 $(date +'%Y-%m-%d')"
-          git pull --rebase origin main && git push || true
+          git pull --rebase --autostash origin main && git push || true
 
   # ============================================================
   # 🛒 Amazonアフィリエイト記事生成（毎日 JST 6:00、楽天と同時実行）
@@ -489,4 +489,4 @@ jobs:
           git add money_agent/data/amazon_article_log.json || true
           git add money_agent/hatena_drafts/ || true
           git diff --staged --quiet || git commit -m "chore: Amazonアフィリエイト記事更新 $(date +'%Y-%m-%d')"
-          git pull --rebase origin main && git push || true
+          git pull --rebase --autostash origin main && git push || true

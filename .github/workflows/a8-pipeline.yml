@@ -74,7 +74,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add money_agent/seen_a8_programs.json || true
           git diff --staged --quiet || git commit -m "chore: A8新着案件パイプライン実行 $(date +'%Y-%m-%d')"
-          git pull --rebase origin main && git push || true
+          git pull --rebase --autostash origin main && git push || true
 
   # ===========================================================
   # 承認済みプログラム → 記事生成 → はてな投稿
@@ -133,7 +133,7 @@ jobs:
                   money_agent/a8_programs_cache.json \
                   money_agent/a8_programs_history.json || true
           git diff --staged --quiet || git commit -m "chore: A8承認済みプログラム記事投稿 $(date +'%Y-%m-%d')"
-          git pull --rebase origin main && git push || true
+          git pull --rebase --autostash origin main && git push || true
 
   # ===========================================================
   # ランキング記事生成（週2回：火・金 JST 10:00）
@@ -183,7 +183,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add money_agent/ranking_generated.json || true
           git diff --staged --quiet || git commit -m "chore: ランキング記事生成 $(date +'%Y-%m-%d')"
-          git pull --rebase origin main && git push || true
+          git pull --rebase --autostash origin main && git push || true
 
   # ===========================================================
   # A8レポート集計（月1回：毎月1日 JST 9:00）
@@ -224,4 +224,4 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add money_agent/a8_report.json money_agent/a8_report.csv || true
           git diff --staged --quiet || git commit -m "chore: A8収益レポート更新 $(date +'%Y-%m')"
-          git pull --rebase origin main && git push || true
+          git pull --rebase --autostash origin main && git push || true
