@@ -56,6 +56,9 @@ jobs:
           CI: "true"
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           HATENA_COOKIES: ${{ secrets.HATENA_COOKIES }}
+          HATENA_ID: ${{ secrets.HATENA_ID }}
+          HATENA_BLOG_ID: ${{ secrets.HATENA_BLOG_ID }}
+          HATENA_API_KEY: ${{ secrets.HATENA_API_KEY }}
           NOTE_COOKIES: ${{ secrets.NOTE_COOKIES }}
           BSKY_HANDLE: ${{ secrets.BSKY_HANDLE }}
           BSKY_APP_PASSWORD: ${{ secrets.BSKY_APP_PASSWORD }}
@@ -122,6 +125,8 @@ jobs:
           git add money_agent/data/approved.json || true
           git add money_agent/data/pending/ || true
           git add money_agent/posted/ || true
+          git add money_agent/hatena_drafts/ || true
+          git add money_agent/data/sns_drafts/ || true
           git diff --staged --quiet || git commit -m "chore: CEOエージェント実行ログ更新 $(date +'%Y-%m-%d %H:%M')"
           git pull --rebase --autostash origin main && git push || true
 
