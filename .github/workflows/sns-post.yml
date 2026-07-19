@@ -339,6 +339,11 @@ jobs:
     name: はてなブログ 投稿
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # 無効化（2026-07-19）: 固定テーマリスト+メモリ上の使用済み管理のため、
+    # CI実行のたびに同じ記事を再生成してブログに重複投稿していた（4月からの
+    # 重複スパムの発生源）。記事生成はCEOエージェント（money-agent.yml）に
+    # 完全移行済みのため、このレガシー投稿ジョブは停止する。
+    if: false
     steps:
       - uses: actions/checkout@v5
 
