@@ -88,5 +88,23 @@
     "products": 10,
     "posted_at": "2026-07-22T22:01:32.769365",
     "success": true
+  },
+  {
+    "category_key": "smart_home",
+    "name": "スマートホーム",
+    "title": "【2026年版】一人暮らしにおすすめスマートホーム家電TOP10｜Amazon",
+    "url": "https://smart-earn-life.hateblo.jp/entry/2026/07/24/070144",
+    "products": 10,
+    "posted_at": "2026-07-23T22:01:47.136614",
+    "success": true
+  },
+  {
+    "category_key": "audio",
+    "name": "オーディオ",
+    "title": "【2026年版】コスパで選ぶワイヤレスイヤホンおすすめランキングTOP10｜Amazon",
+    "url": "https://smart-earn-life.hateblo.jp/entry/2026/07/24/070256",
+    "products": 10,
+    "posted_at": "2026-07-23T22:02:58.366171",
+    "success": true
   }
 ]
