@@ -151,5 +151,23 @@
     "products": 10,
     "posted_at": "2026-07-30T22:02:23.236099",
     "success": true
+  },
+  {
+    "category_key": "audio",
+    "name": "オーディオ",
+    "title": "【2026年版】コスパで選ぶワイヤレスイヤホンおすすめランキングTOP10｜Amazon",
+    "url": "https://smart-earn-life.hateblo.jp/entry/2026/08/01/070013",
+    "products": 9,
+    "posted_at": "2026-07-31T22:00:14.492619",
+    "success": true
+  },
+  {
+    "category_key": "gadget",
+    "name": "ガジェット・家電",
+    "title": "【2026年版】Amazonで買うべきガジェットおすすめランキングTOP10",
+    "url": "https://smart-earn-life.hateblo.jp/entry/2026/08/01/070045",
+    "products": 10,
+    "posted_at": "2026-07-31T22:00:47.020989",
+    "success": true
   }
 ]
