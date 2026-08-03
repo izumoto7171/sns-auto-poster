@@ -187,5 +187,23 @@
     "products": 12,
     "posted_at": "2026-07-31T22:00:09.855040",
     "success": true
+  },
+  {
+    "genre_id": "215783",
+    "name": "家電・生活家電",
+    "title": "【2026年版】一人暮らしにおすすめ家電・生活家電ランキングTOP10｜コスパ重視",
+    "url": "https://smart-earn-life.hateblo.jp/entry/2026/08/04/070241",
+    "products": 12,
+    "posted_at": "2026-08-03T22:02:41.958089",
+    "success": true
+  },
+  {
+    "genre_id": "100804",
+    "name": "キッチン用品・調理器具",
+    "title": "【2026年版】一人暮らし男性におすすめキッチン用品・調理器具ランキングTOP10",
+    "url": "https://smart-earn-life.hateblo.jp/entry/2026/08/04/070317",
+    "products": 12,
+    "posted_at": "2026-08-03T22:03:17.800976",
+    "success": true
   }
 ]
