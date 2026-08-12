@@ -259,5 +259,23 @@
     "products": 12,
     "posted_at": "2026-08-11T21:42:42.994776",
     "success": true
+  },
+  {
+    "genre_id": "551167",
+    "name": "日用品・消耗品",
+    "title": "【2026年版】一人暮らしの日用品・消耗品節約術｜まとめ買いおすすめTOP10",
+    "url": "https://smart-earn-life.hateblo.jp/entry/2026/08/13/064004",
+    "products": 12,
+    "posted_at": "2026-08-12T21:40:04.948934",
+    "success": true
+  },
+  {
+    "genre_id": "100227",
+    "name": "健康食品・プロテイン",
+    "title": "【2026年版】コスパ最強健康食品・プロテインランキングTOP10｜一人暮らし向け",
+    "url": "https://smart-earn-life.hateblo.jp/entry/2026/08/13/064151",
+    "products": 12,
+    "posted_at": "2026-08-12T21:41:52.314500",
+    "success": true
   }
 ]
