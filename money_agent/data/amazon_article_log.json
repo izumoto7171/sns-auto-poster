@@ -259,5 +259,23 @@
     "products": 9,
     "posted_at": "2026-08-11T21:41:12.873522",
     "success": true
+  },
+  {
+    "category_key": "daily_goods",
+    "name": "日用品・消耗品",
+    "title": "【2026年版】一人暮らしの日用品おすすめTOP10｜Amazonで揃える節約術",
+    "url": "https://smart-earn-life.hateblo.jp/entry/2026/08/15/062112",
+    "products": 9,
+    "posted_at": "2026-08-14T21:21:13.539506",
+    "success": true
+  },
+  {
+    "category_key": "cleaning",
+    "name": "掃除・生活家電",
+    "title": "【2026年版】コスパ最強の掃除家電ランキングTOP10｜Amazonおすすめ",
+    "url": "https://smart-earn-life.hateblo.jp/entry/2026/08/15/062301",
+    "products": 10,
+    "posted_at": "2026-08-14T21:23:01.911501",
+    "success": true
   }
 ]
