@@ -1,17 +1,5 @@
 [
   {
-    "posted_at": "2026-06-27T00:04:43.980287",
-    "datetime": "2026-06-27T00:04:43.980287",
-    "platform": "x",
-    "type": "amazon_thread",
-    "label": "Amazon商品紹介",
-    "chars": 106,
-    "content": "寝る前に電気消し忘れるたびに、布団から出たくなくて地味にストレスだった。消し忘れても、もう一度立ち上がって電気を消しに行く手間がなくなった日の衝撃。\nTWEET1_CTA = 「今20%OFF、詳細はツリーへ↓」",
-    "text": "寝る前に電気消し忘れるたびに、布団から出たくなくて地味にストレスだった。消し忘れても、もう一度立ち上がって電気を消しに行く手間がなくなった日の衝撃。\nTWEET1_CTA = 「今20%OFF、詳細はツリーへ↓」",
-    "success": true,
-    "mode": "live"
-  },
-  {
     "posted_at": "2026-06-27T14:51:36.916691",
     "datetime": "2026-06-27T14:51:36.916691",
     "platform": "x",
@@ -2397,6 +2385,18 @@
     "content": "一人暮らしで地味に困ってたこと、Anker 622 Magneticで解決した。20%OFFで買えた。\n今20%OFF、詳細はツリーへ↓",
     "text": "一人暮らしで地味に困ってたこと、Anker 622 Magneticで解決した。20%OFFで買えた。\n今20%OFF、詳細はツリーへ↓",
     "success": true,
+    "mode": "live"
+  },
+  {
+    "posted_at": "2026-08-29T17:11:14.998958",
+    "datetime": "2026-08-29T17:11:14.998958",
+    "platform": "x",
+    "type": "amazon_thread",
+    "label": "Amazon商品紹介",
+    "chars": 99,
+    "content": "ずっと迷ってたAnker Soundcore Libert（Anker Soundcore製）、ついに買った。20%OFFで買えた。これが思ってたより全然よかった。\n今20%OFF、詳細はツリーへ↓",
+    "text": "ずっと迷ってたAnker Soundcore Libert（Anker Soundcore製）、ついに買った。20%OFFで買えた。これが思ってたより全然よかった。\n今20%OFF、詳細はツリーへ↓",
+    "success": false,
     "mode": "live"
   }
 ]
