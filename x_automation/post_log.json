@@ -1,17 +1,5 @@
 [
   {
-    "posted_at": "2026-06-26T15:32:34.986920",
-    "datetime": "2026-06-26T15:32:34.986920",
-    "platform": "x",
-    "type": "amazon_thread",
-    "label": "Amazon商品紹介",
-    "chars": 68,
-    "content": "一人暮らしで地味に困ってたこと、Anker Soundcore Liで解決した。20%OFFで買えた。\n今20%OFF、詳細はツリーへ↓",
-    "text": "一人暮らしで地味に困ってたこと、Anker Soundcore Liで解決した。20%OFFで買えた。\n今20%OFF、詳細はツリーへ↓",
-    "success": true,
-    "mode": "live"
-  },
-  {
     "posted_at": "2026-06-27T00:04:43.980287",
     "datetime": "2026-06-27T00:04:43.980287",
     "platform": "x",
@@ -2396,6 +2384,18 @@
     "chars": 80,
     "content": "デスクのごちゃごちゃを一発で解決したガジェット。 25%OFFで買えた。半信半疑で買ったんだけど、使ってみたら想像以上だった。\n今25%OFF、詳細はツリーへ↓",
     "text": "デスクのごちゃごちゃを一発で解決したガジェット。 25%OFFで買えた。半信半疑で買ったんだけど、使ってみたら想像以上だった。\n今25%OFF、詳細はツリーへ↓",
+    "success": true,
+    "mode": "live"
+  },
+  {
+    "posted_at": "2026-08-29T04:11:42.222829",
+    "datetime": "2026-08-29T04:11:42.222829",
+    "platform": "x",
+    "type": "amazon_thread",
+    "label": "Amazon商品紹介",
+    "chars": 68,
+    "content": "一人暮らしで地味に困ってたこと、Anker 622 Magneticで解決した。20%OFFで買えた。\n今20%OFF、詳細はツリーへ↓",
+    "text": "一人暮らしで地味に困ってたこと、Anker 622 Magneticで解決した。20%OFFで買えた。\n今20%OFF、詳細はツリーへ↓",
     "success": true,
     "mode": "live"
   }
