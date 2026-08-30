@@ -1,17 +1,5 @@
 [
   {
-    "posted_at": "2026-06-28T00:02:12.189620",
-    "datetime": "2026-06-28T00:02:12.189620",
-    "platform": "x",
-    "type": "amazon_pool",
-    "label": "Amazon商品紹介（プール）",
-    "chars": 183,
-    "content": "宅トレしようと思っても、マットが薄くて滑って集中できないのずっと困ってた。結局続かないんだよな。\nAmazonベーシックの10mmマット、クッション性も滑り止めもばっちり。痛くないからしっかり動ける。今38%OFF。\nこれもっと早く知りたかった。pr\nhttps://www.amazon.co.jp/dp/B0FY4WKW74?tag=smartearn22-22",
-    "text": "宅トレしようと思っても、マットが薄くて滑って集中できないのずっと困ってた。結局続かないんだよな。\nAmazonベーシックの10mmマット、クッション性も滑り止めもばっちり。痛くないからしっかり動ける。今38%OFF。\nこれもっと早く知りたかった。pr\nhttps://www.amazon.co.jp/dp/B0FY4WKW74?tag=smartearn22-22",
-    "success": true,
-    "mode": "live"
-  },
-  {
     "posted_at": "2026-06-28T14:56:04.371570",
     "datetime": "2026-06-28T14:56:04.371570",
     "platform": "x",
@@ -2396,6 +2384,18 @@
     "chars": 90,
     "content": "ずっと迷ってたBaseus 67W USB-C 急速充電器（Baseus製）、ついに買った。24%OFFで買えた。これが思ってたより全然よかった。\n今24%OFF、詳細はツリーへ↓",
     "text": "ずっと迷ってたBaseus 67W USB-C 急速充電器（Baseus製）、ついに買った。24%OFFで買えた。これが思ってたより全然よかった。\n今24%OFF、詳細はツリーへ↓",
+    "success": true,
+    "mode": "live"
+  },
+  {
+    "posted_at": "2026-08-30T17:25:50.171314",
+    "datetime": "2026-08-30T17:25:50.171314",
+    "platform": "x",
+    "type": "amazon_thread",
+    "label": "Amazon商品紹介",
+    "chars": 78,
+    "content": "Wi-Fiが遅かった原因、ルーターだった。\n\n半信半疑で試してみたら、25%OFFで買えた。使う前の自分に教えてやりたい。\n今25%OFF、詳細はツリーへ↓",
+    "text": "Wi-Fiが遅かった原因、ルーターだった。\n\n半信半疑で試してみたら、25%OFFで買えた。使う前の自分に教えてやりたい。\n今25%OFF、詳細はツリーへ↓",
     "success": true,
     "mode": "live"
   }
