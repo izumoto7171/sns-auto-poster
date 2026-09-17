@@ -547,5 +547,23 @@
     "products": 10,
     "posted_at": "2026-09-16T23:31:43.370568",
     "success": true
+  },
+  {
+    "category_key": "kitchen",
+    "name": "キッチン家電",
+    "title": "【2026年版】一人暮らしにおすすめキッチン家電ランキングTOP10｜Amazon",
+    "url": "https://smart-earn-life.hateblo.jp/entry/2026/09/18/082028",
+    "products": 10,
+    "posted_at": "2026-09-17T23:20:30.120755",
+    "success": true
+  },
+  {
+    "category_key": "smart_home",
+    "name": "スマートホーム",
+    "title": "【2026年版】一人暮らしにおすすめスマートホーム家電TOP10｜Amazon",
+    "url": "https://smart-earn-life.hateblo.jp/entry/2026/09/18/082217",
+    "products": 10,
+    "posted_at": "2026-09-17T23:22:19.157421",
+    "success": true
   }
 ]
