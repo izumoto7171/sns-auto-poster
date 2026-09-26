@@ -1,17 +1,5 @@
 [
   {
-    "posted_at": "2026-07-17T23:51:57.973237",
-    "datetime": "2026-07-17T23:51:57.973237",
-    "platform": "x",
-    "type": "amazon_thread",
-    "label": "Amazon商品紹介",
-    "chars": 70,
-    "content": "在宅ワークで画面が固まる頻度が高すぎて、業務に集中できない日々…。\n\n\n\n\n\nTWEET1_CTA = 「今25%OFF、詳細はツリーへ↓」",
-    "text": "在宅ワークで画面が固まる頻度が高すぎて、業務に集中できない日々…。\n\n\n\n\n\nTWEET1_CTA = 「今25%OFF、詳細はツリーへ↓」",
-    "success": true,
-    "mode": "live"
-  },
-  {
     "posted_at": "2026-07-17T23:53:01.986650",
     "datetime": "2026-07-17T23:53:01.986650",
     "platform": "x",
@@ -2396,6 +2384,18 @@
     "chars": 91,
     "content": "ずっと迷ってたTP-Link WiFi 無線LAN ルータ（TP-Link製）、ついに買った。25%OFFで買えた。これが思ってたより全然よかった。\n今25%OFF、詳細はツリーへ↓",
     "text": "ずっと迷ってたTP-Link WiFi 無線LAN ルータ（TP-Link製）、ついに買った。25%OFFで買えた。これが思ってたより全然よかった。\n今25%OFF、詳細はツリーへ↓",
+    "success": false,
+    "mode": "live"
+  },
+  {
+    "posted_at": "2026-09-26T01:14:19.474949",
+    "datetime": "2026-09-26T01:14:19.474949",
+    "platform": "x",
+    "type": "amazon_thread",
+    "label": "Amazon商品紹介",
+    "chars": 89,
+    "content": "ずっと迷ってたAnker PowerCore 10000 （Anker製）、ついに買った。20%OFFで買えた。これが思ってたより全然よかった。\n今20%OFF、詳細はツリーへ↓",
+    "text": "ずっと迷ってたAnker PowerCore 10000 （Anker製）、ついに買った。20%OFFで買えた。これが思ってたより全然よかった。\n今20%OFF、詳細はツリーへ↓",
     "success": false,
     "mode": "live"
   }
