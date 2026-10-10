@@ -736,5 +736,23 @@
     "products": 10,
     "posted_at": "2026-10-09T00:58:42.664915",
     "success": true
+  },
+  {
+    "category_key": "pc",
+    "name": "PC・デスク環境",
+    "title": "【2026年版】デスク環境を快適にするPC周辺機器おすすめTOP10｜Amazon",
+    "url": "https://smart-earn-life.hateblo.jp/entry/2026/10/10/092715",
+    "products": 10,
+    "posted_at": "2026-10-10T00:27:16.338183",
+    "success": true
+  },
+  {
+    "category_key": "smart_home",
+    "name": "スマートホーム",
+    "title": "【2026年版】一人暮らしにおすすめスマートホーム家電TOP10｜Amazon",
+    "url": "https://smart-earn-life.hateblo.jp/entry/2026/10/10/092903",
+    "products": 10,
+    "posted_at": "2026-10-10T00:29:04.720480",
+    "success": true
   }
 ]
