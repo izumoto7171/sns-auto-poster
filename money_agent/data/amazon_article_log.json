@@ -781,5 +781,23 @@
     "products": 10,
     "posted_at": "2026-10-12T00:11:54.772347",
     "success": true
+  },
+  {
+    "category_key": "kitchen",
+    "name": "キッチン家電",
+    "title": "【2026年版】一人暮らしにおすすめキッチン家電ランキングTOP10｜Amazon",
+    "url": "https://smart-earn-life.hateblo.jp/entry/2026/10/17/081338",
+    "products": 9,
+    "posted_at": "2026-10-16T23:13:39.594618",
+    "success": true
+  },
+  {
+    "category_key": "audio",
+    "name": "オーディオ",
+    "title": "【2026年版】コスパで選ぶワイヤレスイヤホンおすすめランキングTOP10｜Amazon",
+    "url": "https://smart-earn-life.hateblo.jp/entry/2026/10/17/081527",
+    "products": 10,
+    "posted_at": "2026-10-16T23:15:28.311192",
+    "success": true
   }
 ]
