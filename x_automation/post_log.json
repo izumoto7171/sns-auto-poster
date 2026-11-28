@@ -1,17 +1,5 @@
 [
   {
-    "posted_at": "2026-08-29T17:11:14.998958",
-    "datetime": "2026-08-29T17:11:14.998958",
-    "platform": "x",
-    "type": "amazon_thread",
-    "label": "Amazon商品紹介",
-    "chars": 99,
-    "content": "ずっと迷ってたAnker Soundcore Libert（Anker Soundcore製）、ついに買った。20%OFFで買えた。これが思ってたより全然よかった。\n今20%OFF、詳細はツリーへ↓",
-    "text": "ずっと迷ってたAnker Soundcore Libert（Anker Soundcore製）、ついに買った。20%OFFで買えた。これが思ってたより全然よかった。\n今20%OFF、詳細はツリーへ↓",
-    "success": false,
-    "mode": "live"
-  },
-  {
     "posted_at": "2026-08-30T01:06:39.972097",
     "datetime": "2026-08-30T01:06:39.972097",
     "platform": "x",
@@ -2396,6 +2384,18 @@
     "chars": 75,
     "content": "副業を始めようと思っても何から手を付けるかわからなかった。\nTOSSY（節約サービス）を知ってから少し動けるようになった気がする。\nの条件も悪くない。",
     "text": "副業を始めようと思っても何から手を付けるかわからなかった。\nTOSSY（節約サービス）を知ってから少し動けるようになった気がする。\nの条件も悪くない。",
+    "success": false,
+    "mode": "live"
+  },
+  {
+    "posted_at": "2026-11-28T04:31:01.592666",
+    "datetime": "2026-11-28T04:31:01.592666",
+    "platform": "x",
+    "type": "amazon_thread",
+    "label": "Amazon商品紹介",
+    "chars": 68,
+    "content": "一人暮らしで地味に困ってたこと、Anker Soundcore Liで解決した。20%OFFで買えた。\n今20%OFF、詳細はツリーへ↓",
+    "text": "一人暮らしで地味に困ってたこと、Anker Soundcore Liで解決した。20%OFFで買えた。\n今20%OFF、詳細はツリーへ↓",
     "success": false,
     "mode": "live"
   }
